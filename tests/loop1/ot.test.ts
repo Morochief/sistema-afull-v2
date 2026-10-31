@@ -1,0 +1,92 @@
+import { describe, it, expect, afterAll } from 'vitest';
+import { admin, cerrarConexiones } from '../loop0/helpers.js';
+import { crearUsuario } from '../loop0/auth-helpers.js';
+import { crearOT, transicionar } from '../../apps/api/src/modules/comercial/ot.service.js';
+
+afterAll(cerrarConexiones);
+
+async function clienteTest(nombre = 'zz_test_cliente') {
+  const [c] = await admin`
+    INSERT INTO cliente (codigo, nombre)
+    VALUES (${'ZZ-' + crypto.randomUUID().slice(0, 8)}, ${nombre}) RETURNING id
+  `;
+  return c.id as string;
+}
+
+describe('CA-1.5: Concurrencia en códigos de OT', () => {
+  it('20 creaciones simultáneas generan 20 códigos únicos y correlativos sin huecos', async () => {
+    const u = await crearUsuario(['comercial']);
+    const clienteId = await clienteTest();
+    const ots = await Promise.all(
+      Array.from({ length: 20 }, () => crearOT({ usuarioId: u.id }, { clienteId, titulo: 'ot_concurrente' })),
+    );
+    const nums = ots.map((o) => Number(o!.codigo_ot.split('-')[2])).sort((a, b) => a - b);
+    expect(new Set(nums).size).toBe(20);
+    expect(nums[19] - nums[0]).toBe(19);
+  });
+});
+
+describe('CA-1.4 / CA-1.8: Transiciones y detección de stale data (409)', () => {
+  it('dos cambios simultáneos sobre la misma OT: uno gana y el otro recibe 409', async () => {
+    const u = await crearUsuario(['comercial']);
+    const ctx = { usuarioId: u.id };
+    const ot = (await crearOT(ctx, { clienteId: await clienteTest(), titulo: 'ot_carrera' }))!;
+
+    const r = await Promise.allSettled([
+      transicionar(ctx, ot.id, { desde: 'PENDIENTE', a: 'EN_TALLER' }),
+      transicionar(ctx, ot.id, { desde: 'PENDIENTE', a: 'EN_DISENO' }),
+    ]);
+    const mal = r.filter((x): x is PromiseRejectedResult => x.status === 'rejected');
+    expect(r.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
+    expect(mal).toHaveLength(1);
+    expect(mal[0].reason).toMatchObject({ status: 409 });
+
+    const ev = await admin`SELECT estado_nuevo FROM ot_evento WHERE orden_trabajo_id = ${ot.id} ORDER BY created_at, id`;
+    const [{ estado }] = await admin`SELECT estado FROM orden_trabajo WHERE id = ${ot.id}`;
+    expect(ev).toHaveLength(2);
+    expect(ev.at(-1)!.estado_nuevo).toBe(estado);
+  });
+
+  it('salto inválido rechaza con 400 y cancelar exige motivo', async () => {
+    const u = await crearUsuario(['comercial']);
+    const ctx = { usuarioId: u.id };
+    const ot = (await crearOT(ctx, { clienteId: await clienteTest(), titulo: 'ot_rechazo' }))!;
+    await expect(transicionar(ctx, ot.id, { desde: 'PENDIENTE', a: 'TERMINADO' })).rejects.toMatchObject({ status: 400 });
+    await expect(transicionar(ctx, ot.id, { desde: 'PENDIENTE', a: 'CANCELADO' })).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('la base también exige motivo al cancelar (CHECK en ot_evento)', async () => {
+    const u = await crearUsuario(['comercial']);
+    const ot = (await crearOT({ usuarioId: u.id }, { clienteId: await clienteTest(), titulo: 'ot_check' }))!;
+    await expect(admin`
+      INSERT INTO ot_evento (orden_trabajo_id, estado_anterior, estado_nuevo, autor_id)
+      VALUES (${ot.id}, 'PENDIENTE', 'CANCELADO', ${u.id})
+    `).rejects.toMatchObject({ code: '23514' });
+  });
+});
+
+describe('CA-1.6: Pertenencia de sucursal forzada por la base', () => {
+  it('la base rechaza una OT con sucursal de otro cliente con error 23503', async () => {
+    const a = await clienteTest('cli_a');
+    const b = await clienteTest('cli_b');
+    const [s] = await admin`
+      INSERT INTO sucursal (cliente_id, nombre, gps_lat, gps_lng)
+      VALUES (${b}, ${'suc_' + Date.now()}, -25.3, -57.6) RETURNING id
+    `;
+    const u = await crearUsuario();
+    await expect(admin`
+      INSERT INTO orden_trabajo (codigo_ot, cliente_id, sucursal_id, titulo, creado_por)
+      VALUES (${'OT-FK-' + Date.now()}, ${a}, ${s.id}, 'test_fk', ${u.id})
+    `).rejects.toMatchObject({ code: '23503' });
+  });
+});
+
+describe('CA-1.3: Validación de coordenadas de Paraguay', () => {
+  it('la base rechaza coordenadas fuera del polígono paraguayo (error 23514)', async () => {
+    const c = await clienteTest();
+    await expect(admin`
+      INSERT INTO sucursal (cliente_id, nombre, gps_lat, gps_lng)
+      VALUES (${c}, 'suc_invalida', -57.6, -25.3)
+    `).rejects.toMatchObject({ code: '23514' });
+  });
+});

@@ -1,0 +1,50 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci_admin
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=10
+    env:
+      TEST_ENV: dev
+      APP_ORIGIN: http://localhost:3000
+      DATABASE_URL_ADMIN: postgres://postgres:ci_admin@localhost:5432/postgres
+      DATABASE_URL_API: postgres://afull_api:ci_api@localhost:5432/postgres
+      DATABASE_URL: postgres://afull_api:ci_api@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint (max-lines 250)
+        run: pnpm lint
+
+      - name: Tipos
+        run: pnpm typecheck
+
+      - name: Preparar base (roles de Supabase + migraciones)
+        run: |
+          psql "$DATABASE_URL_ADMIN" -c "CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;"
+          pnpm db:migrate
+          psql "$DATABASE_URL_ADMIN" -c "ALTER ROLE afull_api PASSWORD 'ci_api';"
+
+      - name: Tests (sin el test REST de anon key, que corre en tests-dev.yml)
+        run: pnpm vitest run tests --exclude tests/loop0/anon.test.ts
