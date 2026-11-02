@@ -1,0 +1,50 @@
+name: Tests contra Supabase dev (pooler 6543 + PostgREST anon)
+
+on:
+  schedule:
+    # Diario a las 07:00 UTC (04:00 America/Asuncion)
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests-dev:
+    runs-on: ubuntu-latest
+    env:
+      TEST_ENV: dev
+      APP_ORIGIN: http://localhost:3000
+      DATABASE_URL_ADMIN: ${{ secrets.DEV_DATABASE_URL_ADMIN }}
+      DATABASE_URL_API: ${{ secrets.DEV_DATABASE_URL_API }}
+      DATABASE_URL: ${{ secrets.DEV_DATABASE_URL_API }}
+      SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.DEV_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Guard de entorno (exige TEST_ENV=dev y secrets DEV_*)
+        run: |
+          if [ "$TEST_ENV" != "dev" ]; then
+            echo "ERROR: TEST_ENV debe ser 'dev'."
+            exit 1
+          fi
+          for var in DATABASE_URL_ADMIN DATABASE_URL_API SUPABASE_URL SUPABASE_ANON_KEY; do
+            if [ -z "${!var}" ]; then
+              echo "ERROR: Falta configurar el secret DEV_${var} en GitHub Actions."
+              exit 1
+            fi
+          done
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verificar migraciones en dev
+        run: pnpm db:migrate
+
+      - name: Ejecutar suite completa contra Supabase dev (incluye anon.test.ts y pooler 6543)
+        run: pnpm test

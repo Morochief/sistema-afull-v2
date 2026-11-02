@@ -7,21 +7,21 @@ Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cer
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
-**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las 4 consultas de comprobación dieron los resultados exactos esperados y `pnpm test` pasa **34 de 34 tests en verde** (11 archivos) contra Supabase `dev` y contra PostgreSQL 17 en GitHub Actions CI.
-- **Loop 0 parcialmente verificado:** 18/18 tests en `tests/loop0` en verde + CA-0.10 HTTP verificado en `tests/loop1/ot-api.test.ts` (20 requests HTTP simultáneas por la API Hono y el transaction pooler 6543 en ~1,6 s sin errores). Incluye seed idempotente del primer admin (`scripts/seed-admin.ts` + `seed.test.ts`, verificando `0` usuarios `zz_test_%` activos tras los tests) y bloqueo real de `anon` con SQLSTATE `42501` (`anon.test.ts`). Queda abierto para cerrar Loop 0 al 100%: workflow `tests-dev.yml`, backups y restore manual documentado en `RESTAURAR.md` (CA-0.9) y deploy en Vercel para medir CA-0.1 (login con cold start).
+**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las 4 consultas de comprobación dieron los resultados exactos esperados y `pnpm test` pasa **36 de 36 tests en verde** (11 archivos: 20 de Loop 0 y 16 de Loop 1) contra Supabase `dev` y contra PostgreSQL 17 en GitHub Actions CI.
+- **Loop 0 parcialmente verificado:** 20/20 tests en `tests/loop0` en verde + CA-0.10 HTTP verificado en `tests/loop1/ot-api.test.ts` (20 requests HTTP simultáneas por la API Hono y el transaction pooler 6543 en ~1,6 s sin errores) + test de concurrencia del envoltorio `sinPipelining` (40 consultas mixtas con y sin parámetros en ~0,48 s) y auditoría estática de consultas parametrizadas en `tests/loop0/secuencia.test.ts`. Workflow `.github/workflows/tests-dev.yml` creado (ejecución diaria y manual con guard `TEST_ENV=dev` y secrets `DEV_*`). Queda abierto para cerrar Loop 0 al 100%: configurar los secrets `DEV_*` en GitHub Actions, backups y restore manual documentado en `RESTAURAR.md` (CA-0.9) y despliegue mínimo en Vercel para medir CA-0.1 (login con cold start y pooler desde serverless).
 - **Loop 1A cerrado (CA-1.1 a CA-1.10 verificados):** 16/16 tests de `tests/loop1` en verde contra Supabase `dev` y en CI.
   - **Entrega 1 (commit `b9d0d58`):** Clientes (listado con `q`, `activo`, `desde`/`hasta`, detalle completo, edición con `updatedAt` → `409`, desactivar/reactivar advirtiendo OTs abiertas), sucursales (`sucursales.service.ts`), contactos con cambio atómico de contacto principal y marcas (`subrecursos.service.ts`), benchmark CA-1.2 ejecutando `queryListarClientes` real (`busqueda.test.ts`), y `clientes.test.ts` cubriendo CA-1.1 (paginación 25), CA-1.7 (bloqueo `DELETE` real con `42501`) y CA-1.10 en `/api/clientes`.
-  - **Entrega 2 (cerrada):** Detalle de OT (`GET /api/comercial/ot/:id` devolviendo la OT más el historial `ot_evento` ordenado por `created_at ASC, id ASC` coincidente con `estado`, CA-1.8), filtro por `clienteId` en `listarOTs`, edición de OT (`PATCH /api/comercial/ot/:id` con `SELECT ... FOR UPDATE`, exigiendo `updatedAt` → `409`, validando sucursal activa del cliente o `null`, auditando `ot.editar` en la misma transacción y bloqueando con `400` mediante `esEstadoFinal` si está en `TERMINADO` o `CANCELADO`), recorrido dinámico global de `app.routes` (CA-1.10 reforzado: todas las rutas de la app exigen `401` sin sesión salvo `POST /api/auth/login`, y `/api/comercial/ot` exige `403` sin capacidad `comercial`/`admin`) y CA-0.10 (20 requests HTTP simultáneas en `ot-api.test.ts`).
+  - **Entrega 2 (commit `ed0621b`):** Detalle de OT (`GET /api/comercial/ot/:id` devolviendo la OT más el historial `ot_evento` ordenado por `created_at ASC, id ASC` coincidente con `estado`, CA-1.8), filtro por `clienteId` en `listarOTs`, edición de OT (`PATCH /api/comercial/ot/:id` con `SELECT ... FOR UPDATE`, exigiendo `updatedAt` → `409`, validando sucursal activa del cliente o `null`, auditando `ot.editar` en la misma transacción y bloqueando con `400` mediante `esEstadoFinal` si está en `TERMINADO` o `CANCELADO`), recorrido dinámico global de `app.routes` (CA-1.10 reforzado: todas las rutas de la app exigen `401` sin sesión salvo `POST /api/auth/login`, y `/api/comercial/ot` exige `403` sin capacidad `comercial`/`admin`) y CA-0.10 (20 requests HTTP simultáneas en `ot-api.test.ts`).
 
 | Pieza | Estado |
 | :--- | :--- |
 | Documento maestro v3.x | Escrito, revisado |
 | Repositorio y monorepo | Inicializado en `D:\sistema-afull`. Remoto: `https://github.com/Morochief/sistema-afull-v2.git` (rama `main`). `lint` y `typecheck` en verde. |
 | Migraciones `0001` a `0004` (SQL) | **Aplicadas con éxito en Supabase `afull-dev`** con Drizzle journal. |
-| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev`**. Loop 0 parcialmente verificado (18/18 tests en `loop0` + CA-0.10 HTTP en verde; pendientes `tests-dev.yml`, CA-0.1 en Vercel y CA-0.9 restore manual). |
-| Tests Loop 0 (Vitest) | **18/18 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, auth, seed idempotente con limpieza de `zz_test_%`, inmutabilidad y concurrencia por pooler + CA-0.10 HTTP). |
+| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev`**. Loop 0 parcialmente verificado (20/20 tests en `loop0` + CA-0.10 HTTP en verde; pendientes secrets de `tests-dev.yml`, CA-0.1 en Vercel y CA-0.9 restore manual). |
+| Tests Loop 0 (Vitest) | **20/20 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, auth, seed idempotente con limpieza de `zz_test_%`, inmutabilidad, concurrencia por pooler + `sinPipelining` y auditoría estática de parámetros). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
-| Workflows de GitHub Actions | `ci.yml` configurado y pusheado a `main` en GitHub. |
+| Workflows de GitHub Actions | `ci.yml` (en verde en cada push) y `tests-dev.yml` (diario + manual contra Supabase `dev` con guard `TEST_ENV=dev`). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar contra la API real. |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
 | Proyecto Vercel | Pendiente (a configurar con runtime Node en panel de Vercel). |
@@ -67,7 +67,15 @@ El proyecto anterior se rompió por acumulación de parches. Por eso se rediseñ
 
 ### Base de datos y seguridad
 - **Dos roles:** las migraciones corren como `postgres`; la API se conecta como `afull_api` (sin ser dueño de nada, sin DDL, `NOBYPASSRLS`). Así la inmutabilidad de la auditoría es real a nivel motor.
-- Conexión de la API por el **pooler de transacción (puerto 6543)** con `prepare: false` y `fetch_types: false`. En `postgres-js` (`postgres@3.4.9`) con `prepare: false`, toda consulta fuera de `sql.begin` debe tener al menos un parámetro ligado (p. ej. `WHERE ${true}` en predicados dinámicos vacíos) para que `describeFirst` sea `true` y la conexión no entre en estado `busy` haciendo pipelining de `Parse + Describe + Flush` (sin `Sync`) detrás de otra consulta a través de Supavisor. Migraciones y backups por conexión directa o pooler en modo sesión (puerto 5432 del pooler).
+- Conexión de la API por el **pooler de transacción (puerto 6543)** con `prepare: false`, `fetch_types: false` y el envoltorio `sinPipelining(sql)` en `apps/api/src/db/client.ts`. Migraciones y backups por conexión directa o pooler en modo sesión (puerto 5432 del pooler).
+- **Hallazgo del pooler de transacciones (Supavisor, puerto 6543) y reglas derivadas:**
+  - *Síntoma:* Al lanzar 20 requests HTTP simultáneas (`CA-0.10`) contra la API usando el pooler 6543, 14 completaban y 6 quedaban colgadas hasta el timeout de 30 s.
+  - *Hipótesis (basada en inspección de `postgres@3.4.9`):* Con `prepare: false`, las consultas con `>= 1` parámetro activan `describeFirst = true`, haciendo que `execute(q)` devuelva `false` y mueva la conexión a la cola `full` (una sola consulta en vuelo por ciclo `ReadyForQuery`). Las consultas con `0` parámetros dejan `describeFirst = false`, por lo que `execute(q)` devuelve `true` y mueve la conexión a la cola `busy`. Si llega otra consulta con parámetros mientras la conexión está en `busy`, `postgres-js` encadena (*pipelining*) `Parse + Describe + Flush` (sin `Sync`) en el mismo socket detrás de la consulta previa; al cruzar el límite de transacción en Supavisor, ese `Flush` sin `Sync` no recibe respuesta.
+  - *Mitigación de fondo (triple defensa):*
+    1. **Envoltorio `sinPipelining` en `apps/api/src/db/client.ts`:** asigna `options.onexecute = () => false` en toda `Query` de plantilla (sin alterar el `onexecute` interno que `sql.begin` usa en `BEGIN`), forzando a que `execute(q)` devuelva siempre `false` incluso en consultas de 0 parámetros. Probado en `tests/loop0/secuencia.test.ts` mezclando 20 consultas sin parámetros y 20 con parámetros en paralelo (~476 ms).
+    2. **Regla única de consultas parametrizadas + test de auditoría estática:** toda consulta ejecutada con `await sql/tx/runner/adminSql` en `apps/api/src` debe interpolar al menos un parámetro `${...}` (incluyendo `WHERE ${true}` en `dondeClientes`/`dondeOTs` y `siguiente_valor(${'CLI'})`). El test estático en `tests/loop0/secuencia.test.ts` recorre `apps/api/src/**/*.ts` y falla si se introduce una consulta sin parámetros.
+    3. **Ejecución en serie de archivos de test (`fileParallelism: false` en `vitest.config.ts`):** no "optimizar" activando paralelismo entre archivos. Todos los archivos de test atacan la misma base `dev`, comparten secuencias globales (como `OT-2026` en `ot.test.ts` CA-1.5, que exige 20 números contiguos sin que otro worker intercale OTs) y comparten el cupo de conexiones simultáneas del pooler de Supabase Free Tier.
+  - *Pendiente de verificar:* confirmar este comportamiento bajo funciones serverless en Vercel (donde múltiples instancias efímeras abren conexiones contra el puerto 6543) y evaluar si futuras versiones de `postgres` resuelven el pipelining con `prepare: false`.
 - **RLS activado en todas las tablas**, `REVOKE ALL` a `anon` y `authenticated`, y `REVOKE EXECUTE` sobre funciones (cierra el RPC de PostgREST).
 - **Regla para toda tabla nueva** (tres pasos, al final de cada migración):
   ```sql
@@ -179,8 +187,9 @@ Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "C
 
 ## 7. Verificaciones pendientes (cosas que se dieron por probables, no comprobadas)
 
-- [ ] Login y hash en Vercel: tiempo de 100–300 ms, incluyendo cold start; que `@node-rs/argon2` cargue en el runtime.
-- [ ] Términos del plan Vercel Hobby para uso comercial.
+- [ ] Login y hash en Vercel: tiempo de 100–300 ms, incluyendo cold start; que `@node-rs/argon2` cargue en el runtime Node de Vercel (CA-0.1).
+- [ ] Comportamiento del pooler de transacciones (puerto 6543 con `sinPipelining` y `fetch_types: false`) desde funciones serverless de Vercel bajo peticiones concurrentes.
+- [ ] Términos del plan Vercel Hobby para uso comercial antes de operar con personal real.
 - [x] Que Supabase permita `CREATE ROLE afull_api` y cómo se escribe el usuario en el pooler: **VERIFICADO**. Supabase permite `CREATE ROLE` sin error y el usuario en el transaction pooler 6543 es `afull_api.<ref-proyecto>`.
 - [x] Que el rol funcione con RLS como se espera (políticas por rol): **VERIFICADO**. 16 tests de Loop 0 en verde contra Supabase `dev`.
 - [ ] Si `pg_dump` conecta desde runners de GitHub (IPv4): usar pooler en modo sesión; confirmar.
@@ -248,14 +257,18 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 ## 12. Siguiente paso
 
-1. **Seed del primer admin y bloqueo `anon` (`42501`) cerrados (commit `2352a53`):** `scripts/seed-admin.ts`, `apps/api/src/modules/auth/seed.ts`, `tests/loop0/seed.test.ts` (desactiva solo los usuarios creados en el test y verifica `0` activos con prefijo `zz_test_%`) y `tests/loop0/anon.test.ts` en verde.
-2. **Loop 1A cerrado (Entregas 1 y 2 completadas):**
-   - **Entrega 1 (commit `b9d0d58`):** Clientes, sucursales, contactos (cambio atómico de principal) y marcas, `busqueda.test.ts` (CA-1.2 real) y `clientes.test.ts` (CA-1.1, CA-1.7 con `42501` en `DELETE` y CA-1.10 sobre `/api/clientes`).
-   - **Entrega 2:** Detalle de OT (`GET /api/comercial/ot/:id` con historial `ot_evento`, CA-1.8), filtro `clienteId` en `GET /api/comercial/ot`, edición de OT (`PATCH /api/comercial/ot/:id` con control `409`, cambio de sucursal permitiendo `null`, bloqueo `400` en `TERMINADO`/`CANCELADO` vía `esEstadoFinal` y auditoría `ot.editar`), recorrido global de `app.routes` (CA-1.10 reforzado) y 20 requests HTTP simultáneas por el pooler (CA-0.10 HTTP) en `tests/loop1/ot-api.test.ts`.
-   - **Métricas:** **34/34 tests en verde** (11 archivos). Los 5 archivos `.ts` más largos son `tests/loop1/clientes.test.ts` (213 líneas), `tests/loop1/ot-api.test.ts` (210), `apps/api/src/modules/comercial/ot.service.ts` (176), `apps/api/src/modules/clientes\service.ts` (174) y `apps/api/src/modules/clientes/subrecursos.service.ts` (164), todos bajo el límite de 250 líneas.
-3. **Siguiente paso inmediato — Loop 1B (Frontend Clientes y OT):**
+1. **Loop 1A cerrado y mitigación de fondo del pooler implementada:**
+   - Envoltorio `sinPipelining(sql)` en `apps/api/src/db/client.ts` + auditoría completa de consultas en `apps/api/src` + tests de concurrencia mixta (40 consultas con y sin parámetros) y auditoría estática en `tests/loop0/secuencia.test.ts`.
+   - Workflow `.github/workflows/tests-dev.yml` creado (ejecución diaria y manual contra Supabase `dev` con guard `TEST_ENV=dev`).
+   - **Métricas actuales:** **36/36 tests en verde** (11 archivos: 20 de Loop 0 y 16 de Loop 1A). Ningún archivo `.ts` supera las 213 líneas.
+2. **Paso intermedio recomendado antes de Loop 1B — Despliegue mínimo de la API en Vercel:**
+   - Desplegar la API actual en Vercel (runtime Node) exponiendo `/api/auth/login` y `GET /api/clientes` contra Supabase `afull-dev`.
+   - Verificar dos riesgos estructurales antes de construir el frontend:
+     a) Que `@node-rs/argon2` cargue sin problemas en el runtime de Vercel y cuánto tarda el login con cold start (**CA-0.1**, meta 100–300 ms).
+     b) Que el pooler 6543 (`sinPipelining` + `fetch_types: false`) responda de forma estable bajo invocaciones serverless concurrentes.
+   - Cargar los 4 secrets `DEV_*` (`DEV_DATABASE_URL_ADMIN`, `DEV_DATABASE_URL_API`, `DEV_SUPABASE_URL`, `DEV_SUPABASE_ANON_KEY`) en GitHub Actions y disparar `tests-dev.yml` manualmente para comprobar su ejecución en la nube.
+3. **Cierre completo de Loop 0 (Backups y Restore manual — CA-0.9):**
+   - Configurar `backup-db.yml` y `backup-storage.yml`, ejecutar un restore manual completo y documentarlo en `RESTAURAR.md`.
+4. **Inicio de Loop 1B (Frontend Clientes y OT):**
    - Diseñar y acordar primero el contrato de `TablaAdmin` (props, paginación fija de 25, buscador con debounce de 300 ms, filtros de estado/rango de fechas, estados de carga/error/vacío) y los hooks `useClientes` / `useOT`.
    - Implementar el shell en `apps/web` (Vite, TanStack Router y Query v5, login, layout en paleta Negro y Naranja `#090a0f` / `#111318` / `#ea580c`, radios 4–6 px), vistas y modales (un archivo por modal, ≤ 250 líneas).
-4. **Pendientes abiertos de Loop 0 (paralelos o al desplegar Loop 1B):**
-   - Configurar `tests-dev.yml`, `backup-db.yml`, `backup-storage.yml` y ejecutar el restore manual documentado en `RESTAURAR.md` (CA-0.9).
-   - Desplegar en Vercel (runtime Node) y medir el login con cold start (CA-0.1).

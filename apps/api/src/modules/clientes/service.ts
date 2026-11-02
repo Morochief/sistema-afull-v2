@@ -31,6 +31,7 @@ export function verificarUpdatedAt(actual: Date | string, enviado: string): void
 
 export function dondeClientes(f: Omit<FiltroClientes, 'pagina'>, runner: Sql = sql) {
   const patron = f.q?.trim() ? `%${escaparLike(f.q.trim())}%` : null;
+  // Se parametriza ${true} para que incluso sin filtros la consulta tenga >= 1 parámetro (describeFirst = true en pooler 6543)
   return runner`WHERE ${true}
     ${f.activo === undefined ? runner`` : runner`AND activo = ${f.activo}`}
     ${patron ? runner`AND (nombre ILIKE ${patron} OR razon_social ILIKE ${patron} OR ruc ILIKE ${patron} OR codigo ILIKE ${patron})` : runner``}
@@ -84,7 +85,7 @@ export type NuevoCliente = { nombre: string; razonSocial?: string; ruc?: string;
 export async function crearCliente(ctx: Ctx, d: NuevoCliente) {
   try {
     return await sql.begin(async (tx) => {
-      const [{ v }] = await tx`SELECT siguiente_valor('CLI') AS v`;
+      const [{ v }] = await tx`SELECT siguiente_valor(${'CLI'}) AS v`;
       const codigo = `CLI-${String(v).padStart(4, '0')}`;
       const [c] = await tx`
         INSERT INTO cliente (codigo, nombre, razon_social, ruc, telefono, email)

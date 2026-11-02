@@ -19,6 +19,7 @@ export type FiltroOT = {
 
 function dondeOTs(f: FiltroOT) {
   const patron = f.q?.trim() ? `%${escaparLike(f.q.trim())}%` : null;
+  // Se parametriza ${true} para que incluso sin filtros la consulta tenga >= 1 parámetro (describeFirst = true en pooler 6543)
   return sql`WHERE ${true}
     ${f.estado ? sql`AND estado = ${f.estado}` : sql``}
     ${f.clienteId ? sql`AND cliente_id = ${f.clienteId}` : sql``}
