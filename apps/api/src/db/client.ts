@@ -6,22 +6,22 @@ if (!url) {
 }
 
 /**
- * Desactiva el pipelining de consultas sobre una misma conexión cuando se usa el
- * pooler de transacciones (Supavisor, puerto 6543) con `prepare: false`.
+ * Mitigación para el pooler de transacciones (Supavisor, puerto 6543) con `prepare: false`.
+ * Estado: MITIGADO, CAUSA SIN CONFIRMAR (hipótesis basada en lectura de `postgres@3.4.9`).
  *
- * En `postgres@3.4.9`, las consultas con parámetros (`parameters.length >= 1`) activan
- * `describeFirst = true`, lo que hace que `execute(q)` devuelva `false` y mueva la
- * conexión a la cola `full` (estrictamente una consulta por ciclo `ReadyForQuery`).
- * En cambio, las consultas sin parámetros (`parameters.length === 0`) dejan
- * `describeFirst = false`, devolviendo `true` en `execute(q)` y moviendo la conexión a
- * la cola `busy`. Si llega otra consulta con parámetros mientras esa conexión está en
- * `busy`, `postgres-js` encadena `Parse + Describe + Flush` (sin `Sync`) en el mismo
- * socket detrás de la consulta previa, lo que queda colgado al cruzar el límite de
- * transacción del pooler.
+ * IMPORTANTE: Este envoltorio depende de `options.onexecute`, que es un detalle interno de
+ * `postgres-js` (`src/connection.js`) y NO forma parte de su API pública. Por ese motivo, la
+ * dependencia `postgres` está fijada en la versión exacta `"3.4.9"` (sin `^`) en `package.json`.
+ * No actualizar `postgres` sin correr contra Supabase `dev` el test de 40 consultas mixtas
+ * en `tests/loop0/secuencia.test.ts` y las 20 requests HTTP de `tests/loop1/ot-api.test.ts`.
  *
- * Al definir `options.onexecute = () => false` en toda `Query` creada por plantilla
- * (sin tocar el `onexecute` interno que `sql.begin` inyecta en `BEGIN`), `execute(q)`
- * devuelve siempre `false` y ninguna conexión entra en `busy`.
+ * Hipótesis: En `postgres@3.4.9`, las consultas con parámetros (`parameters.length >= 1`) activan
+ * `describeFirst = true`, haciendo que `execute(q)` devuelva `false` y mueva la conexión a `full`.
+ * Las consultas sin parámetros (`parameters.length === 0`) dejan `describeFirst = false`, devolviendo
+ * `true` en `execute(q)` y moviendo la conexión a `busy`, donde una consulta siguiente puede
+ * encadenarse en el mismo socket antes de recibir `ReadyForQuery`.
+ * Al definir `options.onexecute = () => false` en toda `Query` de plantilla (sin tocar el `onexecute`
+ * interno que `sql.begin` inyecta en `BEGIN`), `execute(q)` devuelve siempre `false`.
  */
 export function sinPipelining<T extends Sql>(instancia: T): T {
   return new Proxy(instancia, {

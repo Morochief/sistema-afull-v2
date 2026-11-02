@@ -3,13 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "scripts": {
+    "build": "tsc --noEmit false --outDir dist --rootDir src",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@afull/shared": "workspace:*",
     "@hono/node-server": "^1.13.7",
     "@node-rs/argon2": "^2.0.2",
     "hono": "^4.6.10",
-    "postgres": "^3.4.5",
+    "postgres": "3.4.9",
     "zod": "^3.23.8"
   },
   "devDependencies": { "@types/node": "^22.9.0", "typescript": "^5.6.3" }

@@ -7,6 +7,8 @@
     "node": ">=22"
   },
   "scripts": {
+    "prepare": "pnpm --filter @afull/shared build",
+    "build": "pnpm --filter @afull/shared build && pnpm --filter @afull/api build",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "pnpm -r run typecheck && tsc -p tests/tsconfig.json --noEmit",
     "test:loop0": "vitest run tests/loop0",
@@ -22,7 +24,7 @@
     "drizzle-kit": "^0.28.1",
     "drizzle-orm": "^0.36.4",
     "eslint": "^9.14.0",
-    "postgres": "^3.4.5",
+    "postgres": "3.4.9",
     "tsx": "^4.23.15",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.14.0",

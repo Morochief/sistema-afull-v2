@@ -21,10 +21,10 @@ Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cer
 | Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev`**. Loop 0 parcialmente verificado (20/20 tests en `loop0` + CA-0.10 HTTP en verde; pendientes secrets de `tests-dev.yml`, CA-0.1 en Vercel y CA-0.9 restore manual). |
 | Tests Loop 0 (Vitest) | **20/20 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, auth, seed idempotente con limpieza de `zz_test_%`, inmutabilidad, concurrencia por pooler + `sinPipelining` y auditoría estática de parámetros). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
-| Workflows de GitHub Actions | `ci.yml` (en verde en cada push) y `tests-dev.yml` (diario + manual contra Supabase `dev` con guard `TEST_ENV=dev`). |
+| Workflows de GitHub Actions | `ci.yml` (en verde en cada push) y `tests-dev.yml` (**escrito, sin ejecutar**; requiere cargar los 4 secrets `DEV_*` en la UI de GitHub y disparar `workflow_dispatch`). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar contra la API real. |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
-| Proyecto Vercel | Pendiente (a configurar con runtime Node en panel de Vercel). |
+| Proyecto Vercel | Entrypoint listo (`api/index.js`, `apps/api/src/vercel.ts`, `vercel.json` en `gru1`, `pnpm build` precompilando `@afull/shared` y `@afull/api`). Pendiente de desplegar y medir en el panel de Vercel. |
 
 ---
 
@@ -68,14 +68,14 @@ El proyecto anterior se rompió por acumulación de parches. Por eso se rediseñ
 ### Base de datos y seguridad
 - **Dos roles:** las migraciones corren como `postgres`; la API se conecta como `afull_api` (sin ser dueño de nada, sin DDL, `NOBYPASSRLS`). Así la inmutabilidad de la auditoría es real a nivel motor.
 - Conexión de la API por el **pooler de transacción (puerto 6543)** con `prepare: false`, `fetch_types: false` y el envoltorio `sinPipelining(sql)` en `apps/api/src/db/client.ts`. Migraciones y backups por conexión directa o pooler en modo sesión (puerto 5432 del pooler).
-- **Hallazgo del pooler de transacciones (Supavisor, puerto 6543) y reglas derivadas:**
+- **Hallazgo del pooler de transacciones (Supavisor, puerto 6543) — Estado: MITIGADO, CAUSA SIN CONFIRMAR:**
   - *Síntoma:* Al lanzar 20 requests HTTP simultáneas (`CA-0.10`) contra la API usando el pooler 6543, 14 completaban y 6 quedaban colgadas hasta el timeout de 30 s.
-  - *Hipótesis (basada en inspección de `postgres@3.4.9`):* Con `prepare: false`, las consultas con `>= 1` parámetro activan `describeFirst = true`, haciendo que `execute(q)` devuelva `false` y mueva la conexión a la cola `full` (una sola consulta en vuelo por ciclo `ReadyForQuery`). Las consultas con `0` parámetros dejan `describeFirst = false`, por lo que `execute(q)` devuelve `true` y mueve la conexión a la cola `busy`. Si llega otra consulta con parámetros mientras la conexión está en `busy`, `postgres-js` encadena (*pipelining*) `Parse + Describe + Flush` (sin `Sync`) en el mismo socket detrás de la consulta previa; al cruzar el límite de transacción en Supavisor, ese `Flush` sin `Sync` no recibe respuesta.
-  - *Mitigación de fondo (triple defensa):*
-    1. **Envoltorio `sinPipelining` en `apps/api/src/db/client.ts`:** asigna `options.onexecute = () => false` en toda `Query` de plantilla (sin alterar el `onexecute` interno que `sql.begin` usa en `BEGIN`), forzando a que `execute(q)` devuelva siempre `false` incluso en consultas de 0 parámetros. Probado en `tests/loop0/secuencia.test.ts` mezclando 20 consultas sin parámetros y 20 con parámetros en paralelo (~476 ms).
-    2. **Regla única de consultas parametrizadas + test de auditoría estática:** toda consulta ejecutada con `await sql/tx/runner/adminSql` en `apps/api/src` debe interpolar al menos un parámetro `${...}` (incluyendo `WHERE ${true}` en `dondeClientes`/`dondeOTs` y `siguiente_valor(${'CLI'})`). El test estático en `tests/loop0/secuencia.test.ts` recorre `apps/api/src/**/*.ts` y falla si se introduce una consulta sin parámetros.
-    3. **Ejecución en serie de archivos de test (`fileParallelism: false` en `vitest.config.ts`):** no "optimizar" activando paralelismo entre archivos. Todos los archivos de test atacan la misma base `dev`, comparten secuencias globales (como `OT-2026` en `ot.test.ts` CA-1.5, que exige 20 números contiguos sin que otro worker intercale OTs) y comparten el cupo de conexiones simultáneas del pooler de Supabase Free Tier.
-  - *Pendiente de verificar:* confirmar este comportamiento bajo funciones serverless en Vercel (donde múltiples instancias efímeras abren conexiones contra el puerto 6543) y evaluar si futuras versiones de `postgres` resuelven el pipelining con `prepare: false`.
+  - *Hipótesis (basada en lectura de `postgres@3.4.9`, sin traza aislada de protocolo en Supavisor):* Con `prepare: false`, las consultas con `>= 1` parámetro activan `describeFirst = true`, haciendo que `execute(q)` devuelva `false` y mueva la conexión a la cola `full` (una sola consulta en vuelo por ciclo `ReadyForQuery`). Las consultas con `0` parámetros dejan `describeFirst = false`, por lo que `execute(q)` devuelve `true` y mueve la conexión a la cola `busy`, donde una consulta siguiente puede encadenarse en el mismo socket antes de recibir `ReadyForQuery`. Lo que está demostrado empíricamente es que con las mitigaciones el síntoma desaparece.
+  - *Mitigación aplicada y cautelas:*
+    1. **Envoltorio `sinPipelining` en `apps/api/src/db/client.ts` y versión fija `postgres@3.4.9`:** asigna `options.onexecute = () => false` en toda `Query` de plantilla (sin alterar el `onexecute` interno que `sql.begin` usa en `BEGIN`), forzando a que `execute(q)` devuelva siempre `false` incluso en consultas de 0 parámetros. **Cautela:** `options.onexecute` es un detalle interno de `postgres-js`, no API pública; por ello `postgres` está fijado en `"3.4.9"` (sin `^`) en `package.json`, y el test de 40 consultas mixtas en `tests/loop0/secuencia.test.ts` detecta cualquier regresión si se decide actualizar la librería.
+    2. **Regla de consultas parametrizadas + test estático:** toda consulta ejecutada con `await sql/tx/runner/adminSql` en `apps/api/src` interpola al menos un parámetro `${...}` (incluyendo `WHERE ${true}` en `dondeClientes`/`dondeOTs` y `siguiente_valor(${'CLI'})`). **Cautela:** el test estático por expresión regular en `tests/loop0/secuencia.test.ts` es una red útil pero tiene falsos negativos (no ve `sql.unsafe` ni fragmentos reutilizados), por lo que no sustituye a `sinPipelining`.
+    3. **Ejecución en serie de archivos de test (`fileParallelism: false` en `vitest.config.ts`):** no "optimizar" activando paralelismo entre archivos. Todos los archivos de test atacan la misma base `dev`, comparten secuencias globales (como `OT-2026` en `ot.test.ts` CA-1.5) y comparten el cupo de conexiones simultáneas del pooler de Supabase Free Tier.
+  - *Pendiente de verificar:* confirmar este comportamiento bajo funciones serverless en Vercel y verificar si la corrida diaria de `tests-dev.yml` basta como actividad para evitar que Supabase pause `dev` por inactividad.
 - **RLS activado en todas las tablas**, `REVOKE ALL` a `anon` y `authenticated`, y `REVOKE EXECUTE` sobre funciones (cierra el RPC de PostgREST).
 - **Regla para toda tabla nueva** (tres pasos, al final de cada migración):
   ```sql
@@ -257,18 +257,15 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 ## 12. Siguiente paso
 
-1. **Loop 1A cerrado y mitigación de fondo del pooler implementada:**
-   - Envoltorio `sinPipelining(sql)` en `apps/api/src/db/client.ts` + auditoría completa de consultas en `apps/api/src` + tests de concurrencia mixta (40 consultas con y sin parámetros) y auditoría estática en `tests/loop0/secuencia.test.ts`.
-   - Workflow `.github/workflows/tests-dev.yml` creado (ejecución diaria y manual contra Supabase `dev` con guard `TEST_ENV=dev`).
-   - **Métricas actuales:** **36/36 tests en verde** (11 archivos: 20 de Loop 0 y 16 de Loop 1A). Ningún archivo `.ts` supera las 213 líneas.
-2. **Paso intermedio recomendado antes de Loop 1B — Despliegue mínimo de la API en Vercel:**
-   - Desplegar la API actual en Vercel (runtime Node) exponiendo `/api/auth/login` y `GET /api/clientes` contra Supabase `afull-dev`.
-   - Verificar dos riesgos estructurales antes de construir el frontend:
-     a) Que `@node-rs/argon2` cargue sin problemas en el runtime de Vercel y cuánto tarda el login con cold start (**CA-0.1**, meta 100–300 ms).
-     b) Que el pooler 6543 (`sinPipelining` + `fetch_types: false`) responda de forma estable bajo invocaciones serverless concurrentes.
-   - Cargar los 4 secrets `DEV_*` (`DEV_DATABASE_URL_ADMIN`, `DEV_DATABASE_URL_API`, `DEV_SUPABASE_URL`, `DEV_SUPABASE_ANON_KEY`) en GitHub Actions y disparar `tests-dev.yml` manualmente para comprobar su ejecución en la nube.
-3. **Cierre completo de Loop 0 (Backups y Restore manual — CA-0.9):**
-   - Configurar `backup-db.yml` y `backup-storage.yml`, ejecutar un restore manual completo y documentarlo en `RESTAURAR.md`.
-4. **Inicio de Loop 1B (Frontend Clientes y OT):**
-   - Diseñar y acordar primero el contrato de `TablaAdmin` (props, paginación fija de 25, buscador con debounce de 300 ms, filtros de estado/rango de fechas, estados de carga/error/vacío) y los hooks `useClientes` / `useOT`.
-   - Implementar el shell en `apps/web` (Vite, TanStack Router y Query v5, login, layout en paleta Negro y Naranja `#090a0f` / `#111318` / `#ea580c`, radios 4–6 px), vistas y modales (un archivo por modal, ≤ 250 líneas).
+1. **Loop 1A cerrado, `postgres@3.4.9` fijado y entrypoint de Vercel preparado:**
+   - Envoltorio `sinPipelining(sql)` en `apps/api/src/db/client.ts` con versión exacta `"postgres": "3.4.9"` (sin `^`), auditoría de consultas en `apps/api/src` y tests en `tests/loop0/secuencia.test.ts` (**36/36 tests en verde**).
+   - Entrypoint para Vercel Node runtime listo: `apps/api/src/vercel.ts` (`handle(app)` de `@hono/node-server/vercel`), `api/index.js` (`runtime: 'nodejs'`) y `vercel.json` (`regions: ["gru1"]`, `buildCommand: "pnpm run build"` que compila `@afull/shared` y `@afull/api` a JS puro en `dist/` para evitar fallos de empaquetado del workspace).
+   - Workflow `.github/workflows/tests-dev.yml` **escrito, sin ejecutar**: el usuario debe cargar manualmente los 4 secrets (`DEV_DATABASE_URL_ADMIN`, `DEV_DATABASE_URL_API`, `DEV_SUPABASE_URL`, `DEV_SUPABASE_ANON_KEY`) en **Settings → Secrets and variables → Actions** de GitHub y disparar `workflow_dispatch`.
+2. **Paso intermedio actual — Despliegue mínimo de la API en Vercel (apuntando a `dev`) y mediciones:**
+   - Configurar en el panel de Vercel las variables de entorno (`DATABASE_URL` con el pooler 6543 de `afull-dev` y `APP_ORIGIN` con la URL final del despliegue; revisar Deployment Protection y región `gru1` São Paulo).
+   - Usar un usuario de prueba en `dev` (desactivándolo al terminar) y medir:
+     1) Si `@node-rs/argon2` carga en el runtime de Vercel (sí/no y error si falla).
+     2) Tiempo de `POST /api/auth/login` en al menos 10 muestras, separando la 1.ª (cold start) de las 9 siguientes (objetivo: 100–300 ms, **CA-0.1**).
+     3) 20 requests simultáneas a `GET /api/clientes` con sesión válida (cuántas responden `200` y tiempo total).
+     4) Un `POST /api/auth/login` con `Origin` incorrecto que responda `403`, y presencia de `Secure` y `HttpOnly` en la cookie `Set-Cookie`.
+3. **Cierre completo de Loop 0 (Backups y Restore manual — CA-0.9) e inicio de Loop 1B (`TablaAdmin` y `useClientes`).**
