@@ -3,8 +3,12 @@ import { admin, cerrarConexiones } from './helpers.js';
 import { post } from './auth-helpers.js';
 import { sembrarAdmin } from '../../apps/api/src/modules/auth/seed.js';
 
+const usuariosCreados: string[] = [];
+
 afterAll(async () => {
-  await admin`UPDATE usuario SET activo = false WHERE username LIKE 'zz_test_%'`;
+  if (usuariosCreados.length > 0) {
+    await admin`UPDATE usuario SET activo = false WHERE username = ANY(${usuariosCreados})`;
+  }
   await cerrarConexiones();
 });
 
@@ -16,6 +20,7 @@ describe('Seed del primer administrador (idempotencia, auditoría y login)', () 
 
   it('ejecutado dos veces crea una sola fila, una sola capacidad admin, audita y permite login HTTP real', async () => {
     const username = `zz_test_admin_${crypto.randomUUID().slice(0, 8)}`;
+    usuariosCreados.push(username);
     const passOriginal = 'ClaveSeguraAdmin2026!';
     const passSegunda = 'OtraClaveQueNoDebePisar2026!';
 
@@ -59,8 +64,12 @@ describe('Seed del primer administrador (idempotencia, auditoría y login)', () 
     expect(setCookie).toContain('afull_session=');
     expect(setCookie.toLowerCase()).toContain('httponly');
 
-    // Desactivar el admin de prueba al finalizar para no acumular admins activos con claves conocidas
+    // Desactivar el admin de prueba al finalizar y verificar que 0 admins zz_test_% queden activos
     await admin`UPDATE usuario SET activo = false WHERE id = ${r1.usuarioId}`;
     await admin`DELETE FROM sesion WHERE usuario_id = ${r1.usuarioId}`;
+    const [{ activos }] = await admin`
+      SELECT count(*)::int AS activos FROM usuario WHERE username LIKE 'zz_test_%' AND activo = true
+    `;
+    expect(activos).toBe(0);
   });
 });

@@ -1,32 +1,62 @@
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
-import { puedeTransicionar, type EstadoOT } from '@afull/shared';
+import { puedeTransicionar, esEstadoFinal, type EstadoOT } from '@afull/shared';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import { TAM_PAGINA, desplazamiento, escaparLike, armarPagina } from '../../lib/paginacion.js';
-import type { Ctx } from '../clientes/service.js';
+import { type Ctx, esperarAvanceReloj, verificarUpdatedAt } from '../clientes/service.js';
 
 const anioAsuncion = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion', year: 'numeric' }).format(new Date());
 
-export type FiltroOT = { pagina: number; q?: string; estado?: EstadoOT; desde?: string; hasta?: string };
+export type FiltroOT = {
+  pagina: number;
+  q?: string;
+  estado?: EstadoOT;
+  clienteId?: string;
+  desde?: string;
+  hasta?: string;
+};
 
-export async function listarOTs(f: FiltroOT) {
+function dondeOTs(f: FiltroOT) {
   const patron = f.q?.trim() ? `%${escaparLike(f.q.trim())}%` : null;
-  const donde = sql`WHERE true
+  return sql`WHERE ${true}
     ${f.estado ? sql`AND estado = ${f.estado}` : sql``}
+    ${f.clienteId ? sql`AND cliente_id = ${f.clienteId}` : sql``}
     ${patron ? sql`AND (titulo ILIKE ${patron} OR codigo_ot ILIKE ${patron})` : sql``}
     ${f.desde ? sql`AND created_at >= (${f.desde}::date)::timestamp AT TIME ZONE 'America/Asuncion'` : sql``}
     ${f.hasta ? sql`AND created_at < ((${f.hasta}::date + 1)::timestamp AT TIME ZONE 'America/Asuncion')` : sql``}`;
+}
 
+export async function listarOTs(f: FiltroOT) {
   try {
-    const [{ total }] = await sql`SELECT count(*)::int AS total FROM orden_trabajo ${donde}`;
+    const [{ total }] = await sql`SELECT count(*)::int AS total FROM orden_trabajo ${dondeOTs(f)}`;
     const items = await sql`
-      SELECT id, codigo_ot, cliente_id, sucursal_id, titulo, estado, fecha_prometida, created_at
-      FROM orden_trabajo ${donde}
+      SELECT id, codigo_ot, cliente_id, sucursal_id, titulo, descripcion, estado, fecha_prometida, created_at, updated_at
+      FROM orden_trabajo ${dondeOTs(f)}
       ORDER BY created_at DESC, id LIMIT ${TAM_PAGINA} OFFSET ${desplazamiento(f.pagina)}
     `;
     return armarPagina([...items], total, f.pagina);
   } catch (e) {
+    traducirErrorPg(e);
+  }
+}
+
+export async function obtenerDetalleOT(id: string) {
+  try {
+    const [ot] = await sql`
+      SELECT id, codigo_ot, cliente_id, sucursal_id, titulo, descripcion, estado, fecha_prometida, creado_por, created_at, updated_at
+      FROM orden_trabajo WHERE id = ${id}
+    `;
+    if (!ot) throw new ErrorApp(404, 'OT no encontrada');
+
+    const eventos = await sql`
+      SELECT id, orden_trabajo_id, estado_anterior, estado_nuevo, autor_id, comentario, created_at
+      FROM ot_evento WHERE orden_trabajo_id = ${id}
+      ORDER BY created_at ASC, id ASC
+    `;
+    return { ...ot, eventos: [...eventos] };
+  } catch (e) {
+    if (e instanceof ErrorApp) throw e;
     traducirErrorPg(e);
   }
 }
@@ -58,6 +88,54 @@ export async function crearOT(ctx: Ctx, d: NuevaOT) {
       `;
       await auditar(
         { usuarioId: ctx.usuarioId, accion: 'ot.crear', recurso: 'orden_trabajo', recursoId: ot.id, ip: ctx.ip, metadata: { codigo } },
+        tx,
+      );
+      return ot;
+    });
+  } catch (e) {
+    if (e instanceof ErrorApp) throw e;
+    traducirErrorPg(e);
+  }
+}
+
+export type PatchOT = {
+  titulo?: string;
+  descripcion?: string | null;
+  fechaPrometida?: string | null;
+  sucursalId?: string | null;
+  updatedAt: string;
+};
+
+export async function editarOT(ctx: Ctx, id: string, d: PatchOT) {
+  await esperarAvanceReloj(d.updatedAt);
+  try {
+    return await sql.begin(async (tx) => {
+      const [actual] = await tx`SELECT * FROM orden_trabajo WHERE id = ${id} FOR UPDATE`;
+      if (!actual) throw new ErrorApp(404, 'OT no encontrada');
+      verificarUpdatedAt(actual.updated_at, d.updatedAt);
+
+      if (esEstadoFinal(actual.estado as EstadoOT)) {
+        throw new ErrorApp(400, `No se puede editar una OT en estado final (${actual.estado})`);
+      }
+
+      if (d.sucursalId !== undefined && d.sucursalId !== null) {
+        const [s] = await tx`SELECT activo FROM sucursal WHERE id = ${d.sucursalId} AND cliente_id = ${actual.cliente_id}`;
+        if (!s?.activo) throw new ErrorApp(400, 'Sucursal inexistente, inactiva o de otro cliente');
+      }
+
+      const titulo = d.titulo ?? actual.titulo;
+      const descripcion = d.descripcion === undefined ? actual.descripcion : d.descripcion;
+      const fechaPrometida = d.fechaPrometida === undefined ? actual.fecha_prometida : d.fechaPrometida;
+      const sucursalId = d.sucursalId === undefined ? actual.sucursal_id : d.sucursalId;
+
+      const [ot] = await tx`
+        UPDATE orden_trabajo
+        SET titulo = ${titulo}, descripcion = ${descripcion}, fecha_prometida = ${fechaPrometida}, sucursal_id = ${sucursalId}
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      await auditar(
+        { usuarioId: ctx.usuarioId, accion: 'ot.editar', recurso: 'orden_trabajo', recursoId: id, ip: ctx.ip, metadata: { titulo, sucursalId } },
         tx,
       );
       return ot;

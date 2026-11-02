@@ -7,20 +7,20 @@ Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cer
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
-**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las 4 consultas de comprobación dieron los resultados exactos esperados y `pnpm test` pasa **29 de 29 tests en verde** (10 archivos) contra Supabase `dev`.
-- **Loop 0 parcialmente verificado:** 18/18 tests en verde (incluye seed idempotente del primer admin en `scripts/seed-admin.ts` + `seed.test.ts`, y bloqueo real de `anon` con SQLSTATE `42501` en `anon.test.ts`). Queda abierto: CA-0.10 (prueba de 20 requests HTTP simultáneas contra la API Hono), CA-0.1 (medición de login con cold start en Vercel post-deploy), CA-0.9 (backups y restore manual documentado en `RESTAURAR.md`) y workflows de backup/`tests-dev.yml`.
-- **Loop 1A parcialmente verificado (Entrega 1 cerrada, falta Entrega 2):** 11/11 tests de `tests/loop1` en verde contra Supabase `dev`.
-  - **Entrega 1 (cerrada en commit `b9d0d58`):** Clientes (listado con `q`, `activo`, `desde`/`hasta`, detalle completo, edición con `updatedAt` → `409`, desactivar/reactivar advirtiendo OTs abiertas), sucursales (`sucursales.service.ts`), contactos con cambio atómico de contacto principal y marcas (`subrecursos.service.ts`), benchmark CA-1.2 ejecutando `queryListarClientes` real (`busqueda.test.ts`), y `clientes.test.ts` cubriendo CA-1.1 (paginación 25), CA-1.7 (bloqueo `DELETE` real con `42501`) y CA-1.10 (recorrido dinámico de `app.routes` en `/api/clientes`).
-  - **Entrega 2 (pendiente para cerrar Loop 1A):** Detalle de OT (`GET /api/comercial/ot/:id` con historial `ot_evento`), filtro por `clienteId` en `listarOTs`, edición de OT (`PATCH /api/comercial/ot/:id` exigiendo `updatedAt` → `409` y bloqueando con `400` si está en estado final `TERMINADO` o `CANCELADO`), y CA-1.1 / CA-1.10 para `/api/comercial/ot`.
+**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las 4 consultas de comprobación dieron los resultados exactos esperados y `pnpm test` pasa **34 de 34 tests en verde** (11 archivos) contra Supabase `dev` y contra PostgreSQL 17 en GitHub Actions CI.
+- **Loop 0 parcialmente verificado:** 18/18 tests en `tests/loop0` en verde + CA-0.10 HTTP verificado en `tests/loop1/ot-api.test.ts` (20 requests HTTP simultáneas por la API Hono y el transaction pooler 6543 en ~1,6 s sin errores). Incluye seed idempotente del primer admin (`scripts/seed-admin.ts` + `seed.test.ts`, verificando `0` usuarios `zz_test_%` activos tras los tests) y bloqueo real de `anon` con SQLSTATE `42501` (`anon.test.ts`). Queda abierto para cerrar Loop 0 al 100%: workflow `tests-dev.yml`, backups y restore manual documentado en `RESTAURAR.md` (CA-0.9) y deploy en Vercel para medir CA-0.1 (login con cold start).
+- **Loop 1A cerrado (CA-1.1 a CA-1.10 verificados):** 16/16 tests de `tests/loop1` en verde contra Supabase `dev` y en CI.
+  - **Entrega 1 (commit `b9d0d58`):** Clientes (listado con `q`, `activo`, `desde`/`hasta`, detalle completo, edición con `updatedAt` → `409`, desactivar/reactivar advirtiendo OTs abiertas), sucursales (`sucursales.service.ts`), contactos con cambio atómico de contacto principal y marcas (`subrecursos.service.ts`), benchmark CA-1.2 ejecutando `queryListarClientes` real (`busqueda.test.ts`), y `clientes.test.ts` cubriendo CA-1.1 (paginación 25), CA-1.7 (bloqueo `DELETE` real con `42501`) y CA-1.10 en `/api/clientes`.
+  - **Entrega 2 (cerrada):** Detalle de OT (`GET /api/comercial/ot/:id` devolviendo la OT más el historial `ot_evento` ordenado por `created_at ASC, id ASC` coincidente con `estado`, CA-1.8), filtro por `clienteId` en `listarOTs`, edición de OT (`PATCH /api/comercial/ot/:id` con `SELECT ... FOR UPDATE`, exigiendo `updatedAt` → `409`, validando sucursal activa del cliente o `null`, auditando `ot.editar` en la misma transacción y bloqueando con `400` mediante `esEstadoFinal` si está en `TERMINADO` o `CANCELADO`), recorrido dinámico global de `app.routes` (CA-1.10 reforzado: todas las rutas de la app exigen `401` sin sesión salvo `POST /api/auth/login`, y `/api/comercial/ot` exige `403` sin capacidad `comercial`/`admin`) y CA-0.10 (20 requests HTTP simultáneas en `ot-api.test.ts`).
 
 | Pieza | Estado |
 | :--- | :--- |
 | Documento maestro v3.x | Escrito, revisado |
 | Repositorio y monorepo | Inicializado en `D:\sistema-afull`. Remoto: `https://github.com/Morochief/sistema-afull-v2.git` (rama `main`). `lint` y `typecheck` en verde. |
 | Migraciones `0001` a `0004` (SQL) | **Aplicadas con éxito en Supabase `afull-dev`** con Drizzle journal. |
-| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev`**. Loop 0 parcialmente verificado (18/18 tests en verde; pendientes CA-0.1 en Vercel, CA-0.9 restore manual y CA-0.10 HTTP concurrente). |
-| Tests Loop 0 (Vitest) | **18/18 en verde contra Supabase `dev`** (RLS, anon key `42501`, auth, seed idempotente, inmutabilidad y concurrencia por pooler). |
-| Tests Loop 1 (Vitest) | **11/11 en verde contra Supabase `dev`** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`). Entrega 1 cerrada; falta Entrega 2 (detalle/edición OT y CA-1.10 en OT) para cerrar Loop 1A. |
+| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev`**. Loop 0 parcialmente verificado (18/18 tests en `loop0` + CA-0.10 HTTP en verde; pendientes `tests-dev.yml`, CA-0.1 en Vercel y CA-0.9 restore manual). |
+| Tests Loop 0 (Vitest) | **18/18 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, auth, seed idempotente con limpieza de `zz_test_%`, inmutabilidad y concurrencia por pooler + CA-0.10 HTTP). |
+| Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
 | Workflows de GitHub Actions | `ci.yml` configurado y pusheado a `main` en GitHub. |
 | `backup-storage.mjs` | Escrito de memoria, sin probar contra la API real. |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
@@ -67,7 +67,7 @@ El proyecto anterior se rompió por acumulación de parches. Por eso se rediseñ
 
 ### Base de datos y seguridad
 - **Dos roles:** las migraciones corren como `postgres`; la API se conecta como `afull_api` (sin ser dueño de nada, sin DDL, `NOBYPASSRLS`). Así la inmutabilidad de la auditoría es real a nivel motor.
-- Conexión de la API por el **pooler de transacción (puerto 6543)** con `prepare: false`. Migraciones y backups por conexión directa o pooler en modo sesión (puerto 5432 del pooler).
+- Conexión de la API por el **pooler de transacción (puerto 6543)** con `prepare: false` y `fetch_types: false`. En `postgres-js` (`postgres@3.4.9`) con `prepare: false`, toda consulta fuera de `sql.begin` debe tener al menos un parámetro ligado (p. ej. `WHERE ${true}` en predicados dinámicos vacíos) para que `describeFirst` sea `true` y la conexión no entre en estado `busy` haciendo pipelining de `Parse + Describe + Flush` (sin `Sync`) detrás de otra consulta a través de Supavisor. Migraciones y backups por conexión directa o pooler en modo sesión (puerto 5432 del pooler).
 - **RLS activado en todas las tablas**, `REVOKE ALL` a `anon` y `authenticated`, y `REVOKE EXECUTE` sobre funciones (cierra el RPC de PostgREST).
 - **Regla para toda tabla nueva** (tres pasos, al final de cada migración):
   ```sql
@@ -146,30 +146,30 @@ Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guar
 Orden: 0 Base → 1 Clientes + OT → 2 Tareas, cronómetro y Control en Vivo → 3 Campo offline + flota → 4 Stock → 5 Costeo → 6 Pre-prensa → 7 RR.HH. → 8 Portal B2B.
 (Costeo va temprano porque es lo que justifica el sistema.)
 
-### Loop 0: Base (especificado, sin ejecutar)
+### Loop 0: Base (parcialmente verificado; 18/18 tests + CA-0.10 HTTP en verde)
 
 Tareas: 1 decidir API (Vercel Node, cerrada) · 2 repo + reglas de lint · 3 dos proyectos Supabase · 4 conexión y migraciones · 5 migraciones 0001–0003 · 6 auth · 7 capacidades + seed del primer admin · 8 auditoría · 9 CI · 10 backups · 11 deploy y prueba de humo.
 
 Criterios de aceptación:
-- **CA-0.1** Login con Argon2id, cookie segura, fila en `sesion`; **medido en el entorno desplegado**.
-- **CA-0.2** Desactivar un usuario invalida su cookie en la siguiente request (401).
-- **CA-0.4** Sin la capacidad: 403.
-- **CA-0.5** Toda acción sensible genera `evento_auditoria`; si la mutación falla, la auditoría se revierte con ella.
-- **CA-0.6** CI: `tsc --noEmit`, lint y Vitest en verde.
-- **CA-0.7** Con la `anon key`, ninguna tabla responde ni acepta escrituras (test recorre `information_schema`); las funciones no se invocan por RPC.
-- **CA-0.8** `UPDATE`/`DELETE`/`TRUNCATE` sobre `evento_auditoria` fallan, y `afull_api` no puede hacer `DROP`/`DISABLE TRIGGER`.
-- **CA-0.9** Backup diario con restore verificado automáticamente **más un restore manual completo hecho una vez por una persona**. Sin ese restore manual, no está cumplido.
-- **CA-0.10** 20 requests simultáneas por el pooler sin errores de prepared statements ni de conexiones.
-- **CA-0.11** El CI falla si algún archivo supera 250 líneas.
+- **CA-0.1** Login con Argon2id, cookie segura, fila en `sesion`; **medido en el entorno desplegado** (pendiente deploy en Vercel).
+- **CA-0.2** Desactivar un usuario invalida su cookie en la siguiente request (401). (**Verificado**)
+- **CA-0.4** Sin la capacidad: 403. (**Verificado**)
+- **CA-0.5** Toda acción sensible genera `evento_auditoria`; si la mutación falla, la auditoría se revierte con ella. (**Verificado**)
+- **CA-0.6** CI: `tsc --noEmit`, lint y Vitest en verde. (**Verificado en GitHub Actions**)
+- **CA-0.7** Con la `anon key`, ninguna tabla responde ni acepta escrituras (test recorre `information_schema` y verifica error `42501` en PostgREST); las funciones no se invocan por RPC. (**Verificado**)
+- **CA-0.8** `UPDATE`/`DELETE`/`TRUNCATE` sobre `evento_auditoria` fallan, y `afull_api` no puede hacer `DROP`/`DISABLE TRIGGER`. (**Verificado**)
+- **CA-0.9** Backup diario con restore verificado automáticamente **más un restore manual completo hecho una vez por una persona**. Sin ese restore manual, no está cumplido. (Pendiente)
+- **CA-0.10** 20 requests simultáneas por el pooler sin errores de prepared statements ni de conexiones. (**Verificado a nivel DB y con 20 requests HTTP simultáneas en `ot-api.test.ts`**)
+- **CA-0.11** El CI falla si algún archivo supera 250 líneas. (**Verificado**)
 - **CA-0.3 (cronómetros concurrentes) se movió al Loop 2**: necesita tablas que aún no existen.
 
-Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service}.test.ts`. El test de la `anon key` no corre en CI (necesita la API REST de Supabase); corre a diario contra `dev` en `tests-dev.yml`. Los tests tienen un guard `TEST_ENV=dev` y **nunca se corren contra `prod`**.
+Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,seed}.test.ts`. El test de la `anon key` no corre en CI (necesita la API REST de Supabase); correrá a diario contra `dev` en `tests-dev.yml` (pendiente). Los tests tienen un guard `TEST_ENV=dev` y **nunca se corren contra `prod`**.
 
-### Loop 1: Clientes y OT (especificado, sin ejecutar)
+### Loop 1: Clientes y OT (Loop 1A cerrado; Loop 1B pendiente)
 
-Partido en dos. **1A** (base y API): migración `0004`, esquemas y máquina de estados en `shared`, infraestructura común (`ErrorApp`, `traducirErrorPg`, paginación), módulos `clientes` y `comercial`, tests. **1B** (frontend): shell (Vite, Router, login, layout), componente genérico `TablaAdmin`, hooks `useClientes`/`useOT`, modales, deploy a `dev`. Cerrar 1A con CI en verde antes de empezar 1B.
+Partido en dos. **1A** (base y API, **CERRADO**): migración `0004`, esquemas y máquina de estados en `shared` (`puedeTransicionar`, `esEstadoFinal`), infraestructura común (`ErrorApp`, `traducirErrorPg`, paginación), módulos `clientes` y `comercial`, tests (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **1B** (frontend, **pendiente**): shell (Vite, Router, login, layout), componente genérico `TablaAdmin`, hooks `useClientes`/`useOT`, modales, deploy a `dev`.
 
-Criterios: CA-1.1 paginación fija de 25 · CA-1.2 búsqueda < 100 ms **en la base** con 5000 registros · CA-1.3 GPS en Paraguay (Zod y base) · CA-1.4 máquina de estados aplicada (400 salto inválido, 409 dato viejo) · CA-1.5 código de OT sin duplicados ni huecos bajo concurrencia · CA-1.6 sucursal del cliente de la OT · CA-1.7 sin borrado físico · CA-1.8 `ot_evento` en la misma transacción y coherente con el estado · CA-1.9 test de `anon key` sigue en verde · CA-1.10 todos los endpoints exigen `comercial` o `admin` · CA-1.11 (1B) tabla con debounce 300 ms, filtros y paginador, archivos ≤ 250 líneas.
+Criterios 1A (**todos verificados**): CA-1.1 paginación fija de 25 · CA-1.2 búsqueda < 100 ms **en la base** con 5000 registros (nota: con 5000 filas el planner puede optar por Seq Scan en ~12 ms; validar índice GIN trigram con ≥ 50.000 filas o `enable_seqscan = off` si se requiere forzar Bitmap Index Scan) · CA-1.3 GPS en Paraguay (Zod y base) · CA-1.4 máquina de estados aplicada (400 salto inválido y bloqueo de edición en estados finales, 409 dato viejo) · CA-1.5 código de OT sin duplicados ni huecos bajo concurrencia · CA-1.6 sucursal del cliente de la OT · CA-1.7 sin borrado físico (`42501` en `DELETE`) · CA-1.8 `ot_evento` en la misma transacción y coherente con el estado · CA-1.9 test de `anon key` sigue en verde (`42501`) · CA-1.10 todos los endpoints exigen `comercial` o `admin` (verificado recorriendo `app.routes`). Pendiente 1B: CA-1.11 tabla con debounce 300 ms, filtros y paginador, archivos ≤ 250 líneas.
 
 Pendiente del 1B: `TablaAdmin` (props, estados de carga, error y vacío) y `useClientes`. Son las piezas que se repiten en todos los módulos siguientes.
 
@@ -248,9 +248,14 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 ## 12. Siguiente paso
 
-1. **Seed del primer admin y bloqueo `anon` (`42501`) cerrados (commit `2352a53`):** `scripts/seed-admin.ts`, `apps/api/src/modules/auth/seed.ts`, `tests/loop0/seed.test.ts` y `tests/loop0/anon.test.ts` en verde; admins de prueba `zz_test_%` desactivados en `dev`.
-2. **Entrega 1 de Loop 1A cerrada (commit `b9d0d58`):** Clientes, detalle, edición con `updatedAt` → `409`, desactivación con advertencia de OTs abiertas, `sucursales.service.ts`, `subrecursos.service.ts` (contactos con cambio atómico de principal y marcas), `busqueda.test.ts` (CA-1.2 real) y `clientes.test.ts` (CA-1.1, CA-1.7 con error `42501` en `DELETE` y CA-1.10 dinámico sobre `app.routes`). Suite total: **29/29 tests en verde**, ningún archivo supera las 174 líneas efectivas.
-3. **Ejecutar Entrega 2 de Loop 1A (siguiente paso inmediato):**
-   - Detalle de OT (`GET /api/comercial/ot/:id` con historial `ot_evento`), filtro por `clienteId` en `listarOTs`, edición de OT (`PATCH /api/comercial/ot/:id` exigiendo `updatedAt` → `409` y bloqueando con `400` en estados finales `TERMINADO`/`CANCELADO`).
-   - Tests en `tests/loop1/ot.test.ts` para detalle, edición, bloqueo en estados finales, paginación y recorrido dinámico de `app.routes` (CA-1.10) en `/api/comercial/ot`.
-4. **Cerrar Loop 1A con CI en verde** y recién entonces iniciar Loop 1B (definiendo primero el contrato de `TablaAdmin` y `useClientes`).
+1. **Seed del primer admin y bloqueo `anon` (`42501`) cerrados (commit `2352a53`):** `scripts/seed-admin.ts`, `apps/api/src/modules/auth/seed.ts`, `tests/loop0/seed.test.ts` (desactiva solo los usuarios creados en el test y verifica `0` activos con prefijo `zz_test_%`) y `tests/loop0/anon.test.ts` en verde.
+2. **Loop 1A cerrado (Entregas 1 y 2 completadas):**
+   - **Entrega 1 (commit `b9d0d58`):** Clientes, sucursales, contactos (cambio atómico de principal) y marcas, `busqueda.test.ts` (CA-1.2 real) y `clientes.test.ts` (CA-1.1, CA-1.7 con `42501` en `DELETE` y CA-1.10 sobre `/api/clientes`).
+   - **Entrega 2:** Detalle de OT (`GET /api/comercial/ot/:id` con historial `ot_evento`, CA-1.8), filtro `clienteId` en `GET /api/comercial/ot`, edición de OT (`PATCH /api/comercial/ot/:id` con control `409`, cambio de sucursal permitiendo `null`, bloqueo `400` en `TERMINADO`/`CANCELADO` vía `esEstadoFinal` y auditoría `ot.editar`), recorrido global de `app.routes` (CA-1.10 reforzado) y 20 requests HTTP simultáneas por el pooler (CA-0.10 HTTP) en `tests/loop1/ot-api.test.ts`.
+   - **Métricas:** **34/34 tests en verde** (11 archivos). Los 5 archivos `.ts` más largos son `tests/loop1/clientes.test.ts` (213 líneas), `tests/loop1/ot-api.test.ts` (210), `apps/api/src/modules/comercial/ot.service.ts` (176), `apps/api/src/modules/clientes\service.ts` (174) y `apps/api/src/modules/clientes/subrecursos.service.ts` (164), todos bajo el límite de 250 líneas.
+3. **Siguiente paso inmediato — Loop 1B (Frontend Clientes y OT):**
+   - Diseñar y acordar primero el contrato de `TablaAdmin` (props, paginación fija de 25, buscador con debounce de 300 ms, filtros de estado/rango de fechas, estados de carga/error/vacío) y los hooks `useClientes` / `useOT`.
+   - Implementar el shell en `apps/web` (Vite, TanStack Router y Query v5, login, layout en paleta Negro y Naranja `#090a0f` / `#111318` / `#ea580c`, radios 4–6 px), vistas y modales (un archivo por modal, ≤ 250 líneas).
+4. **Pendientes abiertos de Loop 0 (paralelos o al desplegar Loop 1B):**
+   - Configurar `tests-dev.yml`, `backup-db.yml`, `backup-storage.yml` y ejecutar el restore manual documentado en `RESTAURAR.md` (CA-0.9).
+   - Desplegar en Vercel (runtime Node) y medir el login con cold start (CA-0.1).

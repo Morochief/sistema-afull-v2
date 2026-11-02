@@ -8,6 +8,7 @@ if (!url) {
 // Pooler de transacciones (puerto 6543) exige prepare: false
 export const sql = postgres(url, {
   prepare: false,
+  fetch_types: false,
   max: 15,
   idle_timeout: 20,
   connect_timeout: 10,

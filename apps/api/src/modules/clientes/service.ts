@@ -31,7 +31,7 @@ export function verificarUpdatedAt(actual: Date | string, enviado: string): void
 
 export function dondeClientes(f: Omit<FiltroClientes, 'pagina'>, runner: Sql = sql) {
   const patron = f.q?.trim() ? `%${escaparLike(f.q.trim())}%` : null;
-  return runner`WHERE true
+  return runner`WHERE ${true}
     ${f.activo === undefined ? runner`` : runner`AND activo = ${f.activo}`}
     ${patron ? runner`AND (nombre ILIKE ${patron} OR razon_social ILIKE ${patron} OR ruc ILIKE ${patron} OR codigo ILIKE ${patron})` : runner``}
     ${f.desde ? runner`AND created_at >= (${f.desde}::date)::timestamp AT TIME ZONE 'America/Asuncion'` : runner``}

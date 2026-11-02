@@ -20,3 +20,4 @@ const TRANSICIONES: Record<EstadoOT, readonly EstadoOT[]> = {
 
 export const transicionesDesde = (de: EstadoOT): readonly EstadoOT[] => TRANSICIONES[de];
 export const puedeTransicionar = (de: EstadoOT, a: EstadoOT): boolean => TRANSICIONES[de].includes(a);
+export const esEstadoFinal = (e: EstadoOT): boolean => TRANSICIONES[e].length === 0;

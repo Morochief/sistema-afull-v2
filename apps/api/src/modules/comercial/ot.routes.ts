@@ -1,10 +1,13 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import { requireSesion, requireCapacidad } from '../auth/middleware.js';
-import { listarOTs, crearOT, transicionar } from './ot.service.js';
-import { nuevaOTSchema, transicionSchema, filtroOTSchema } from '@afull/shared';
+import { listarOTs, obtenerDetalleOT, crearOT, editarOT, transicionar } from './ot.service.js';
+import { nuevaOTSchema, patchOTSchema, transicionSchema, filtroOTSchema } from '@afull/shared';
 import { paginaSchema } from '../../lib/paginacion.js';
 import { ipDe } from '../../lib/ip.js';
+import type { Ctx } from '../clientes/service.js';
+
+const ctxDe = (c: Context): Ctx => ({ usuarioId: c.get('usuario').id, ip: ipDe(c) });
 
 export const otRoutes = new Hono()
   .use('*', requireSesion, requireCapacidad('comercial'))
@@ -15,11 +18,19 @@ export const otRoutes = new Hono()
   })
   .post('/', async (c) => {
     const body = nuevaOTSchema.parse(await c.req.json().catch(() => null));
-    const res = await crearOT({ usuarioId: c.get('usuario').id, ip: ipDe(c) }, body);
-    return c.json(res, 201);
+    return c.json(await crearOT(ctxDe(c), body), 201);
+  })
+  .get('/:id', async (c) => {
+    const id = z.string().uuid().parse(c.req.param('id'));
+    return c.json(await obtenerDetalleOT(id));
+  })
+  .patch('/:id', async (c) => {
+    const id = z.string().uuid().parse(c.req.param('id'));
+    const body = patchOTSchema.parse(await c.req.json().catch(() => null));
+    return c.json(await editarOT(ctxDe(c), id, body));
   })
   .post('/:id/transicionar', async (c) => {
     const id = z.string().uuid().parse(c.req.param('id'));
     const body = transicionSchema.parse(await c.req.json().catch(() => null));
-    return c.json(await transicionar({ usuarioId: c.get('usuario').id, ip: ipDe(c) }, id, body));
+    return c.json(await transicionar(ctxDe(c), id, body));
   });
