@@ -10,6 +10,7 @@ export class ErrorApp extends Error {
 export function traducirErrorPg(e: unknown): never {
   const code = (e as { code?: string }).code;
   if (code === '23505') throw new ErrorApp(409, 'Ya existe un registro con ese valor único');
+  if (code === '23P01') throw new ErrorApp(409, 'Existe un solapamiento en las fechas o rangos definidos');
   if (code === '23503') throw new ErrorApp(400, 'Referencia foránea inválida o inexistente');
   if (code === '23514') throw new ErrorApp(400, 'Un valor no cumple las restricciones válidas');
   if (code === '22P02') throw new ErrorApp(400, 'Identificador o parámetro con formato inválido');

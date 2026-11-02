@@ -127,3 +127,44 @@ export const CLAVES_OT_DETALLE = [
 export const CLAVES_OT_EVENTO = [
   'id', 'orden_trabajo_id', 'estado_anterior', 'estado_nuevo', 'autor_id', 'comentario', 'created_at'
 ] as const;
+
+export type PersonaFila = {
+  id: string;
+  nombre: string;
+  ci: string;
+  cargo: string | null;
+  departamento: string | null;
+  jefe_id: string | null;
+  activo: boolean;
+  usuario_id: string | null;
+  username: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PersonaAsignable = {
+  id: string;
+  nombre: string;
+};
+
+export type TarifaFila = {
+  id: string;
+  persona_id: string;
+  tarifa_hora_gs: string;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const CLAVES_PERSONA_FILA = [
+  'id', 'nombre', 'ci', 'cargo', 'departamento', 'jefe_id', 'activo', 'usuario_id', 'username', 'created_at', 'updated_at'
+] as const;
+
+export const CLAVES_PERSONA_ASIGNABLE = [
+  'id', 'nombre'
+] as const;
+
+export const CLAVES_TARIFA_FILA = [
+  'id', 'persona_id', 'tarifa_hora_gs', 'fecha_inicio', 'fecha_fin', 'created_at', 'updated_at'
+] as const;

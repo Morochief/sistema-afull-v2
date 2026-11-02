@@ -62,6 +62,7 @@ Crear el esquema `extensions`, la extensión `pg_trgm`, los roles base y el rol 
 @'
 CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA extensions;
 
 DO $$
 DECLARE r text;
