@@ -37,7 +37,7 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 | Tests Loop 0 (Vitest) | **22/22 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, funciones y default privileges cerrados en `funciones.test.ts`, auth, seed idempotente, inmutabilidad, concurrencia por pooler + `sinPipelining`, CSRF en `csrf.test.ts`). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
 | Tests Loop 1B (Vitest frontend + contrato) | **45/45 tests web en verde** (9 suites) y **6 tests de contrato/API adicionales**, más **15/15 pasos Playwright UI en verde contra Vercel**. **Loop 1B cerrado (CA-1.11 a CA-1.16)**. |
-| Tests Loop 2 (Vitest backend) | **6/6 en verde contra Supabase `dev`** (`personas.test.ts`, `tarifas.test.ts`, `auditoria-personas.test.ts`, CA-2.3, CA-2.4). Total backend: **50/50 en verde** (48/48 en CI sin `anon.test.ts`). |
+| Tests Loop 2 (Vitest backend) | **12/12 en verde contra Supabase `dev`** (6 tests de L2.E1 en personas/tarifas + 6 tests de L2.E2 en tareas/cronómetro; CA-0.3, CA-2.1, CA-2.2, CA-2.3, CA-2.4, CA-2.5). Total backend: **56/56 en verde** (54/54 en CI sin `anon.test.ts`). |
 | Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2, #5 y #6 con D5-1 y migración 0006 con btree_gist comprobados**). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 3** (hoy no se usa Storage). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
@@ -229,7 +229,7 @@ Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "C
 
 ## 8. Backlog por loop (anotado para no olvidarlo)
 
-- **Loop 2:** CA-0.3 (dos inicios simultáneos de cronómetro: uno falla con `409`, nunca dos filas abiertas). Exclusion constraint de tarifas (requiere `btree_gist`). Aislar el módulo `live` tras la interfaz portable. Eventos de Broadcast solo en cambios de estado.
+- **Loop 2 (L2.E1 y L2.E2 completados):** CA-0.3 (concurrencia de inicios simultáneos con serialización `FOR UPDATE` en persona, rechazo Postgres 23505 y sincronización con `clock_timestamp()` contra `23514`). Exclusion constraint de tarifas con `btree_gist` (migración `0006`). CA-2.1 a CA-2.5 verificados. Pendiente L2.E3: aislar el módulo `live` tras la interfaz portable (`lib/live.ts`), endpoint `/api/live/estado` y CA-2.6.
 - **Loop 3:** la cola Dexie guarda también los **blobs de las fotos**, e **idempotencia** en `marcacion_asistencia`, viajes e intervalos. **Un `401` no descarta eventos**: se conservan, se pide login y se reintenta. Definir la regla de reparto de km entre varias OT de un mismo viaje (por paradas o por km de tramo) en `shared/formulas`. `sucursal.gps_lat/lng` ya existe.
 - **Loop 4:** cada `consumo_insumo` genera su `movimiento_stock` (`SALIDA_PRODUCCION`) **en la misma transacción**, con FK entre ambos y costo unitario congelado al momento del consumo. Definir cómo se deriva el costo promedio (promedio móvil). Quitar `costo_promedio_gs` y `km_actual` como contadores mutables del diseño original.
 - **Loop 5:** snapshot de costeo al cierre de la OT (no vista materializada): horas × tarifa vigente + insumos + km × costo por km. Cálculo en alta precisión y redondeo único al final.
@@ -323,4 +323,6 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `99151ff` | fix(web): sesión completa tras login y campos opcionales vacíos (auditoría E3). | CI Run `#41519975658` green |
 | 2026-11-02 | `fd38c0b` | test(ui): recorrido Playwright de 15 pasos en Vercel y remoción de Toaster duplicado. | 15/15 pasos Playwright UI en Vercel green |
 | 2026-11-02 | `ec3a77a` | feat(api): implementar migracion 0006, maquinas y API de personas y tarifas (L2.E1). | 47/47 tests backend en dev, Backup Run #6 green |
-| 2026-11-02 | `379afa1` | fix(api): auditoría en transacción y 409 al vincular usuario ya asignado (auditoría L2.E1). | 50/50 tests backend en dev, 45/45 web, lint 0, tipos 0 |
+| 2026-11-02 | `f52a42f` | fix(api): auditoría en transacción y 409 al vincular usuario ya asignado (auditoría L2.E1). | 50/50 tests backend en dev, 45/45 web, CI Run `#41` green |
+| 2026-11-02 | `beb5cdf` | docs: registrar evidencia de backup run 6 y ci run 41 en mesa de trabajo. | CI Run `#42` green |
+| 2026-11-02 | `e1fc4ad` | **Loop 2 — Entrega L2.E2:** Tareas en OT, cronómetro atómico con auto-pausa (`CAMBIO_TAREA`), vista `/api/mi-trabajo`, y tests CA-0.3, CA-2.1, CA-2.2, CA-2.3, CA-2.5. | 56/56 tests backend en dev, 45/45 web, CI Run `#43` green |

@@ -540,3 +540,58 @@ Se revisaron e integraron los cambios en `apps/api/src/modules/personas/`:
 - **Web Tests:** **45/45 tests pasando**.
 - **Lint:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
 - **Typecheck:** 0 errores en todos los paquetes (`pnpm typecheck`).
+
+---
+
+## Entrega L2.E2: Tareas en OT, Cronómetro Atómico y Vista Mi Trabajo
+
+**Fecha:** 2026-11-02 19:54  
+**Commit:** `e1fc4ad` (`feat(api): implementar tareas en OT, cronometro y vista mi-trabajo (L2.E2)`)  
+**GitHub Actions CI Run:** [#41541135985](https://github.com/Morochief/sistema-afull-v2/actions/runs/41541135985) (Run #43) — **Success** (Lint 0, Tipos 0, 54 tests backend, 45 tests web, Build Vite 8).
+
+### 1. Resumen de Implementación
+Se implementó el ciclo de vida operativo de tareas, cronómetro de operarios y vista `Mi Trabajo` respetando la arquitectura de Loop 2 (`docs/LOOP_2_DISENO.md` §4.2, 4.3 y 8):
+
+1. **Paquete Compartido (`@afull/shared`):**
+   - `src/schemas/tareas.ts`: Esquemas Zod para creación de tareas en OT (`itemTareaEnOTSchema`), agregar tarea (`nuevaTareaSchema`), edición concurrente (`patchTareaSchema` con `updatedAt`), cancelación (`cancelarTareaSchema` con motivo obligatorio), inicio (`iniciarTareaSchema` con `claveIdempotencia` UUID), pausa (`pausarTareaSchema` con motivo de catálogo) y finalización (`finalizarTareaSchema`).
+   - `src/schemas/comercial.ts`: Actualizado `nuevaOTSchema` para aceptar array opcional de hasta 30 tareas.
+   - `src/types/api.ts`: Contratos TypeScript `TareaFila`, `TareaEventoFila`, `MiTrabajoTarea`, `MiTrabajoRespuesta` y constantes de validación de contrato `CLAVES_TAREA_FILA`.
+
+2. **Módulo Comercial — Gestión de Tareas (`apps/api/src/modules/comercial/`):**
+   - `tareas.service.ts`:
+     - `insertarTareasIniciales`: Inserción atómica de tareas y sus eventos iniciales (`PENDIENTE`) dentro de la transacción de creación de OT en `ot.service.ts`.
+     - `listarTareasOT`: Listado con cálculo de minutos acumulados reales sumando intervalos cerrados y el intervalo abierto en curso.
+     - `agregarTareaOT`: Permite agregar tareas a OTs abiertas (rechaza con 400 si la OT está terminada o cancelada).
+     - `editarTarea`: Control estricto de concurrencia 409 sobre `updatedAt` de la tarea (rechaza con 400 si la tarea está en estado final).
+     - `cancelarTarea`: Exige comentario, cierra intervalos abiertos si los hubiera y audita `tarea.cancelar` en la misma transacción.
+   - `tareas.routes.ts` y `ot.routes.ts`: Montaje de `GET /api/comercial/ot/:id/tareas`, `POST /api/comercial/ot/:id/tareas`, `PATCH /api/tareas/:id` y `POST /api/tareas/:id/cancelar`.
+
+3. **Módulo Cronómetro y Mi Trabajo (`apps/api/src/modules/cronometro/`):**
+   - `service.ts` y `mutaciones.service.ts` (divididos para respetar la regla de ≤ 250 líneas):
+     - `obtenerMiTrabajo`: Retorna `servidor_ahora`, `intervalo_abierto_actual` (con minutos transcurridos en tiempo real) y la lista de tareas asignadas al operario con minutos acumulados y estado.
+     - `iniciarTarea`: Bloquea la fila de la `persona` con `SELECT ... FOR UPDATE` para serializar carreras. Implementa idempotencia estricta por `clave_idempotencia` (retorna 200 con el intervalo existente). Si el operario tiene otra tarea en curso, ejecuta **auto-pausa atómica** cerrando el intervalo abierto con motivo `CAMBIO_TAREA` y transicionando la tarea anterior a `PAUSADA` con evento auditado. Abre el nuevo intervalo y transiciona la tarea a `EN_CURSO` retornando 201.
+     - **Sincronización milimétrica contra condiciones de carrera:** Para garantizar el cumplimiento estricto del constraint `chk_intervalo_horas` (`hora_fin >= hora_inicio`) frente a requests concurrentes, la inserción y cierre de intervalos emplean `clock_timestamp()` y `greatest(clock_timestamp(), hora_inicio)`.
+     - `pausarTarea` y `finalizarTarea`: Validan transiciones válidas según la máquina de estados, cierran el intervalo abierto con el motivo correspondiente, registran evento inmutable y auditan la mutación (`tarea.pausar` / `tarea.finalizar`) dentro de la misma transacción.
+   - `routes.ts`: Montado en `/api/mi-trabajo` con middleware `requireAlgunaCapacidad('taller', 'montaje')`.
+   - `middleware.ts`: Incorporado helper `requireAlgunaCapacidad(...caps)` para autorización flexible por capacidades operativas.
+
+### 2. Cumplimiento de Criterios de Aceptación (Verificados)
+- **CA-0.3 (Concurrencia extrema):** Verificado con 10 peticiones HTTP simultáneas de inicio de cronómetro con diferentes tareas y claves para la misma persona. Todas las peticiones resuelven sin error 500 (201 / 200 / 409), exactamente 1 intervalo queda abierto en base de datos, y cualquier inserción paralela no serializada es rechazada por el motor PostgreSQL con código `23505` (`uq_intervalo_abierto`).
+- **CA-2.1 (Idempotencia):** La repetición de una misma clave de idempotencia retorna `HTTP 200` con el mismo ID de intervalo sin generar filas duplicadas ni errores.
+- **CA-2.2 (Auto-pausa atómica):** Al iniciar la tarea B teniendo la tarea A en curso, la tarea A pasa inmediatamente a `PAUSADA` con su intervalo cerrado por `CAMBIO_TAREA`, y la tarea B pasa a `EN_CURSO` con un nuevo intervalo abierto, todo de forma atómica.
+- **CA-2.3 (Inmutabilidad estricta):** Los triggers `fn_tarea_intervalo_update`, `trg_tarea_intervalo_no_delete` y `trg_tarea_evento_inmutable` rechazan cualquier intento de UPDATE (`23514`) o DELETE sobre intervalos cerrados o eventos históricos.
+- **CA-2.5 (Seguridad y Permisos RBAC):** Operarios sin asignación reciben 403, usuarios sin vínculo a persona reciben 403, llamadas sin sesión reciben 401, y usuarios sin capacidad `taller` ni `montaje` reciben 403 en `/api/mi-trabajo`.
+
+### 3. Evidencia de Tests y Calidad
+- **Backend Tests:** **19 suites pasadas, 56/56 tests en verde** (54 en CI de GitHub Actions por exclusión de `anon.test.ts`).
+  - `tests/loop2/cronometro.test.ts`: 5 tests pasando.
+  - `tests/loop2/tareas-ot.test.ts`: 1 suite completa pasando.
+  - `tests/loop2/personas.test.ts`: 2 tests pasando.
+  - `tests/loop2/tarifas.test.ts`: 1 test pasando.
+  - `tests/loop2/auditoria-personas.test.ts`: 3 tests pasando.
+- **Web Tests:** **9 suites pasadas, 45/45 tests en verde**.
+- **Linter:** `eslint . --max-warnings 0` -> **0 errores, 0 advertencias**.
+- **Typecheck:** `pnpm typecheck` -> **0 errores** en packages, apps y tests.
+- **Build:** `pnpm build` -> Compilación limpia de shared, api y web.
+- **GitHub Actions:** CI Run [#41541135985](https://github.com/Morochief/sistema-afull-v2/actions/runs/41541135985) (Run #43) completado con **éxito** (`success`).
+
