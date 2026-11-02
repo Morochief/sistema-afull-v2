@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { resolverSinVacios } from '../../lib/formulario.js';
 import { toast } from 'sonner';
 import {
   patchOTSchema,
@@ -56,7 +56,7 @@ export function ModalEditarOT({ ot, abierto, onCerrar }: ModalEditarOTProps) {
     setValue,
     formState: { errors },
   } = useForm<PatchOT>({
-    resolver: zodResolver(patchOTSchema),
+    resolver: resolverSinVacios(patchOTSchema),
     defaultValues: {
       titulo: '',
       descripcion: '',

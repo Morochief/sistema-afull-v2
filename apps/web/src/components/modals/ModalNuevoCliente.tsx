@@ -1,5 +1,5 @@
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { resolverSinVacios } from '../../lib/formulario.js';
 import { toast } from 'sonner';
 import { nuevoClienteSchema } from '@afull/shared';
 import { useCrearCliente } from '../../hooks/clientes/useMutacionesCliente.js';
@@ -30,7 +30,7 @@ export function ModalNuevoCliente({ abierto, onCerrar }: ModalNuevoClienteProps)
     reset,
     formState: { errors },
   } = useForm<NuevoCliente>({
-    resolver: zodResolver(nuevoClienteSchema),
+    resolver: resolverSinVacios(nuevoClienteSchema),
     defaultValues: {
       nombre: '',
       razonSocial: '',

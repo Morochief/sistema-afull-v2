@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { resolverSinVacios } from '../../lib/formulario.js';
 import { toast } from 'sonner';
 import { nuevaOTSchema, type SucursalFila, type ClienteFila } from '@afull/shared';
 import { useCrearOT } from '../../hooks/ots/useMutacionesOT.js';
@@ -42,7 +42,7 @@ export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNueva
     reset,
     formState: { errors },
   } = useForm<NuevaOT>({
-    resolver: zodResolver(nuevaOTSchema),
+    resolver: resolverSinVacios(nuevaOTSchema),
     defaultValues: {
       clienteId: clienteInicialId || '',
       sucursalId: undefined,

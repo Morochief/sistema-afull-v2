@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { resolverSinVacios } from '../../lib/formulario.js';
 import { toast } from 'sonner';
 import { patchClienteSchema, type ClienteFila } from '@afull/shared';
 import { useEditarCliente } from '../../hooks/clientes/useMutacionesCliente.js';
@@ -53,7 +53,7 @@ export function ModalEditarCliente({
     setValue,
     formState: { errors },
   } = useForm<PatchCliente>({
-    resolver: zodResolver(patchClienteSchema),
+    resolver: resolverSinVacios(patchClienteSchema),
     defaultValues: {
       nombre: '',
       razonSocial: '',

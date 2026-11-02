@@ -27,11 +27,13 @@ export function useSesion() {
 
   const mutacionLogin = useMutation({
     mutationFn: async ({ username, password }: { username: string; password: string }) => {
-      const res = await apiFetch<{ ok: boolean; usuario: UsuarioSesion }>('/api/auth/login', {
+      await apiFetch<{ ok: boolean }>('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
       });
-      return res.usuario;
+      // POST /login devuelve solo { id, username } (sin capacidades). La sesión completa
+      // se lee de /yo; usar la respuesta del login rompía tieneCapacidad() tras ingresar.
+      return apiFetch<UsuarioSesion>('/api/auth/yo');
     },
     onSuccess: (nuevoUsuario) => {
       queryClient.setQueryData(['sesion', 'yo'], nuevoUsuario);
@@ -55,7 +57,8 @@ export function useSesion() {
 
   const tieneCapacidad = (cap: string): boolean => {
     if (!usuario) return false;
-    return usuario.capacidades.includes('admin') || usuario.capacidades.includes(cap);
+    const caps = usuario.capacidades ?? [];
+    return caps.includes('admin') || caps.includes(cap);
   };
 
   return {
