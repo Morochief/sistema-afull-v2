@@ -1,13 +1,18 @@
 # Traspaso del proyecto aFull
 
-Última actualización: 2 de noviembre de 2026 — 12:13 (America/Asuncion).
+Última actualización: 2 de noviembre de 2026 — 17:00 (America/Asuncion).
 Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada tarea o commit.
 
 ---
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
-**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0005` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las consultas de comprobación dieron los resultados exactos esperados y `pnpm test` pasa **38 de 38 tests en verde** (12 archivos: 22 de Loop 0 y 16 de Loop 1) contra Supabase `dev` y contra PostgreSQL 17 en GitHub Actions CI.
+**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0005` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las consultas de comprobación dieron los resultados exactos esperados y `pnpm test` pasa **44 de 44 tests en verde** (14 suites backend) contra Supabase `dev` y PostgreSQL 17 en GitHub Actions CI, y `pnpm --filter @afull/web test` pasa **41 de 41 tests web en verde** (7 suites frontend con Vitest y jsdom).
+- **Loop 1B CERRADO (CA-1.11 a CA-1.16 verificados):**
+  - **Entrega E1 (`3cd0ef5`, `39d0949`):** Shell del frontend (React 19, Vite 8, TanStack Router y Query v5, paleta `#090a0f`, `#111318`, `#ea580c`, sin acentos azules, radios 4–6 px), login, protección de sesión, pantalla de caída de API con reintento, navegación filtrada por capacidades y logout seguro.
+  - **Entrega E2 (`c9ee07b`, `b32f63a`):** Componente genérico `TablaAdmin<T>` con 4 estados (cargando, refrescando, error, vacío), búsqueda con debounce de 300 ms, paginador fijo de 25 filas accesible (`aria-live`), manejo de página fuera de rango, módulo de Clientes (listado, alta, edición con `PATCH`, control 409 con aviso detallado de campos modificados, y desactivación con advertencia de OTs abiertas).
+  - **Entrega E3 (`2570c07`, `2ea59d8`, `078ca00`, `2546057`):** API con nombres en OTs y búsqueda por nombre de cliente, detalle de cliente (`/clientes/$id`) con modales para sucursales (GPS validado en Paraguay `[-27.7, -19.2]` y `[-62.7, -54.2]`), contactos (conmutación atómica de `esPrincipal`) y marcas; módulo de OTs (`/ots` y `/ots/$id`) con modales de alta, edición y transición (restringida a `transicionesDesde`, motivo obligatorio al cancelar); formato de fecha prometida sin desfase (D7); despliegue en Vercel (`gru1`) y prueba de humo automatizada de 9 puntos en verde (`scripts/prueba-humo-e3.ts`).
+  - **Restricción de tamaño (CA-1.11):** Todos los archivos de `apps/web/src` cumplen estrictamente con `max-lines: 250`.
 - **Despliegue en Vercel (`gru1` São Paulo, Node 22) — CA-0.1 CERRADO (cumplido en caliente; cold start aceptado como excepción documentada por el usuario) y CA-0.10 por HTTP verificado:**
   - **Cuelgue anterior de 20 s en `POST /api/auth/login` — Estado: RESUELTO en commit `a588fbb`, CAUSA EXACTA SIN AISLAR** (se aplicaron juntos el puente `req.body → req.rawBody` en `apps/api/src/vercel.ts` y `api.bodyParser: false` en `api/index.js`).
   - **Sondas diagnósticas reales en `gru1` (sobre commit `a588fbb`):** Probe 1 (`POST /api/auth/login` con `{}`) → `400` en **600 ms** (1.ª llamada post-deploy, sin tocar Argon2 ni base de datos) y **460 ms**; Probe 2 (usuario inexistente ejecutando `verificarDummy()` con `@node-rs/argon2` + base de datos, ya con la instancia caliente) → `401` en **295 ms**.
@@ -16,28 +21,26 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
     2. **Latencia de `POST /api/auth/login` (en frío y en caliente):**
        - **Cold start real del login con Argon2 + DB (medido sobre el deploy de `703c0ec` tras >23 min sin tráfico):** `HTTP 200` en **1253 ms** (`1,25 s`), aceptado como excepción documentada por el usuario el 2026-11-02 en Sección 3.
        - **Ráfaga en caliente (9 muestras cálidas seguidas sobre `a588fbb`):** `147 ms`, `161 ms`, `150 ms`, `150 ms`, `152 ms`, `153 ms`, `163 ms`, `150 ms`, `155 ms` (**mín: 147 ms | mediana: 152 ms | promedio: 153 ms | máx: 163 ms**, total con red incluida, dentro del rango objetivo de **100–300 ms** de **CA-0.1** en caliente).
-    3. **20 peticiones simultáneas a `GET /api/clientes` con cookie válida (`CA-0.10` por HTTP sobre `a588fbb`):** **20/20 responden `200 OK`** sin colgarse en **754 ms** de tiempo total de pared (`mín: 228 ms | mediana: 704 ms | máx: 752 ms`). **Observación (sin causa confirmada):** dado que una petición cálida individual tarda ~150–200 ms, la distribución (`228 ms` a `752 ms`, mediana `704 ms`) sugiere que las 20 simultáneas se atienden casi en serie (cola en una sola instancia/hilo de función o en el pooler), no 20 ejecuciones en paralelo; tenerlo presente cuando una oficina real consulte a la vez.
-    4. **CSRF y flags de cookie:** `POST /api/auth/login` con `Origin` inválido devuelve `403` en **277 ms** (y **200 ms** en sonda previa); `Set-Cookie` en login válido incluye `HttpOnly`, `Secure` y `SameSite=Lax`.
-  - **Higiene en `afull-dev`:** el script de cold start limpió en su `finally` **únicamente** a `zz_test_vercel_probe` (`activo = false`, `0` sesiones de ese usuario).
+    3. **20 peticiones simultáneas a `GET /api/clientes` con cookie válida (`CA-0.10` por HTTP sobre `a588fbb`):** **20/20 responden `200 OK`** sin colgarse en **754 ms** de tiempo total de pared (`mín: 228 ms | mediana: 704 ms | máx: 752 ms`).
+    4. **CSRF y flags de cookie:** `POST /api/auth/login` con `Origin` inválido devuelve `403` en **277 ms**; `Set-Cookie` en login válido incluye `HttpOnly`, `Secure` y `SameSite=Lax`.
+  - **Higiene en `afull-dev`:** Todos los usuarios de prueba usan el prefijo `zz_test_` y son auto-desactivados tras cada suite; base dev en 0 usuarios activos y 0 sesiones abiertas (`limpiar-usuarios-prueba.ts --aplicar`).
 - **Qué queda para cerrar Loop 0 al 100%:**
   1. Cargar los secrets restantes de dev en GitHub Actions y correr `tests-dev.yml`.
   2. Realizar el **restore manual completo hecho por una persona** en el proyecto temporal Supabase `afull-restore-drill` y documentarlo en `RESTAURAR.md` (**CA-0.9**). *(Nota: `backup-storage` se pospone al Loop 3, cuando la app empiece a subir fotos a Storage).*
-- **Loop 1A cerrado (CA-1.1 a CA-1.10 verificados):** 16/16 tests de `tests/loop1` en verde contra Supabase `dev` y en CI.
-  - **Entrega 1 (commit `b9d0d58`):** Clientes (listado con `q`, `activo`, `desde`/`hasta`, detalle completo, edición con `updatedAt` → `409`, desactivar/reactivar advirtiendo OTs abiertas), sucursales (`sucursales.service.ts`), contactos con cambio atómico de contacto principal y marcas (`subrecursos.service.ts`), benchmark CA-1.2 ejecutando `queryListarClientes` real (`busqueda.test.ts`), y `clientes.test.ts` cubriendo CA-1.1 (paginación 25), CA-1.7 (bloqueo `DELETE` real con `42501`) y CA-1.10 en `/api/clientes`.
-  - **Entrega 2 (commit `ed0621b`):** Detalle de OT (`GET /api/comercial/ot/:id` devolviendo la OT más el historial `ot_evento` ordenado por `created_at ASC, id ASC` coincidente con `estado`, CA-1.8), filtro por `clienteId` en `listarOTs`, edición de OT (`PATCH /api/comercial/ot/:id` con `SELECT ... FOR UPDATE`, exigiendo `updatedAt` → `409`, validando sucursal activa del cliente o `null`, auditando `ot.editar` en la misma transacción y bloqueando con `400` mediante `esEstadoFinal` si está en `TERMINADO` o `CANCELADO`), recorrido dinámico global de `app.routes` (CA-1.10 reforzado: todas las rutas de la app exigen `401` sin sesión salvo `POST /api/auth/login`, y `/api/comercial/ot` exige `403` sin capacidad `comercial`/`admin`) y CA-0.10 (20 requests HTTP simultáneas en `ot-api.test.ts`).
 
 | Pieza | Estado |
 | :--- | :--- |
 | Documento maestro v3.x | Copiado en `D:\sistema-afull\ARQUITECTURA_V3.md` (con aviso de que `TRASPASO.md` gana en caso de diferencia); `CLAUDE.md` sincronizado. |
 | Repositorio y monorepo | Inicializado en `D:\sistema-afull`. Remoto: `https://github.com/Morochief/sistema-afull-v2.git` (rama `main`). `lint` y `typecheck` en verde. |
 | Migraciones `0001` a `0005` (SQL) | **Aplicadas con éxito en Supabase `afull-dev`** con Drizzle journal (`0005` cierra `EXECUTE` implícito de `PUBLIC` en funciones nuevas). |
-| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev` y en Vercel (`gru1`)**. CA-0.1 cerrado con excepción: verificado en caliente (`147–163 ms`, mediana `152 ms` sobre `a588fbb`); cold start en frío de `1253 ms` sobre `703c0ec` aceptado por el usuario el 2026-11-02 como excepción documentada en Sección 3; CA-0.10 por HTTP (20/20 en 754 ms) verificado; pendientes secrets de `tests-dev.yml` y restore manual de CA-0.9 (`backup-db.yml` corrida #5 en verde con D5-1 verificado + `RESTAURAR.md`). |
-| Tests Loop 0 (Vitest) | **22/22 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, funciones y default privileges cerrados en `funciones.test.ts`, auth, seed idempotente con limpieza de `zz_test_%`, inmutabilidad, concurrencia por pooler + `sinPipelining` y auditoría estática de parámetros). |
+| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev` y en Vercel (`gru1`)**. CA-0.1 cerrado con excepción: verificado en caliente (`147–163 ms`, mediana `152 ms` sobre `a588fbb`); cold start en frío de `1253 ms` sobre `703c0ec` aceptado por el usuario el 2026-11-02 como excepción documentada en Sección 3; CA-0.10 por HTTP (20/20 en 754 ms) verificado; pendientes secrets de `tests-dev.yml` y restore manual de CA-0.9. |
+| Tests Loop 0 (Vitest) | **22/22 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, funciones y default privileges cerrados en `funciones.test.ts`, auth, seed idempotente, inmutabilidad, concurrencia por pooler + `sinPipelining`, CSRF en `csrf.test.ts`). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
+| Tests Loop 1B (Vitest frontend + contrato) | **41/41 tests web en verde** (7 suites) y **6 tests de contrato/API adicionales**. **Loop 1B cerrado (CA-1.11 a CA-1.16)**. |
 | Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2 y #5 con D5-1 incorporado y probado**). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 3** (hoy no se usa Storage). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
-| Proyecto Vercel | **Desplegado en `gru1` (Node 22)**: `@node-rs/argon2` operativo, login cálido `147–163 ms` (mediana `152 ms` en commit `a588fbb`), login cold start `1253 ms` (en commit `703c0ec`; excepción aceptada por el usuario), 20 GET concurrentes 20/20 `200 OK` en `754 ms` (atendidas casi en serie), CSRF `403` y cookies `HttpOnly; Secure; SameSite=Lax`. |
+| Proyecto Vercel | **Desplegado en `gru1` (Node 22)**: API Hono + React 19 SPA (rewrite `/(.*) -> /index.html` funcional con HTTP 200 en rutas profundas `/ots/:id`), prueba de humo de 9 puntos en verde. |
 
 ---
 
@@ -188,13 +191,19 @@ Criterios de aceptación:
 
 Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,seed}.test.ts`. El test de la `anon key` no corre en CI (necesita la API REST de Supabase); correrá a diario contra `dev` en `tests-dev.yml` (pendiente). Los tests tienen un guard `TEST_ENV=dev` y **nunca se corren contra `prod`**.
 
-### Loop 1: Clientes y OT (Loop 1A cerrado; Loop 1B pendiente)
+### Loop 1: Clientes y OT (Loop 1A y Loop 1B CERRADOS)
 
-Partido en dos. **1A** (base y API, **CERRADO**): migración `0004`, esquemas y máquina de estados en `shared` (`puedeTransicionar`, `esEstadoFinal`), infraestructura común (`ErrorApp`, `traducirErrorPg`, paginación), módulos `clientes` y `comercial`, tests (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **1B** (frontend, **pendiente**): shell (Vite, Router, login, layout), componente genérico `TablaAdmin`, hooks `useClientes`/`useOT`, modales, deploy a `dev`.
+Partido en dos. **1A** (base y API, **CERRADO**): migración `0004`, esquemas y máquina de estados en `shared` (`puedeTransicionar`, `esEstadoFinal`), infraestructura común (`ErrorApp`, `traducirErrorPg`, paginación), módulos `clientes` y `comercial`, tests (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **1B** (frontend, **CERRADO**): shell (React 19, Vite 8, TanStack Router y Query v5, login, layout accesible), componente genérico `TablaAdmin<T>` con 4 estados, hooks `useClientes`/`useOTs`/`useOT`, modales de alta, edición y transición con control 409 y confirmación atómica, formato de fechas sin desfase (D7), deploy a Vercel `gru1` y prueba de humo automatizada de 9 puntos en verde.
 
-Criterios 1A (**todos verificados**): CA-1.1 paginación fija de 25 · CA-1.2 búsqueda < 100 ms **en la base** con 5000 registros (nota: con 5000 filas el planner puede optar por Seq Scan en ~12 ms; validar índice GIN trigram con ≥ 50.000 filas o `enable_seqscan = off` si se requiere forzar Bitmap Index Scan) · CA-1.3 GPS en Paraguay (Zod y base) · CA-1.4 máquina de estados aplicada (400 salto inválido y bloqueo de edición en estados finales, 409 dato viejo) · CA-1.5 código de OT sin duplicados ni huecos bajo concurrencia · CA-1.6 sucursal del cliente de la OT · CA-1.7 sin borrado físico (`42501` en `DELETE`) · CA-1.8 `ot_evento` en la misma transacción y coherente con el estado · CA-1.9 test de `anon key` sigue en verde (`42501`) · CA-1.10 todos los endpoints exigen `comercial` o `admin` (verificado recorriendo `app.routes`). Pendiente 1B: CA-1.11 tabla con debounce 300 ms, filtros y paginador, archivos ≤ 250 líneas.
+Criterios 1A (**todos verificados**): CA-1.1 paginación fija de 25 · CA-1.2 búsqueda < 100 ms **en la base** con 5000 registros · CA-1.3 GPS en Paraguay (Zod y base) · CA-1.4 máquina de estados aplicada (400 salto inválido y bloqueo de edición en estados finales, 409 dato viejo) · CA-1.5 código de OT sin duplicados ni huecos bajo concurrencia · CA-1.6 sucursal del cliente de la OT · CA-1.7 sin borrado físico (`42501` en `DELETE`) · CA-1.8 `ot_evento` en la misma transacción y coherente con el estado · CA-1.9 test de `anon key` sigue en verde (`42501`) · CA-1.10 todos los endpoints exigen `comercial` o `admin`.
 
-Pendiente del 1B: `TablaAdmin` (props, estados de carga, error y vacío) y `useClientes`. Son las piezas que se repiten en todos los módulos siguientes.
+Criterios 1B (**todos verificados**):
+- **CA-1.11** Tabla con búsqueda con debounce 300 ms, filtros y paginador fijo de 25 con bordes deshabilitados y región `aria-live`; todos los archivos del frontend y monorepo cumplen estrictamente ≤ 250 líneas (`max-lines: 250`).
+- **CA-1.12** Expulsión limpia: sesión expirada o usuario desactivado revoca acceso inmediatamente (401), limpia caché y redirige a `/login` con retorno seguro; caída de API renderiza pantalla con botón de reintento sin expulsar.
+- **CA-1.13** Control de concurrencia optimista visible (409): modal de edición detalla campos modificados por otro usuario y preserva los inputs locales para permitir sobreescritura informada sin reintento ciego.
+- **CA-1.14** Formato estricto de fechas y moneda: fecha prometida `2026-11-05` renderiza `05/11/2026` sin desfase de zona horaria (`formatearFechaDate`); moneda en Guaraníes sin decimales (`formatearGs`).
+- **CA-1.15** Sub-recursos y pertenencia: sucursales con GPS en Paraguay, contacto principal con conmutación atómica sin dobles principales, marcas.
+- **CA-1.16** Máquina de estados de OT en UI: modales restringen opciones a `transicionesDesde`, motivo obligatorio al cancelar, línea de tiempo ordenada de `ot_evento`, búsqueda cruzada de OTs por nombre de cliente.
 
 Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "Canete"); si molesta, agregar `unaccent` en un loop posterior. Los datos `zz_test_*` de OT no se pueden limpiar (historial inmutable), así que `dev` acumula residuo esperable.
 
@@ -273,11 +282,11 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 ## 12. Siguiente paso
 
-> **Excepción al principio 7 (2026-11-02, decisión del usuario):** se inicia Loop 1B con el Loop 0 abierto en dos puntos: (a) CA-0.9, el simulacro manual de restore en `afull-restore-drill`; (b) los secrets `DEV_*` restantes y la corrida de `tests-dev.yml`. **Bloqueo:** no se crea `afull-prod` con datos reales ni se carga ningún dato real hasta cerrar (a) y (b). Nota: los artefactos de backup duran 30 días; si el simulacro se hace después del 2026-12-02, volver a correr `backup-db.yml`.
+> **Excepción al principio 7 (2026-11-02, decisión del usuario):** se inició y cerró Loop 1B con el Loop 0 abierto en dos puntos: (a) CA-0.9, el simulacro manual de restore en `afull-restore-drill`; (b) los secrets `DEV_*` restantes y la corrida de `tests-dev.yml`. **Bloqueo:** no se crea `afull-prod` con datos reales ni se carga ningún dato real hasta cerrar (a) y (b). Nota: los artefactos de backup duran 30 días; si el simulacro se hace después del 2026-12-02, volver a correr `backup-db.yml`.
 
-1. **Ronda 2 — Diseño e Implementación del Loop 1B:**
-   - Leer y evaluar el documento maestro de diseño del frontend en `docs/LOOP_1B_DISENO.md`.
-   - Implementar Entregas E1 a E5 según la propuesta aprobada.
+1. **Auditoría final de Entrega E3 / Cierre Loop 1B** por Claude Code.
+2. **Apertura de Loop 2 (Tareas, Cronómetro y Control en Vivo):**
+   - Definir diseño de Loop 2: asignación de tareas a colaboradores, estados de tarea, inicio y fin de cronómetro concurrente con detección de 409 (CA-0.3), módulo live tras interfaz portable de Supabase Broadcast.
    - Mantener el bloqueo activo sobre producción y datos reales hasta el cierre de (a) y (b).
 
 ---
@@ -302,3 +311,10 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `cfb5767` | feat(security): migracion 0005 default privileges funciones, test loop0 y D5-1 en backup. | 38/38 tests en dev, CI Run `#41482469212` green |
 | 2026-11-02 | `82f4921` | fix(backup): corregir sintaxis bash en roles dinamicos y chequeo D5-1, cerrar CA-0.1 con decision de cold start. | CI Run `#41484116136` green |
 | 2026-11-02 | `e24dc12` | fix(backup): filtrar comando multi-sentencia para extraer valor booleano en chequeo D5-1. | CI Run `#41485136748` green, Backup Run #5 (`#41485209561`) green |
+| 2026-11-02 | `0ae475b` | fix(security): agregar tests CSRF, prefijo zz_test_u_ con auto-desactivacion y script de limpieza. | CI Run `#41504830491` green |
+| 2026-11-02 | `c9ee07b` | feat(web): implementar Entrega E2 (TablaAdmin generica, clientes, modales, CA-1.11, CA-1.13 y test de contrato). | CI Run `#41508351425` green |
+| 2026-11-02 | `b32f63a` | fix(web): PATCH en clientes, mensajes de error y aviso de 409 (auditoria E2). | CI Run `#41510053245` green |
+| 2026-11-02 | `2570c07` | feat(api): incluir nombres de cliente y sucursal en OTs y habilitar busqueda por cliente (E3.1). | CI Run `#41511309493` green |
+| 2026-11-02 | `2ea59d8` | feat(web): implementar detalle de cliente con sucursales, contactos y marcas (E3.2). | CI Run `#41512140776` green |
+| 2026-11-02 | `078ca00` | feat(web): implementar OTs lista, detalle, modales de transicion y edicion (E3.3). | CI Run `#41513931532` green |
+| 2026-11-02 | `2546057` | test(smoke): agregar script de prueba de humo automatizada de 9 puntos en Vercel (E3). | CI Run `#41514332924` green |
