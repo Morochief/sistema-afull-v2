@@ -37,7 +37,7 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 | Tests Loop 0 (Vitest) | **22/22 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, funciones y default privileges cerrados en `funciones.test.ts`, auth, seed idempotente, inmutabilidad, concurrencia por pooler + `sinPipelining`, CSRF en `csrf.test.ts`). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
 | Tests Loop 1B (Vitest frontend + contrato) | **45/45 tests web en verde** (9 suites) y **6 tests de contrato/API adicionales**, más **15/15 pasos Playwright UI en verde contra Vercel**. **Loop 1B cerrado (CA-1.11 a CA-1.16)**. |
-| Tests Loop 2 (Vitest backend + web) | **15/15 tests backend Loop 2 en verde contra Supabase `dev`** (6 de L2.E1 + 6 de L2.E2 + 3 de L2.E3 en live/estado; CA-0.3, CA-2.1 a CA-2.6). Total backend: **59/59 en verde** (57/57 en CI sin `anon.test.ts`). Web: **47/47 en verde** (10 suites). |
+| Tests Loop 2 (Vitest backend + web) | **17/17 tests backend Loop 2 en verde contra Supabase `dev`** (6 de L2.E1 + 6 de L2.E2 + 3 de L2.E3 + 2 de auditoría reintentos; CA-0.3, CA-2.1 a CA-2.6). Total backend: **61/61 en verde** (59/59 en CI sin `anon.test.ts`). Web: **47/47 en verde** (10 suites). |
 | Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2, #5 y #6 con D5-1 y migración 0006 con btree_gist comprobados**). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 3** (hoy no se usa Storage). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
@@ -328,3 +328,5 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `e1fc4ad` | **Loop 2 — Entrega L2.E2:** Tareas en OT, cronómetro atómico con auto-pausa (`CAMBIO_TAREA`), vista `/api/mi-trabajo`, y tests CA-0.3, CA-2.1, CA-2.2, CA-2.3, CA-2.5. | 56/56 tests backend en dev, 45/45 web, CI Run `#43` green |
 | 2026-11-02 | `afa9510` | docs: reportar entrega L2.E2 y actualizar bitacora de traspaso. | CI Run `#44` green |
 | 2026-11-02 | `d38e9b7` | **Loop 2 — Entrega L2.E3:** Módulo live (servidor y cliente), broadcast REST y endpoint `/api/live/estado` (CA-2.6). | 59/59 tests backend en dev, 47/47 web, CI Run `#45` green |
+| 2026-11-02 | `0d5ed28` | docs: reportar entrega L2.E3 y actualizar bitacora de traspaso. | CI Run `#46` green |
+| 2026-11-02 | `3ffd125` | fix(api,web): live sin claves fijas, día de Asunción, idempotencia de pausar/finalizar y bloqueo de reasignación en curso (auditoría L2.E2/E3). | 61/61 tests backend en dev, 47/47 web, CI Run `#47` green |

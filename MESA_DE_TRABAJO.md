@@ -651,4 +651,36 @@ Se implementó el ciclo de vida operativo de tareas, cronómetro de operarios y 
 - **Build:** `pnpm build` -> Compilación limpia de shared, api y web.
 - **GitHub Actions:** CI Run [#41544442358](https://github.com/Morochief/sistema-afull-v2/actions/runs/41544442358) (Run #45) completado con **éxito** (`success`).
 
+---
+
+## Resolución de Auditoría L2.E2 y L2.E3
+
+**Fecha:** 2026-11-02 20:38  
+**Commit:** `3ffd125` (`fix(api,web): live sin claves fijas, día de Asunción, idempotencia de pausar/finalizar y bloqueo de reasignación en curso (auditoría L2.E2/E3)`)  
+**GitHub Actions CI Run:** [#41546851350](https://github.com/Morochief/sistema-afull-v2/actions/runs/41546851350) (Run #47) — **Success** (Lint 0, Tipos 0, 59 tests backend, 47 tests web, Build Vite 8).
+
+### 1. Correcciones Integradas de Claude Code
+1. **Configuración dinámica de Realtime:**
+   - En `apps/api/src/modules/live/publicar.ts` y `apps/web/src/lib/live.ts` se removieron las URLs y credenciales hardcodeadas por defecto. Ambas piezas leen exclusivamente de variables de entorno (`SUPABASE_URL` / `SUPABASE_ANON_KEY` en API, y `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` en web). Si faltan en el entorno, el servidor omite el broadcast sin fallar y el cliente se apoya en el sondeo cada 30 segundos.
+   - En `tests/loop2/live.test.ts`, el test configura dinámicamente las variables de entorno de prueba y las restaura al finalizar.
+2. **Zona horaria en Control en Vivo:**
+   - En `apps/api/src/modules/live/service.ts`, el cálculo de minutos trabajados hoy se ajustó a la zona horaria de Paraguay (`America/Asuncion`), evitando reinicios de contador prematuros entre las 21:00 y las 24:00.
+3. **Filtro de personas en Control en Vivo:**
+   - Muestra exclusivamente a los operarios asignables con capacidad `taller` o `montaje`, más cualquier persona que tenga un intervalo abierto en curso.
+4. **Idempotencia de Pausar y Finalizar:**
+   - En `apps/api/src/modules/cronometro/mutaciones.service.ts`, si un reintento de red o doble toque llega cuando la tarea ya se encuentra en el estado deseado (`PAUSADA` o `LISTO`), se responde `HTTP 200` inmediatamente sin generar eventos duplicados ni publicar broadcasts espurios.
+5. **Protección de reasignación de tareas `EN_CURSO`:**
+   - En `apps/api/src/modules/comercial/tareas.mutaciones.service.ts`, intentar reasignar una tarea `EN_CURSO` a otra persona responde `HTTP 409` ("La tarea está en curso; el operario debe pausarla antes de reasignarla"), previniendo intervalos huérfanos.
+6. **Nueva suite de pruebas:**
+   - `tests/loop2/cronometro-reintentos.test.ts` (2 tests) verificando la idempotencia ante reintentos de red y el rechazo 409 al reasignar tareas en curso.
+7. **Higiene estricta de base de datos:**
+   - En `tests/loop2/cronometro.test.ts`, `tests/loop2/live.test.ts` y `tests/loop2/cronometro-reintentos.test.ts`, todos los fixtures usan el prefijo `zz_test_` y cierran de forma garantizada los intervalos abiertos en el `afterAll`, desactivando las personas de prueba.
+
+### 2. Estado de la Suite
+- **Backend Tests:** **21 suites pasadas, 61/61 tests en verde** en local (59/59 en CI de GitHub Actions).
+- **Web Tests:** **10 suites pasadas, 47/47 tests en verde**.
+- **Linter & Typecheck:** 0 errores, 0 advertencias.
+- **Build:** Compilación limpia de shared, api y web.
+
+
 
