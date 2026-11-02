@@ -5,7 +5,20 @@ import { crearUsuario, post } from '../loop0/auth-helpers.js';
 import { app } from '../../apps/api/src/index.js';
 import { CLAVES_LIVE_ESTADO_RESPUESTA, CLAVES_LIVE_PERSONA_ITEM, type LiveEstadoRespuesta } from '../../packages/shared/src/index.js';
 
-afterAll(cerrarConexiones);
+const personasCreadas = new Set<string>();
+
+afterAll(async () => {
+  if (personasCreadas.size > 0) {
+    const ids = [...personasCreadas];
+    await admin`
+      UPDATE tarea_intervalo
+      SET hora_fin = greatest(clock_timestamp(), hora_inicio), motivo_cierre = 'FIN'
+      WHERE hora_fin IS NULL AND persona_id = ANY(${ids}::uuid[])
+    `;
+    await admin`UPDATE persona SET activo = false WHERE id = ANY(${ids}::uuid[])`;
+  }
+  await cerrarConexiones();
+});
 
 const ORIGEN = process.env.APP_ORIGIN || 'http://localhost:3000';
 
@@ -27,13 +40,14 @@ async function fixtureOperarioConTarea() {
   const { u, cookie } = await sesionUsuario(['taller', 'montaje']);
   const tag = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const [p] = await admin`
-    INSERT INTO persona (nombre, ci) VALUES (${'zz_op_' + tag}, ${'CI-' + tag}) RETURNING id, nombre
+    INSERT INTO persona (nombre, ci) VALUES (${'zz_test_op_' + tag}, ${'CI-' + tag}) RETURNING id, nombre
   `;
+  personasCreadas.add(p.id as string);
   await admin`UPDATE usuario SET persona_id = ${p.id} WHERE id = ${u.id}`;
 
   const [adminUser] = await admin`SELECT id FROM usuario WHERE activo = true LIMIT 1`;
   const [cliente] = await admin`
-    INSERT INTO cliente (codigo, nombre) VALUES (${'CL-' + tag}, ${'zz_cli_' + tag}) RETURNING id, nombre
+    INSERT INTO cliente (codigo, nombre) VALUES (${'CL-' + tag}, ${'zz_test_cli_' + tag}) RETURNING id, nombre
   `;
   const [ot] = await admin`
     INSERT INTO orden_trabajo (codigo_ot, cliente_id, titulo, creado_por)
@@ -114,6 +128,9 @@ describe('L2.E3 — Control en Vivo y Módulo Live (CA-2.5, CA-2.6)', () => {
   it('CA-2.6 Resiliencia y Payload sin datos en publicarLive: si falla broadcast, la mutación responde 201', async () => {
     const { cookie: cookieOperario, tarea } = await fixtureOperarioConTarea();
     const fetchOriginal = globalThis.fetch;
+    const envOriginal = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_ANON_KEY };
+    process.env.SUPABASE_URL = 'https://realtime.example.test';
+    process.env.SUPABASE_ANON_KEY = 'clave-de-prueba';
     const llamadasBroadcast: { url: string; body: unknown }[] = [];
 
     // Interceptamos fetch para verificar payload y simular caída de Realtime
@@ -152,6 +169,10 @@ describe('L2.E3 — Control en Vivo y Módulo Live (CA-2.5, CA-2.6)', () => {
       expect(int?.id).toBeDefined();
     } finally {
       globalThis.fetch = fetchOriginal;
+      if (envOriginal.url === undefined) delete process.env.SUPABASE_URL;
+      else process.env.SUPABASE_URL = envOriginal.url;
+      if (envOriginal.key === undefined) delete process.env.SUPABASE_ANON_KEY;
+      else process.env.SUPABASE_ANON_KEY = envOriginal.key;
     }
   });
 });

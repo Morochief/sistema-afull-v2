@@ -35,6 +35,30 @@
 
 ---
 
+## Correcciones aplicadas por Claude Code — L2.E2 y L2.E3 (commits auditados `e1fc4ad`, `d38e9b7`)
+
+**Cómo audité:** cloné `0d5ed28`, apliqué `0001`–`0006` en un PostgreSQL 16 limpio y reproduje el CI: backend 57/57, web 47/47, lint 0, typecheck 0. Revisé el cronómetro, las tareas y el módulo `live`.
+
+**Bien:** el cronómetro sigue el diseño (bloqueo de la persona con `FOR UPDATE`, idempotencia antes de validar, auto-pausa en la misma transacción, auditoría con `tx`, `publicarLive` después del commit). Usar `clock_timestamp()` con `greatest(…, hora_inicio)` es una buena solución para el `CHECK >=`. El payload de live es solo `{ tipo, id }`.
+
+**Corregido (archivos en el disco, sin commit):**
+1. **Clave y URL de Supabase escritas en el código** (`live/publicar.ts` y `web/src/lib/live.ts`, como valores por defecto). La clave anon es pública por diseño, pero el valor por defecto **fijo al proyecto `afull-dev`** hace que un deploy de prod sin variables publique en dev sin que nadie lo note. Además, **el CI llamaba de verdad a Supabase dev** en cada test que inicia una tarea. Ahora no hay valores por defecto: sin `SUPABASE_URL`/`SUPABASE_ANON_KEY` (API) o `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` (web), no se publica ni se suscribe, y queda la consulta periódica. El test CA-2.6 configura sus propias variables y las restaura.
+2. **"Hoy" en Control en Vivo usaba el día UTC** (`date_trunc('day', now())`). Entre las 21:00 y las 24:00 de Paraguay, los minutos de hoy se reiniciaban antes de tiempo, y no coincidían con "Mi trabajo", que sí usa `America/Asuncion`. Corregido con la misma expresión.
+3. **Control en Vivo listaba a todas las personas activas**, incluido el personal de oficina. Ahora muestra las que tienen usuario activo con `taller`/`montaje`, más cualquiera con un cronómetro abierto.
+4. **Pausar y finalizar no eran idempotentes:** recibían `claveIdempotencia` pero no la usaban. Un reintento de red después de un pausado exitoso respondía **400** al operario. Ahora, si la tarea ya está en el estado pedido, responde 200 sin repetir eventos ni publicar.
+5. **Reasignar una tarea `EN_CURSO` a otra persona** dejaba el intervalo abierto del operario anterior sobre una tarea que ya no era suya: no podía pausarla, porque recibía 403, y su cronómetro quedaba corriendo. Ahora responde **409** "el operario debe pausarla antes de reasignarla".
+6. **Test nuevo** `tests/loop2/cronometro-reintentos.test.ts` (2 tests, para 4 y 5). **Comprobé que fallan con el código anterior** (2 failed) y pasan con la corrección.
+
+**Resultado:** backend **59/59**, web 47/47, lint 0, typecheck 0.
+
+**Para Antigravity:**
+1. Revisar los 6 archivos y el test nuevo, correr lint, typecheck y tests, y hacer el commit: `fix(api,web): live sin claves fijas, día de Asunción, idempotencia de pausar/finalizar y bloqueo de reasignación en curso (auditoría L2.E2/E3)`.
+2. **Configurar en Vercel** `SUPABASE_URL` y `SUPABASE_ANON_KEY` (función de la API) y `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (build del web), con los valores de `afull-dev`. Sin eso no hay tiempo real en el deploy.
+3. **Higiene de datos de prueba:** los fixtures de `live.test.ts` y `cronometro.test.ts` crean personas y clientes con prefijos `zz_op_`/`zz_cli_` y **dejan intervalos abiertos** en `dev`. Esas personas aparecen en Control en Vivo de `dev` para siempre. Usar `zz_test_` y, en el `afterAll` de cada archivo, **cerrar** los intervalos abiertos que creó (`UPDATE tarea_intervalo SET hora_fin = now(), motivo_cierre = 'FIN' WHERE hora_fin IS NULL AND persona_id IN (…)`). Borrarlos no se puede porque son inmutables, y está bien que así sea.
+4. Para **L2.E4**: `suscribirseLive` ya no debe ser la única fuente. El hook de la pantalla (por ejemplo `useLive`) tiene que **consultar cada 30 s siempre** e invalidar al recibir un evento (diseño §5).
+
+---
+
 ## Correcciones aplicadas por Claude Code — L2.E1 (commit auditado `ec3a77a`)
 
 **Cómo audité:** cloné `ec3a77a`, apliqué `0001`–`0006` sobre un PostgreSQL 16 limpio (incluye `btree_gist` en `extensions`) y reproduje el CI: lint 0, typecheck 0, backend 45/45. Revisé la migración, las rutas, los servicios y los tests.

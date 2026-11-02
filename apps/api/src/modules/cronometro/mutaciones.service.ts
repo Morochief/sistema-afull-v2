@@ -25,6 +25,8 @@ export async function pausarTarea(ctx: Ctx, tareaId: string, motivo: MotivoCierr
       if (tarea.persona_asignada_id !== persona.id) {
         throw new ErrorApp(403, 'Solo puedes operar tareas asignadas a tu persona');
       }
+      // Reintento (red, doble toque): si ya está en el estado pedido, responder igual sin repetir nada.
+      if (tarea.estado === 'PAUSADA') return { tareaId, estado: 'PAUSADA', repetida: true };
       if (!puedeTransicionarTarea(tarea.estado as EstadoTarea, 'PAUSADA')) {
         throw new ErrorApp(400, `No se puede pausar una tarea en estado ${tarea.estado}`);
       }
@@ -56,9 +58,9 @@ export async function pausarTarea(ctx: Ctx, tareaId: string, motivo: MotivoCierr
         tx
       );
 
-      return { tareaId, estado: 'PAUSADA' };
+      return { tareaId, estado: 'PAUSADA', repetida: false };
     });
-    await publicarLive('tarea.pausar', tareaId);
+    if (!r.repetida) await publicarLive('tarea.pausar', tareaId);
     return r;
   } catch (e) {
     if (e instanceof ErrorApp) throw e;
@@ -86,6 +88,8 @@ export async function finalizarTarea(ctx: Ctx, tareaId: string, comentario?: str
       if (tarea.persona_asignada_id !== persona.id) {
         throw new ErrorApp(403, 'Solo puedes operar tareas asignadas a tu persona');
       }
+      // Reintento (red, doble toque): si ya está en el estado pedido, responder igual sin repetir nada.
+      if (tarea.estado === 'LISTO') return { tareaId, estado: 'LISTO', repetida: true };
       if (!puedeTransicionarTarea(tarea.estado as EstadoTarea, 'LISTO')) {
         throw new ErrorApp(400, `No se puede finalizar una tarea en estado ${tarea.estado}`);
       }
@@ -117,9 +121,9 @@ export async function finalizarTarea(ctx: Ctx, tareaId: string, comentario?: str
         tx
       );
 
-      return { tareaId, estado: 'LISTO' };
+      return { tareaId, estado: 'LISTO', repetida: false };
     });
-    await publicarLive('tarea.finalizar', tareaId);
+    if (!r.repetida) await publicarLive('tarea.finalizar', tareaId);
     return r;
   } catch (e) {
     if (e instanceof ErrorApp) throw e;

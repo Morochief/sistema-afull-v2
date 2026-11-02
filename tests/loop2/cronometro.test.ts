@@ -3,7 +3,20 @@ import { admin, cerrarConexiones } from '../loop0/helpers.js';
 import { crearUsuario, post } from '../loop0/auth-helpers.js';
 import { app } from '../../apps/api/src/index.js';
 
-afterAll(cerrarConexiones);
+const personasCreadas = new Set<string>();
+
+afterAll(async () => {
+  if (personasCreadas.size > 0) {
+    const ids = [...personasCreadas];
+    await admin`
+      UPDATE tarea_intervalo
+      SET hora_fin = greatest(clock_timestamp(), hora_inicio), motivo_cierre = 'FIN'
+      WHERE hora_fin IS NULL AND persona_id = ANY(${ids}::uuid[])
+    `;
+    await admin`UPDATE persona SET activo = false WHERE id = ANY(${ids}::uuid[])`;
+  }
+  await cerrarConexiones();
+});
 
 const ORIGEN = process.env.APP_ORIGIN || 'http://localhost:3000';
 
@@ -11,8 +24,9 @@ async function sesionOperario(capacidades: string[] = ['taller']) {
   const u = await crearUsuario(capacidades);
   const tag = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const [p] = await admin`
-    INSERT INTO persona (nombre, ci) VALUES (${'zz_op_' + tag}, ${'CI-' + tag}) RETURNING id, nombre
+    INSERT INTO persona (nombre, ci) VALUES (${'zz_test_op_' + tag}, ${'CI-' + tag}) RETURNING id, nombre
   `;
+  personasCreadas.add(p.id as string);
   await admin`UPDATE usuario SET persona_id = ${p.id} WHERE id = ${u.id}`;
   const res = await post('/api/auth/login', { username: u.username, password: 'Password123!' });
   const cookie = res.headers.get('set-cookie')!.split(';')[0];
@@ -29,7 +43,7 @@ function req(method: string, path: string, cookie?: string, body?: unknown) {
 async function fixtureOTyTareas(personaId: string, cantidad = 3) {
   const tag = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const [cliente] = await admin`
-    INSERT INTO cliente (codigo, nombre) VALUES (${'CL-' + tag}, ${'zz_cli_' + tag}) RETURNING id
+    INSERT INTO cliente (codigo, nombre) VALUES (${'CL-' + tag}, ${'zz_test_cli_' + tag}) RETURNING id
   `;
   const [adminUser] = await admin`SELECT id FROM usuario WHERE activo = true LIMIT 1`;
   const [ot] = await admin`

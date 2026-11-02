@@ -1,10 +1,18 @@
-const DEFAULT_URL = 'https://oxthxdnyxabupeebzwmn.supabase.co';
-const DEFAULT_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94dGh4ZG55eGFidXBlZWJ6d21uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1OTQ0NTYsImV4cCI6MjEwOTE3MDQ1Nn0.RcCmHHL62b4pJBrNO2Yfn24n00S_QzBrMoUggfgDFvQ';
+// Sin valores por defecto a propósito: si faltan las variables, no se publica (los clientes
+// tienen la consulta periódica de respaldo). Un default fijo al proyecto afull-dev haría que
+// un deploy de prod mal configurado publique en dev sin que nadie lo note.
+let avisado = false;
 
 export async function publicarLive(tipo: string, id: string): Promise<void> {
-  const baseUrl = process.env.SUPABASE_URL || DEFAULT_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY || DEFAULT_KEY;
+  const baseUrl = process.env.SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY;
+  if (!baseUrl || !anonKey) {
+    if (!avisado) {
+      console.warn('[live:publicar] SUPABASE_URL/SUPABASE_ANON_KEY no configuradas: no se publica (queda el respaldo por consulta).');
+      avisado = true;
+    }
+    return;
+  }
   const endpoint = `${baseUrl}/realtime/v1/api/broadcast`;
 
   try {

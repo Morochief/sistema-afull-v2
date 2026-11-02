@@ -16,14 +16,23 @@ export async function editarTarea(ctx: Ctx, tareaId: string, d: PatchTareaInput)
   await esperarAvanceReloj(d.updatedAt);
   try {
     const editada = await sql.begin(async (tx) => {
-      const [tarea] = await tx<{ estado: string; updated_at: Date }[]>`
-        SELECT estado, updated_at FROM tarea WHERE id = ${tareaId} FOR UPDATE
+      const [tarea] = await tx<{ estado: string; updated_at: Date; persona_asignada_id: string | null }[]>`
+        SELECT estado, updated_at, persona_asignada_id FROM tarea WHERE id = ${tareaId} FOR UPDATE
       `;
       if (!tarea) throw new ErrorApp(404, 'Tarea no encontrada');
       if (esEstadoTareaFinal(tarea.estado as EstadoTarea)) {
         throw new ErrorApp(400, 'No se puede editar una tarea en estado final');
       }
       verificarUpdatedAt(tarea.updated_at, d.updatedAt);
+      // Reasignar con el cronómetro corriendo dejaría un intervalo abierto de una persona sobre
+      // una tarea que ya no es suya (no podría pausarla). Primero hay que pausarla.
+      if (
+        tarea.estado === 'EN_CURSO' &&
+        d.personaAsignadaId !== undefined &&
+        d.personaAsignadaId !== tarea.persona_asignada_id
+      ) {
+        throw new ErrorApp(409, 'La tarea está en curso: el operario debe pausarla antes de reasignarla');
+      }
 
       if (d.personaAsignadaId) {
         const [p] = await tx<{ activo: boolean }[]>`SELECT activo FROM persona WHERE id = ${d.personaAsignadaId}`;

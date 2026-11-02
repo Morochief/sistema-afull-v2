@@ -5,18 +5,16 @@ export interface EventoLive {
   id: string;
 }
 
-const DEFAULT_SUPABASE_URL = 'https://oxthxdnyxabupeebzwmn.supabase.co';
-const DEFAULT_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94dGh4ZG55eGFidXBlZWJ6d21uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1OTQ0NTYsImV4cCI6MjEwOTE3MDQ1Nn0.RcCmHHL62b4pJBrNO2Yfn24n00S_QzBrMoUggfgDFvQ';
-
-const SUPABASE_URL =
-  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-const SUPABASE_ANON_KEY =
-  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_ANON_KEY || DEFAULT_ANON_KEY;
+// Sin valores por defecto: se configuran en el build (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).
+// Si faltan, no hay suscripción en tiempo real y la pantalla vive de la consulta periódica.
+const entorno = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
+const SUPABASE_URL = entorno.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = entorno.VITE_SUPABASE_ANON_KEY;
 
 let client: ReturnType<typeof createClient> | null = null;
 
 export function obtenerSupabaseClient() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
   if (!client) {
     client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -28,6 +26,7 @@ export function obtenerSupabaseClient() {
 
 export function suscribirseLive(cb: (evento: EventoLive) => void): () => void {
   const supabase = obtenerSupabaseClient();
+  if (!supabase) return () => {};
   let canal: RealtimeChannel | null = null;
   let temporizadorDebounce: ReturnType<typeof setTimeout> | null = null;
 

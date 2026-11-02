@@ -35,7 +35,7 @@ export async function obtenerEstadoLive(): Promise<LiveEstadoRespuesta> {
         (SELECT ROUND(SUM(EXTRACT(EPOCH FROM (COALESCE(ic.hora_fin, clock_timestamp()) - ic.hora_inicio)) / 60))
          FROM tarea_intervalo ic
          WHERE ic.persona_id = p.id
-           AND ic.hora_inicio >= date_trunc('day', now())
+           AND ic.hora_inicio >= (date_trunc('day', now() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion')
         ), 0
       )::int AS minutos_hoy
     FROM persona p
@@ -44,6 +44,14 @@ export async function obtenerEstadoLive(): Promise<LiveEstadoRespuesta> {
     LEFT JOIN orden_trabajo o ON o.id = t.orden_trabajo_id
     LEFT JOIN cliente c ON c.id = o.cliente_id
     WHERE p.activo = true
+      AND (
+        i.id IS NOT NULL
+        OR EXISTS (
+          SELECT 1 FROM usuario u
+          JOIN permiso_capacidad pc ON pc.usuario_id = u.id AND pc.capacidad IN ('taller', 'montaje')
+          WHERE u.persona_id = p.id AND u.activo = true
+        )
+      )
     ORDER BY p.nombre ASC
   `;
 
