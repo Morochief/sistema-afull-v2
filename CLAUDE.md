@@ -1,5 +1,7 @@
 # Reglas del Proyecto Sistema aFull (Claude Code)
 
+> **Archivo canónico de estado y decisiones:** lee siempre `TRASPASO.md` completo en la raíz del repositorio antes de actuar. Si hay cualquier diferencia entre este archivo y `TRASPASO.md`, **gana `TRASPASO.md`**.
+
 ## 2. Principios de ingeniería (no negociables)
 
 1. **Eventos inmutables, no contadores.** Horas, estados y consumos son filas históricas. Saldos y costos se calculan sumando eventos.
@@ -18,7 +20,7 @@
 - **Stack gratuito:** Vercel (runtime **Node**, no Edge) + Supabase Free (región São Paulo) + GitHub Actions.
 - **Frontend y API bajo el mismo sitio** (mismo proyecto de Vercel o subdominios del mismo dominio), porque la cookie es `SameSite=Lax` y no viaja entre sitios distintos.
 - **Fly.io no es gratis en 2026** (sin plan gratuito, solo créditos de prueba). Queda como destino de migración futura si la API necesita un proceso siempre vivo.
-- **Pendiente de verificar:** el plan Vercel Hobby es para uso no comercial según lo conocido. Revisar los términos actuales antes de operar con personal real. Alternativa: Cloudflare Workers, pero su límite de CPU probablemente no alcanza para Argon2.
+- **Pendiente de verificar:** el plan Vercel Hobby es para uso no comercial según lo conocido. Revisar los términos actuales antes de operar con personal real.
 - Dos entornos desde el día 1: proyectos Supabase `dev` y `prod`.
 
 ### Tiempo real
@@ -29,7 +31,8 @@
 
 ### Base de datos y seguridad
 - **Dos roles:** las migraciones corren como `postgres`; la API se conecta como `afull_api` (sin ser dueño de nada, sin DDL, `NOBYPASSRLS`). Así la inmutabilidad de la auditoría es real a nivel motor.
-- Conexión de la API por el **pooler de transacción (puerto 6543)** con `prepare: false`. Migraciones y backups por conexión directa o pooler en modo sesión (puerto 5432 del pooler).
+- Conexión de la API por el **pooler de transacción (puerto 6543)** con `prepare: false`, `fetch_types: false` y el envoltorio `sinPipelining(sql)` en `apps/api/src/db/client.ts` con `postgres@3.4.9` fijo (sin `^`). Migraciones y backups por conexión directa o pooler en modo sesión (puerto 5432 del pooler).
+- **Mitigación del pooler 6543 (mitigado, causa sin confirmar):** toda consulta `sql` en `apps/api/src` pasa por `sinPipelining(sql)` (`options.onexecute = () => false`) e interpola al menos un parámetro `${...}`. En `vitest.config.ts` mantener siempre `fileParallelism: false`.
 - **RLS activado en todas las tablas**, `REVOKE ALL` a `anon` y `authenticated`, y `REVOKE EXECUTE` sobre funciones (cierra el RPC de PostgREST).
 - **Regla para toda tabla nueva** (tres pasos, al final de cada migración):
   ```sql
@@ -42,12 +45,12 @@
 - Capacidades atómicas (`admin`, `comercial`, `diseno`, `taller`, `montaje`, `ver_costos`, `rrhh`) con `CHECK` en la base. Los "roles" son solo plantillas de interfaz. `admin` pasa siempre.
 
 ### Autenticación
-- Argon2id con `@node-rs/argon2` (OWASP: 19 MiB, 2 iteraciones, 1 hilo; apuntar a 100–300 ms en Vercel). Alternativa si el binario nativo no carga: `scrypt` de `node:crypto`.
+- Argon2id con `@node-rs/argon2` (OWASP: 19 MiB, 2 iteraciones, 1 hilo; medido en Vercel `gru1`: ~152 ms en caliente y ~1253 ms en cold start).
 - Token de 32 bytes aleatorios en la cookie `afull_session` (`HttpOnly`, `Secure`, `SameSite=Lax`). En la base solo se guarda su SHA-256.
 - Sesión validada en cada request contra `sesion` y `usuario.activo` (revocación instantánea). Expiración deslizante de 30 días; `last_active_at` se refresca como máximo cada 5 minutos.
 - CSRF: `SameSite=Lax` más verificación del header `Origin` en toda petición que modifica datos.
 - Fuerza bruta: tabla `intento_login` (5 fallos por usuario o 20 por IP en 15 minutos). Mensaje de error idéntico para usuario inexistente, inactivo o clave mala.
-- La auditoría de mutaciones va **dentro de la misma transacción**. La de login/logout va fuera, con `try/catch`, para que una falla de auditoría no deje a todos sin entrar (decisión a documentar en el registro de cambios).
+- La auditoría de mutaciones va **dentro de la misma transacción**. La de login/logout va fuera, con `try/catch`, para que una falla de auditoría no deje a todos sin entrar.
 - `metadata` de auditoría nunca lleva contraseñas ni tokens (`limpiarMetadata` los filtra, pero no depender de eso).
 
 ### Dominio
@@ -57,20 +60,18 @@
   `PENDIENTE → EN_DISENO | EN_TALLER | CANCELADO`; `EN_DISENO → EN_TALLER | CANCELADO`; `EN_TALLER → EN_MONTAJE | TERMINADO | CANCELADO`; `EN_MONTAJE → TERMINADO | CANCELADO`.
 - Cada transición usa `SELECT ... FOR UPDATE` y exige el campo `desde` (el estado que el usuario veía): si cambió, responde `409`.
 - `ot_evento` es el historial inmutable; `orden_trabajo.estado` es solo el último valor.
-- Auditoría de flota: se compara el odómetro contra la **distancia de ruta de las paradas planificadas** (`hoja_ruta_parada`), no contra Haversine entre inicio y fin. La línea recta subestima las calles (factor ~1,2–1,5), así que **la alerta es informativa, nunca bloqueante**, y se permiten paradas extra con motivo. Mejor aún: calcular la distancia por ruta con OSRM o similar al armar la hoja de ruta (a evaluar).
+- Auditoría de flota: se compara el odómetro contra la **distancia de ruta de las paradas planificadas** (`hoja_ruta_parada`), no contra Haversine entre inicio y fin. La alerta es informativa, nunca bloqueante.
 - La geocerca de asistencia (100 m) es **disuasiva**, no seguridad dura: el GPS del navegador es falsificable.
-
----
 
 ---
 
 ## 11. Cómo trabajar (para Claude Code o una sesión nueva)
 
-1. Leer este archivo y el documento maestro completos. Resumir el estado en 10 líneas para confirmar alineación.
+1. Leer `TRASPASO.md` completo (que incluye e invalida diferencias previas del documento maestro v3.x). Resumir el estado en 10 líneas para confirmar alineación.
 2. Tratar todo lo "sin verificar" como tal. Marcar con claridad lo que no se pudo ejecutar.
 3. No reabrir decisiones de la sección 3 sin un problema real; si lo hay, explicarlo.
 4. Verificar precios, límites y versiones actuales de servicios externos antes de afirmarlos.
-5. Antes de cerrar una tarea: tests en verde, lint en verde, archivo ≤ 250 líneas, y actualizar la sección 0 y "Siguiente paso".
+5. Antes de cerrar una tarea: tests en verde, lint en verde, archivo ≤ 250 líneas, y actualizar la sección 0 y "Siguiente paso" de `TRASPASO.md`.
 6. Los fallos de tests no se "ajustan para que pasen": primero se investiga si revelan un permiso o una restricción mal puestos.
+7. En scripts de prueba contra `dev`, el bloque `finally` debe limpiar **únicamente** los datos creados por ese script (ej. `WHERE username = 'zz_test_...'`), sin barrer filas ajenas.
 
----

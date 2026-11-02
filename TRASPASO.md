@@ -1,6 +1,6 @@
 # Traspaso del proyecto aFull
 
-Última actualización: 2 de noviembre de 2026 — 11:44 (America/Asuncion).
+Última actualización: 2 de noviembre de 2026 — 12:04 (America/Asuncion).
 Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada tarea o commit.
 
 ---
@@ -8,35 +8,36 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
 **Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las 4 consultas de comprobación dieron los resultados exactos esperados y `pnpm test` pasa **36 de 36 tests en verde** (11 archivos: 20 de Loop 0 y 16 de Loop 1) contra Supabase `dev` y contra PostgreSQL 17 en GitHub Actions CI.
-- **Despliegue en Vercel (`gru1` São Paulo, Node 22) — CA-0.1 verificado en caliente (cold start de login pendiente) y CA-0.10 por HTTP verificado:**
+- **Despliegue en Vercel (`gru1` São Paulo, Node 22) — CA-0.1 (en frío y en caliente) y CA-0.10 por HTTP verificados:**
   - **Cuelgue anterior de 20 s en `POST /api/auth/login` — Estado: RESUELTO en commit `a588fbb`, CAUSA EXACTA SIN AISLAR** (se aplicaron juntos el puente `req.body → req.rawBody` en `apps/api/src/vercel.ts` y `api.bodyParser: false` en `api/index.js`).
   - **Sondas diagnósticas reales en `gru1`:** Probe 1 (`POST /api/auth/login` con `{}`) → `400` en **600 ms** (1.ª llamada post-deploy, sin tocar Argon2 ni base de datos) y **460 ms**; Probe 2 (usuario inexistente ejecutando `verificarDummy()` con `@node-rs/argon2` + base de datos, ya con la instancia caliente) → `401` en **295 ms**.
   - **Las 4 mediciones en `gru1` contra Supabase `afull-dev` (pooler 6543):**
     1. **`@node-rs/argon2` en producción:** carga y verifica hashes Argon2id (19 MiB, 2 iteraciones, 1 hilo) sin errores en el runtime Node 22 de Vercel (`200` en login válido y `401` en usuario inexistente con hash dummy). El diseño de autenticación queda con Argon2id (no hace falta `scrypt`).
-    2. **Latencia de `POST /api/auth/login` en caliente (9 muestras cálidas; cold start de login pendiente):** La llamada #1 del lote (`201 ms`) ya entró con la función caliente por las sondas previas, y las 9 muestras siguientes dieron `147 ms`, `161 ms`, `150 ms`, `150 ms`, `152 ms`, `153 ms`, `163 ms`, `150 ms`, `155 ms` (**mín: 147 ms | mediana: 152 ms | promedio: 153 ms | máx: 163 ms**, total con red incluida, dentro del rango objetivo de **100–300 ms** de **CA-0.1** en caliente). **Pendiente:** medir el **cold start real del login con Argon2 + DB** haciendo un único login válido tras 20–30 minutos sin tráfico hacia la función.
+    2. **Latencia de `POST /api/auth/login` (en frío y en caliente):**
+       - **Cold start real del login con Argon2 + DB (medido tras >23 min sin tráfico y deploy nuevo):** `HTTP 200` en **1253 ms** (`1,25 s`, incluye arranque de instancia en `gru1`, carga de `@node-rs/argon2`, apertura de la 1.ª conexión TLS al pooler 6543, 4 queries de login y verificación Argon2id), seguido de **318 ms** en la 2.ª petición inmediata.
+       - **Ráfaga en caliente (9 muestras cálidas seguidas):** `147 ms`, `161 ms`, `150 ms`, `150 ms`, `152 ms`, `153 ms`, `163 ms`, `150 ms`, `155 ms` (**mín: 147 ms | mediana: 152 ms | promedio: 153 ms | máx: 163 ms**, total con red incluida, dentro del rango objetivo de **100–300 ms** de **CA-0.1** en caliente).
     3. **20 peticiones simultáneas a `GET /api/clientes` con cookie válida (`CA-0.10` por HTTP):** **20/20 responden `200 OK`** sin colgarse en **754 ms** de tiempo total de pared (`mín: 228 ms | mediana: 704 ms | máx: 752 ms`). **Observación (sin causa confirmada):** dado que una petición cálida individual tarda ~150–200 ms, la distribución (`228 ms` a `752 ms`, mediana `704 ms`) sugiere que las 20 simultáneas se atienden casi en serie (cola en una sola instancia/hilo de función o en el pooler), no 20 ejecuciones en paralelo; tenerlo presente cuando una oficina real consulte a la vez.
     4. **CSRF y flags de cookie:** `POST /api/auth/login` con `Origin` inválido devuelve `403` en **277 ms** (y **200 ms** en sonda previa); `Set-Cookie` en login válido incluye `HttpOnly`, `Secure` y `SameSite=Lax`.
-  - **Higiene en `afull-dev`:** 0 usuarios activos y 0 filas en `sesion`. *Regla para scripts futuros:* acotar siempre el `finally` únicamente a los datos creados por ese script (ej. `username = 'zz_test_vercel_probe'`), sin barrer filas de otras corridas.
+  - **Higiene en `afull-dev`:** el script de cold start limpió en su `finally` **únicamente** a `zz_test_vercel_probe` (`activo = false`, `0` sesiones de ese usuario).
 - **Qué queda para cerrar Loop 0 al 100%:**
   1. Cargar los 4 secrets `DEV_*` en GitHub Actions y correr `tests-dev.yml`.
-  2. Medir el **cold start real del login con Argon2** tras 20–30 minutos de inactividad en Vercel.
-  3. Crear y verificar `.github/workflows/backup-db.yml`, realizar el **restore manual completo hecho por una persona** y documentarlo en `RESTAURAR.md` (**CA-0.9**). *(Nota: `backup-storage` se pospone al Loop 3, cuando la app empiece a subir fotos a Storage).*
+  2. Crear y verificar `.github/workflows/backup-db.yml`, realizar el **restore manual completo hecho por una persona** y documentarlo en `RESTAURAR.md` (**CA-0.9**). *(Nota: `backup-storage` se pospone al Loop 3, cuando la app empiece a subir fotos a Storage).*
 - **Loop 1A cerrado (CA-1.1 a CA-1.10 verificados):** 16/16 tests de `tests/loop1` en verde contra Supabase `dev` y en CI.
   - **Entrega 1 (commit `b9d0d58`):** Clientes (listado con `q`, `activo`, `desde`/`hasta`, detalle completo, edición con `updatedAt` → `409`, desactivar/reactivar advirtiendo OTs abiertas), sucursales (`sucursales.service.ts`), contactos con cambio atómico de contacto principal y marcas (`subrecursos.service.ts`), benchmark CA-1.2 ejecutando `queryListarClientes` real (`busqueda.test.ts`), y `clientes.test.ts` cubriendo CA-1.1 (paginación 25), CA-1.7 (bloqueo `DELETE` real con `42501`) y CA-1.10 en `/api/clientes`.
   - **Entrega 2 (commit `ed0621b`):** Detalle de OT (`GET /api/comercial/ot/:id` devolviendo la OT más el historial `ot_evento` ordenado por `created_at ASC, id ASC` coincidente con `estado`, CA-1.8), filtro por `clienteId` en `listarOTs`, edición de OT (`PATCH /api/comercial/ot/:id` con `SELECT ... FOR UPDATE`, exigiendo `updatedAt` → `409`, validando sucursal activa del cliente o `null`, auditando `ot.editar` en la misma transacción y bloqueando con `400` mediante `esEstadoFinal` si está en `TERMINADO` o `CANCELADO`), recorrido dinámico global de `app.routes` (CA-1.10 reforzado: todas las rutas de la app exigen `401` sin sesión salvo `POST /api/auth/login`, y `/api/comercial/ot` exige `403` sin capacidad `comercial`/`admin`) y CA-0.10 (20 requests HTTP simultáneas en `ot-api.test.ts`).
 
 | Pieza | Estado |
 | :--- | :--- |
-| Documento maestro v3.x | Escrito, revisado |
+| Documento maestro v3.x | Copiado en `D:\sistema-afull\ARQUITECTURA_V3.md` (con aviso de que `TRASPASO.md` gana en caso de diferencia); `CLAUDE.md` sincronizado. |
 | Repositorio y monorepo | Inicializado en `D:\sistema-afull`. Remoto: `https://github.com/Morochief/sistema-afull-v2.git` (rama `main`). `lint` y `typecheck` en verde. |
 | Migraciones `0001` a `0004` (SQL) | **Aplicadas con éxito en Supabase `afull-dev`** con Drizzle journal. |
-| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev` y en Vercel (`gru1`) en caliente**. CA-0.1 en caliente (9 muestras 147–163 ms, mediana 152 ms; **falta medir cold start del login con Argon2**) y CA-0.10 por HTTP (20/20 en 754 ms) verificados; pendientes secrets de `tests-dev.yml` y CA-0.9 (`backup-db.yml` + restore manual + `RESTAURAR.md`). |
+| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev` y en Vercel (`gru1`) en frío y en caliente**. CA-0.1 (`1253 ms` en cold start real y `147–163 ms`, mediana `152 ms` en ráfaga cálida) y CA-0.10 por HTTP (20/20 en 754 ms) verificados; pendientes secrets de `tests-dev.yml` y CA-0.9 (`backup-db.yml` + restore manual + `RESTAURAR.md`). |
 | Tests Loop 0 (Vitest) | **20/20 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, auth, seed idempotente con limpieza de `zz_test_%`, inmutabilidad, concurrencia por pooler + `sinPipelining` y auditoría estática de parámetros). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
 | Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**pendiente de crear**). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 3** (hoy no se usa Storage). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
-| Proyecto Vercel | **Desplegado y verificado en caliente en `gru1` (Node 22, commit `a588fbb`)**: `@node-rs/argon2` operativo, login cálido 147–163 ms (mediana 152 ms; cold start real pendiente tras 20–30 min sin tráfico), 20 GET concurrentes 20/20 `200 OK` en 754 ms (atendidas casi en serie), CSRF `403` y cookies `HttpOnly; Secure; SameSite=Lax`. |
+| Proyecto Vercel | **Desplegado y verificado en frío y en caliente en `gru1` (Node 22, commit `a588fbb`)**: `@node-rs/argon2` operativo, login cold start `1253 ms`, login cálido `147–163 ms` (mediana `152 ms`), 20 GET concurrentes 20/20 `200 OK` en `754 ms` (atendidas casi en serie), CSRF `403` y cookies `HttpOnly; Secure; SameSite=Lax`. |
 
 ---
 
@@ -166,12 +167,12 @@ Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guar
 Orden: 0 Base → 1 Clientes + OT → 2 Tareas, cronómetro y Control en Vivo → 3 Campo offline + flota → 4 Stock → 5 Costeo → 6 Pre-prensa → 7 RR.HH. → 8 Portal B2B.
 (Costeo va temprano porque es lo que justifica el sistema.)
 
-### Loop 0: Base (20/20 tests + CA-0.1 en caliente y CA-0.10 por HTTP en Vercel verificados; pendientes cold start de login, `tests-dev.yml` y CA-0.9)
+### Loop 0: Base (20/20 tests + CA-0.1 en frío/caliente y CA-0.10 por HTTP en Vercel verificados; pendientes `tests-dev.yml` y CA-0.9)
 
 Tareas: 1 decidir API (Vercel Node, cerrada) · 2 repo + reglas de lint · 3 dos proyectos Supabase · 4 conexión y migraciones · 5 migraciones 0001–0003 · 6 auth · 7 capacidades + seed del primer admin · 8 auditoría · 9 CI · 10 backups · 11 deploy y prueba de humo.
 
 Criterios de aceptación:
-- **CA-0.1** Login con Argon2id, cookie segura, fila en `sesion`; **medido en el entorno desplegado (`gru1`, Node 22)**: 9 muestras cálidas entre `147 ms` y `163 ms` (mediana `152 ms`, promedio `153 ms`, total con red incluida, dentro del objetivo de `100–300 ms`), cookie con `HttpOnly; Secure; SameSite=Lax`. (**Verificado en caliente; falta medir el cold start real del login con Argon2 tras 20–30 min sin tráfico**)
+- **CA-0.1** Login con Argon2id, cookie segura, fila en `sesion`; **medido en el entorno desplegado (`gru1`, Node 22)**: cold start real del login con Argon2 + DB en `1253 ms` (tras >23 min sin tráfico y deploy nuevo), 2.ª llamada inmediata en `318 ms`, y ráfaga de 9 muestras cálidas entre `147 ms` y `163 ms` (mediana `152 ms`, promedio `153 ms`, total con red incluida, dentro del objetivo de `100–300 ms`), cookie con `HttpOnly; Secure; SameSite=Lax`. (**Verificado en frío y en caliente**)
 - **CA-0.2** Desactivar un usuario invalida su cookie en la siguiente request (401). (**Verificado**)
 - **CA-0.4** Sin la capacidad: 403. (**Verificado**)
 - **CA-0.5** Toda acción sensible genera `evento_auditoria`; si la mutación falla, la auditoría se revierte con ella. (**Verificado**)
@@ -199,7 +200,7 @@ Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "C
 
 ## 7. Verificaciones pendientes (cosas que se dieron por probables, no comprobadas)
 
-- [ ] Login y hash en Vercel: tiempo de 100–300 ms, **incluyendo cold start**; que `@node-rs/argon2` cargue en el runtime Node de Vercel (CA-0.1): **VERIFICADO EN CALIENTE en `gru1` (Node 22)** (`@node-rs/argon2` carga y verifica; 9 muestras cálidas `147–163 ms`, mediana `152 ms` con red incluida). **Falta medir el cold start real del login con Argon2** (los `600 ms` medidos fueron de `{}` → `400` sin hash ni DB, y la muestra de `201 ms` entró con la instancia ya caliente; esperar 20–30 min sin tráfico y hacer un único login válido).
+- [x] Login y hash en Vercel: tiempo de 100–300 ms, **incluyendo cold start**; que `@node-rs/argon2` cargue en el runtime Node de Vercel (CA-0.1): **VERIFICADO en frío y en caliente en `gru1` (Node 22)**. `@node-rs/argon2` carga y verifica sin errores; cold start real del login con Argon2 + DB medido tras >23 min sin tráfico y nuevo deploy: **`1253 ms`** (`HTTP 200`, seguido de `318 ms` en la 2.ª llamada inmediata); ráfaga de 9 muestras cálidas: **`147–163 ms`** (mediana `152 ms` con red incluida).
 - [x] Comportamiento del pooler de transacciones (puerto 6543 con `sinPipelining` y `fetch_types: false`) desde funciones serverless de Vercel bajo peticiones concurrentes: **VERIFICADO en `gru1`**. 20 requests simultáneas a `GET /api/clientes` con cookie válida devuelven **20/20 `200 OK`** en `754 ms` de pared (`min: 228 ms | mediana: 704 ms | max: 752 ms`). *Observación (sin causa confirmada):* el escalonamiento `228–752 ms` frente a ~150–200 ms de una petición cálida sugiere atención casi en serie (cola en una sola instancia/hilo o en el pooler).
 - [ ] Términos del plan Vercel Hobby para uso comercial antes de operar con personal real.
 - [x] Que Supabase permita `CREATE ROLE afull_api` y cómo se escribe el usuario en el pooler: **VERIFICADO**. Supabase permite `CREATE ROLE` sin error y el usuario en el transaction pooler 6543 es `afull_api.<ref-proyecto>`.
@@ -228,7 +229,7 @@ Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "C
 
 ## 9. Diferencias entre el documento maestro y lo decidido después
 
-El documento maestro (v3.x) se escribió antes de varias correcciones. Si hay conflicto, **gana este archivo**. Actualizar el maestro con un registro de cambios en lugar de pretender que es definitivo.
+El documento maestro (`ARQUITECTURA_V3.md` en la raíz) se escribió antes de varias correcciones. Si hay conflicto, **gana este archivo (`TRASPASO.md`)**. Actualizar el maestro con un registro de cambios en lugar de pretender que es definitivo.
 
 - El maestro menciona `postgres_changes`: se reemplazó por **Broadcast**.
 - Los criterios CA-0.7 a CA-0.11 y el rol `afull_api` se agregaron después; el maestro puede no tenerlos.
@@ -258,7 +259,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 ## 11. Cómo trabajar (para Claude Code o una sesión nueva)
 
-1. Leer este archivo y el documento maestro completos. Resumir el estado en 10 líneas para confirmar alineación.
+1. Leer este archivo (`TRASPASO.md`) y el documento maestro (`ARQUITECTURA_V3.md`) completos. Resumir el estado en 10 líneas para confirmar alineación.
 2. Tratar todo lo "sin verificar" como tal. Marcar con claridad lo que no se pudo ejecutar.
 3. No reabrir decisiones de la sección 3 sin un problema real; si lo hay, explicarlo.
 4. Verificar precios, límites y versiones actuales de servicios externos antes de afirmarlos.
@@ -271,7 +272,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 1. **Orden recomendado para cerrar el Loop 0 antes de iniciar Loop 1B:**
    1) **Secrets `DEV_*` y corrida manual de `tests-dev.yml` (usuario):** cargar `DEV_DATABASE_URL_ADMIN`, `DEV_DATABASE_URL_API`, `DEV_SUPABASE_URL`, `DEV_SUPABASE_ANON_KEY` en GitHub Settings y disparar `workflow_dispatch`.
-   2) **Medir el cold start real del login con Argon2 en Vercel (`gru1`):** tras 20–30 minutos sin tráfico hacia la función desplegada, ejecutar un único `POST /api/auth/login` válido (limpiando únicamente el usuario `zz_test_` de esa prueba en el `finally`).
+   2) **Cold start real del login con Argon2 en Vercel (`gru1`) — MEDIDO (`1253 ms`, `HTTP 200`):** verificado tras >23 minutos de inactividad y deploy nuevo, con limpieza acotada solo a `zz_test_vercel_probe`.
    3) **Backup diario y restore manual (CA-0.9):** crear `.github/workflows/backup-db.yml` (con verificación automática de restore en contenedor temporal), realizar un restore manual completo hecho por una persona y documentar los pasos exactos en `RESTAURAR.md` antes de cargar cualquier dato real. (`backup-storage` queda pospuesto al Loop 3).
    4) **Cerrar Loop 0 en `TRASPASO.md` y comenzar Loop 1B (`TablaAdmin` y `useClientes`).** *(Si se decide iniciar 1B en paralelo mientras solo haya datos de prueba, anotarlo explícitamente aquí como excepción al principio 7 con fecha y bloqueo de carga de datos reales hasta cerrar CA-0.9).*
 
@@ -290,3 +291,4 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `ba3e970` | Ajuste de build para Vercel (`public/index.html`, `outputDirectory: "public"` en `vercel.json` y `"engines": { "node": "22.x" }` en `package.json`). | CI Run `#10` green |
 | 2026-11-02 | `a588fbb` | Fix de body stream en Vercel Node runtime (`api.bodyParser: false` en `api/index.js` y puente `req.body → req.rawBody` en `apps/api/src/vercel.ts`; resuelto, causa exacta sin aislar). | **CA-0.1 en caliente y CA-0.10 por HTTP verificados en `gru1`:** 9 muestras cálidas 147–163 ms (mediana 152 ms), 20 GET concurrentes 20/20 `200 OK` en 754 ms |
 | 2026-11-02 | `56ddd08` | Registro de mediciones de Vercel `gru1` en `TRASPASO.md`. | CI Run `#12` green |
+| 2026-11-02 | `703c0ec` | Refinamiento en `TRASPASO.md`: distinción entre login cálido y cold start pendiente, observación de serialización en las 20 concurrentes y checklist de cierre del Loop 0. | CI Run `#13` green |
