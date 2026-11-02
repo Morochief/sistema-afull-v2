@@ -515,7 +515,8 @@ Avisos React "Cannot update a component": (ninguno)
 ## Resolución de Auditoría L2.E1 y Evidencia de Backup con Migración 0006
 
 **Fecha:** 2026-11-02 19:20  
-**Commits:** `ec3a77a` (L2.E1 base) y commit subsiguiente de corrección de auditoría.
+**Commits:** `ec3a77a` (L2.E1 base) y `f52a42f` (`fix(api): auditoría en transacción y 409 al vincular usuario ya asignado (auditoría L2.E1)`).  
+**GitHub Actions CI Run:** [#41536754649](https://github.com/Morochief/sistema-afull-v2/actions/runs/41536754649) (Run #41) — **Success** (Lint 0, Tipos 0, 48 tests backend, 45 tests web, Build Vite 8).
 
 ### 1. Evidencia de Ejecución de `backup-db.yml` (Corrida #6 con Migración 0006)
 - **Workflow:** `.github/workflows/backup-db.yml`
