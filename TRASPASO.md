@@ -7,18 +7,19 @@ Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cer
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
-**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` y 21 tests de Loop 0 y Loop 1 pasaron en un PostgreSQL 16 local de desarrollo. **Nada ha sido ejecutado aún contra Supabase ni en GitHub Actions.** Hasta que corra en `dev`, la capa de nube sigue como "pendiente de verificación".
+**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las 4 consultas de comprobación dieron los resultados exactos esperados y la suite `tests/loop0` pasó 16 de 16 tests en verde contra Supabase `dev`.
 
 | Pieza | Estado |
 | :--- | :--- |
 | Documento maestro v3.x | Escrito, revisado |
 | Repositorio y monorepo | Inicializado en `D:\sistema-afull`. Remoto: `https://github.com/Morochief/sistema-afull-v2.git` (rama `main`). `lint` y `typecheck` en verde. |
-| Migraciones `0001` a `0004` (SQL) | Listas con journal de Drizzle; pasaron en Postgres 16 local; **sin aplicar en Supabase**. |
-| Auth, sesiones, auditoría (código) | Tipado y lint en verde; verificado en Postgres 16 local. |
-| Tests Loop 0 y Loop 1 (Vitest) | 21/21 pasaron en Postgres 16 local (sin test REST de anon); **sin ejecutar en Supabase**. |
-| Workflows de GitHub Actions | `ci.yml` configurado; pendiente de push inicial a `origin/main` para verificar en Actions. |
+| Migraciones `0001` a `0004` (SQL) | **Aplicadas con éxito en Supabase `afull-dev`** con Drizzle journal. |
+| Auth, sesiones, auditoría (código) | **Verificado contra Supabase `dev`**. Loop 0 cerrado (16/16 tests en verde). |
+| Tests Loop 0 (Vitest) | **16/16 en verde contra Supabase `dev`** (incluye RLS, anon key, auth, inmutabilidad y concurrencia). |
+| Tests Loop 1 (Vitest) | Pendiente de ejecución en Supabase `dev` (siguiente paso: Fase 3b). |
+| Workflows de GitHub Actions | `ci.yml` configurado y pusheado a `main` en GitHub. |
 | `backup-storage.mjs` | Escrito de memoria, sin probar contra la API real. |
-| Proyectos Supabase `dev` y `prod` | Pendientes (a crear en el panel de Supabase). |
+| Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
 | Proyecto Vercel | Pendiente (a configurar con runtime Node en panel de Vercel). |
 
 ---
@@ -176,8 +177,8 @@ Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "C
 
 - [ ] Login y hash en Vercel: tiempo de 100–300 ms, incluyendo cold start; que `@node-rs/argon2` cargue en el runtime.
 - [ ] Términos del plan Vercel Hobby para uso comercial.
-- [ ] Que Supabase permita `CREATE ROLE afull_api` y cómo se escribe el usuario en el pooler (suele ser `afull_api.<ref-proyecto>`).
-- [ ] Que el rol funcione con RLS como se espera (políticas por rol).
+- [x] Que Supabase permita `CREATE ROLE afull_api` y cómo se escribe el usuario en el pooler: **VERIFICADO**. Supabase permite `CREATE ROLE` sin error y el usuario en el transaction pooler 6543 es `afull_api.<ref-proyecto>`.
+- [x] Que el rol funcione con RLS como se espera (políticas por rol): **VERIFICADO**. 16 tests de Loop 0 en verde contra Supabase `dev`.
 - [ ] Si `pg_dump` conecta desde runners de GitHub (IPv4): usar pooler en modo sesión; confirmar.
 - [ ] Rutas y respuestas de la API de Storage en `backup-storage.mjs`.
 - [ ] Cuota de almacenamiento de artifacts de GitHub en cuenta gratuita.
