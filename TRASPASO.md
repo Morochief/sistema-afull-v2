@@ -12,11 +12,11 @@ Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cer
 | Pieza | Estado |
 | :--- | :--- |
 | Documento maestro v3.x | Escrito, revisado |
-| Repositorio y monorepo | Inicializado en `D:\sistema-afull`. `lint` y `typecheck` en verde. |
+| Repositorio y monorepo | Inicializado en `D:\sistema-afull`. Remoto: `https://github.com/Morochief/sistema-afull-v2.git` (rama `main`). `lint` y `typecheck` en verde. |
 | Migraciones `0001` a `0004` (SQL) | Listas con journal de Drizzle; pasaron en Postgres 16 local; **sin aplicar en Supabase**. |
 | Auth, sesiones, auditoría (código) | Tipado y lint en verde; verificado en Postgres 16 local. |
 | Tests Loop 0 y Loop 1 (Vitest) | 21/21 pasaron en Postgres 16 local (sin test REST de anon); **sin ejecutar en Supabase**. |
-| Workflows de GitHub Actions | `ci.yml` configurado; **sin ejecutar en Actions (repo aún sin remoto)**. |
+| Workflows de GitHub Actions | `ci.yml` configurado; pendiente de push inicial a `origin/main` para verificar en Actions. |
 | `backup-storage.mjs` | Escrito de memoria, sin probar contra la API real. |
 | Proyectos Supabase `dev` y `prod` | Pendientes (a crear en el panel de Supabase). |
 | Proyecto Vercel | Pendiente (a configurar con runtime Node en panel de Vercel). |
@@ -96,6 +96,9 @@ El proyecto anterior se rompió por acumulación de parches. Por eso se rediseñ
 ---
 
 ## 4. Estructura del repositorio
+
+- **Repositorio Remoto Oficial:** `https://github.com/Morochief/sistema-afull-v2.git`
+- **Rama principal:** `main`
 
 ```
 sistema-afull/
