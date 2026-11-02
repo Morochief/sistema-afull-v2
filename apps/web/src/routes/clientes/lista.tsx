@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { Plus, Edit2, Power } from 'lucide-react';
 import type { ClienteFila } from '@afull/shared';
 import { useClientes } from '../../hooks/clientes/useClientes.js';
@@ -11,6 +12,7 @@ import { ModalEditarCliente } from '../../components/modals/ModalEditarCliente.j
 import { ModalEstadoCliente } from '../../components/modals/ModalEstadoCliente.js';
 
 export function ClientesListaPage() {
+  const navigate = useNavigate();
   const { datos, estado, filtros, setFiltros, reintentar } = useClientes();
 
   const [modalNuevoAbierto, setModalNuevoAbierto] = useState(false);
@@ -133,6 +135,7 @@ export function ClientesListaPage() {
         onFiltros={setFiltros}
         opcionesEstado={opcionesEstado}
         claveFila={(c) => c.id}
+        onFilaClick={(c) => void navigate({ to: '/clientes/$id', params: { id: c.id } })}
         textoBusqueda="Buscar por nombre, RUC o código..."
         vacio={{
           titulo: 'Sin clientes registrados',

@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { AppLayout } from './routes/app-layout.js';
 import { LoginPage } from './routes/login.js';
 import { ClientesListaPage } from './routes/clientes/lista.js';
+import { ClientesDetallePage } from './routes/clientes/detalle.js';
 import { OTsListaPage } from './routes/ots/lista.js';
 
 const rootRoute = createRootRoute();
@@ -50,6 +51,12 @@ const clientesRoute = createRoute({
   component: ClientesListaPage,
 });
 
+const clientesDetalleRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/clientes/$id',
+  component: ClientesDetallePage,
+});
+
 const otsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/ots',
@@ -58,7 +65,7 @@ const otsRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appLayoutRoute.addChildren([indexRoute, clientesRoute, otsRoute]),
+  appLayoutRoute.addChildren([indexRoute, clientesRoute, clientesDetalleRoute, otsRoute]),
 ]);
 
 function PaginaNoEncontrada() {
