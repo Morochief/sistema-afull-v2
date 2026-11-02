@@ -117,16 +117,15 @@ jobs:
           SQL
 
           # 2. Crear dinámicamente cualquier otro rol presente en las ACL de origen
-          psql "$SRC" -Atc "
+          ROLES=$(psql "$SRC" -Atc "
             SELECT DISTINCT grantee FROM information_schema.role_table_grants WHERE table_schema IN ('public', 'drizzle')
             UNION
             SELECT DISTINCT grantee FROM information_schema.role_routine_grants WHERE routine_schema IN ('public', 'drizzle')
-          " | (grep -vE '^(PUBLIC|postgres|pg_database_owner)$' || true) | while read -r r; do
+          " | (grep -vE '^(PUBLIC|postgres|pg_database_owner)$' || true))
+
+          for r in $ROLES; do
             if [ -n "$r" ]; then
-              psql "$VERIF" -v ON_ERROR_STOP=1 -v rol="$r" <<'SQL'
-              SELECT format('CREATE ROLE %I NOLOGIN', :'rol')
-              WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'rol') \gexec
-              SQL
+              echo "SELECT format('CREATE ROLE %I NOLOGIN', :'rol') WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'rol') \gexec" | psql "$VERIF" -v ON_ERROR_STOP=1 -v rol="$r"
             fi
           done
 
@@ -151,13 +150,7 @@ jobs:
           SQL
 
           # 3c. Verificación funcional de default privileges para funciones nuevas en la base restaurada (D5-1)
-          fn_defacl_test=$(psql "$VERIF" -v ON_ERROR_STOP=1 -At <<'SQL'
-          BEGIN;
-          CREATE FUNCTION public.zz_probe_defacl() RETURNS int LANGUAGE sql AS 'select 1';
-          SELECT has_function_privilege('anon', 'public.zz_probe_defacl()', 'EXECUTE');
-          ROLLBACK;
-          SQL
-          )
+          fn_defacl_test=$(psql "$VERIF" -v ON_ERROR_STOP=1 -Atc "BEGIN; CREATE FUNCTION public.zz_probe_defacl() RETURNS int LANGUAGE sql AS 'select 1'; SELECT has_function_privilege('anon', 'public.zz_probe_defacl()', 'EXECUTE'); ROLLBACK;")
           echo "anon execute función nueva en base restaurada (D5-1): $fn_defacl_test"
           [ "$fn_defacl_test" = "f" ]
 
