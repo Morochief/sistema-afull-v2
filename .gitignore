@@ -10,3 +10,4 @@ dist/
 storage-backup/
 afull-*.tar.gz.gpg
 afull-*.pgdump.gpg
+.tmp-ui/

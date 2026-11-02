@@ -37,7 +37,11 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
   await sql`INSERT INTO permiso_capacidad (usuario_id, capacidad) VALUES (${u.id}, 'comercial'), (${u.id}, 'admin')`;
   console.log(`[SETUP OK] Usuario creado: ${username}`);
 
-  const browser = await chromium.launch();
+  const launchOptions = {};
+  if (process.platform === 'win32') {
+    launchOptions.channel = 'chrome';
+  }
+  const browser = await chromium.launch(launchOptions);
   const page = await browser.newPage();
   page.setDefaultTimeout(10000);
 
@@ -45,8 +49,9 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
   const avisosReact = [];
   page.on('console', (m) => {
     const txt = m.text();
-    if (m.type() === 'error') problemas.push('CONSOLE: ' + txt);
+    if (m.type() === 'error') problemas.push('CONSOLE ERROR: ' + txt);
     if (txt.includes('Cannot update a component while rendering a different component')) {
+      console.log('>>> CAPTURADO AVISO REACT:', txt);
       avisosReact.push(txt);
     }
   });
@@ -102,9 +107,11 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
     // 4. Editar cliente
     await paso('4. editar cliente', async () => {
       await page.getByRole('button', { name: `Editar ${nombre}` }).click();
+      await page.locator('#edit-telefono').waitFor({ state: 'visible' });
+      await page.waitForTimeout(300);
       await page.locator('#edit-telefono').fill('0981123456');
       await page.getByRole('button', { name: /Guardar Cambios/ }).click();
-      await page.getByText('0981123456').first().waitFor({ timeout: 6000 });
+      await page.getByText('0981123456').first().waitFor({ timeout: 10000 });
     });
 
     // 5. Abrir detalle
@@ -117,7 +124,10 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
     // 6. Crear sucursal con GPS
     await paso('6. crear sucursal', async () => {
       await page.getByRole('button', { name: /Nueva Sucursal/ }).click();
-      await page.locator('input[name=nombre]').last().fill('Casa Central');
+      const input = page.locator('input[name=nombre]').last();
+      await input.waitFor({ state: 'visible' });
+      await page.waitForTimeout(300);
+      await input.fill('Casa Central');
       await page.getByRole('button', { name: /Guardar|Crear|Registrar/ }).last().click();
       await page.getByText('Sucursales (1)').waitFor({ timeout: 6000 });
     });
@@ -125,7 +135,10 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
     // 7. Crear contacto
     await paso('7. crear contacto', async () => {
       await page.getByRole('button', { name: /Nuevo Contacto/ }).click();
-      await page.locator('input[name=nombre]').last().fill('Ana Pérez');
+      const input = page.locator('input[name=nombre]').last();
+      await input.waitFor({ state: 'visible' });
+      await page.waitForTimeout(300);
+      await input.fill('Ana Pérez');
       await page.getByRole('button', { name: /Guardar|Crear|Registrar/ }).last().click();
       await page.getByText('Contactos (1)').waitFor({ timeout: 6000 });
     });
@@ -133,7 +146,10 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
     // 8. Crear marca
     await paso('8. crear marca', async () => {
       await page.getByRole('button', { name: /Nueva Marca/ }).click();
-      await page.locator('input[name=nombre]').last().fill('MarcaX');
+      const input = page.locator('input[name=nombre]').last();
+      await input.waitFor({ state: 'visible' });
+      await page.waitForTimeout(300);
+      await input.fill('MarcaX');
       await page.getByRole('button', { name: /Guardar|Crear|Registrar/ }).last().click();
       await page.getByText('Marcas (1)').waitFor({ timeout: 6000 });
     });
