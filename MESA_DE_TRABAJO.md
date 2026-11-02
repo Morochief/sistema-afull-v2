@@ -508,3 +508,34 @@ Avisos React "Cannot update a component": (ninguno)
   - **Linter:** `eslint . --max-warnings 0` -> **0 errores, 0 advertencias**.
   - **Typecheck:** `pnpm typecheck` -> **0 errores** en packages y tests.
   - **Build:** `pnpm build` -> Shared, API y Web compilados limpiamente.
+
+
+---
+
+## Resolución de Auditoría L2.E1 y Evidencia de Backup con Migración 0006
+
+**Fecha:** 2026-11-02 19:20  
+**Commits:** `ec3a77a` (L2.E1 base) y commit subsiguiente de corrección de auditoría.
+
+### 1. Evidencia de Ejecución de `backup-db.yml` (Corrida #6 con Migración 0006)
+- **Workflow:** `.github/workflows/backup-db.yml`
+- **Run ID:** [#41536310849](https://github.com/Morochief/sistema-afull-v2/actions/runs/41536310849) (Run #6) — **Success** (conclusión en verde en 50s).
+- **Salida literal del paso de verificación de restore (Job 125588931829):**
+```text
+2026-11-02T22:20:29.7941336Z anon execute función nueva en base restaurada (D5-1): f
+2026-11-02T22:20:35.0975496Z tablas: 17 -> 17 | migraciones: 6 -> 6 | triggers_inmutables: 10 -> 10 | defacl_postgres: 3 -> 3
+```
+- **Comprobación:** Las 17 tablas (incluidas las 4 nuevas de `0006`: `tarifa_persona`, `tarea`, `tarea_evento`, `tarea_intervalo`), las 6 migraciones, los 10 triggers inmutables y la extensión `btree_gist` en `extensions` se restauraron y validaron al 100% en la base limpia PostgreSQL 17.
+
+### 2. Integración de Correcciones de Auditoría L2.E1
+Se revisaron e integraron los cambios en `apps/api/src/modules/personas/`:
+1. **Auditoría dentro de la transacción:** En `crearPersona`, `crearTarifa`, `cerrarTarifa` y `vincularUsuario`, la llamada a `auditar(..., tx)` ahora se ejecuta dentro de `sql.begin` pasando el cliente transaccional `tx`. `cerrarTarifa` bloquea la fila mediante `FOR UPDATE` antes de verificar el estado.
+2. **Control 409 al vincular usuario:** `vincularUsuario` verifica si el usuario a vincular ya tiene asignada otra persona distinta; en tal caso responde `HTTP 409` con el mensaje `"El usuario ya está vinculado a otra persona; desvinculalo primero"`.
+3. **Nomenclatura unificada:** Acciones renombradas a formato estándar del proyecto: `persona.crear`, `tarifa.crear`, `tarifa.cerrar`.
+4. **Nueva suite de pruebas:** `tests/loop2/auditoria-personas.test.ts` (3 tests) pasando al 100%.
+
+### 3. Estado de la Suite Completa
+- **Backend Tests:** **50/50 tests pasando en local** (17 suites contra Supabase `afull-dev`, 48/48 en CI sin `anon.test.ts`).
+- **Web Tests:** **45/45 tests pasando**.
+- **Lint:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Typecheck:** 0 errores en todos los paquetes (`pnpm typecheck`).

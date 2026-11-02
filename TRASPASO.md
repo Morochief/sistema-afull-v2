@@ -37,8 +37,8 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 | Tests Loop 0 (Vitest) | **22/22 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, funciones y default privileges cerrados en `funciones.test.ts`, auth, seed idempotente, inmutabilidad, concurrencia por pooler + `sinPipelining`, CSRF en `csrf.test.ts`). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
 | Tests Loop 1B (Vitest frontend + contrato) | **45/45 tests web en verde** (9 suites) y **6 tests de contrato/API adicionales**, más **15/15 pasos Playwright UI en verde contra Vercel**. **Loop 1B cerrado (CA-1.11 a CA-1.16)**. |
-| Tests Loop 2 (Vitest backend) | **3/3 en verde contra Supabase `dev`** (`personas.test.ts`, `tarifas.test.ts`, CA-2.3, CA-2.4). Total backend: **47/47 en verde**. |
-| Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2 y #5 con D5-1 incorporado y probado; actualizado con btree_gist**). |
+| Tests Loop 2 (Vitest backend) | **6/6 en verde contra Supabase `dev`** (`personas.test.ts`, `tarifas.test.ts`, `auditoria-personas.test.ts`, CA-2.3, CA-2.4). Total backend: **50/50 en verde** (48/48 en CI sin `anon.test.ts`). |
+| Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2, #5 y #6 con D5-1 y migración 0006 con btree_gist comprobados**). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 3** (hoy no se usa Storage). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
 | Proyecto Vercel | **Desplegado en `gru1` (Node 22)**: API Hono + React 19 SPA (rewrite `/(.*) -> /index.html` funcional con HTTP 200 en rutas profundas `/ots/:id`), prueba de humo de 9 puntos en verde. |
@@ -322,4 +322,5 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `5de4ec4` | fix(smoke): tipado local y limite de lineas en script de prueba de humo. | CI Run `#41515506474` green |
 | 2026-11-02 | `99151ff` | fix(web): sesión completa tras login y campos opcionales vacíos (auditoría E3). | CI Run `#41519975658` green |
 | 2026-11-02 | `fd38c0b` | test(ui): recorrido Playwright de 15 pasos en Vercel y remoción de Toaster duplicado. | 15/15 pasos Playwright UI en Vercel green |
-| 2026-11-02 | `5378840` | feat(api): implementar migracion 0006, maquinas y API de personas y tarifas (L2.E1). | 47/47 tests backend en dev, 45/45 web, lint 0, tipos 0 |
+| 2026-11-02 | `ec3a77a` | feat(api): implementar migracion 0006, maquinas y API de personas y tarifas (L2.E1). | 47/47 tests backend en dev, Backup Run #6 green |
+| 2026-11-02 | `379afa1` | fix(api): auditoría en transacción y 409 al vincular usuario ya asignado (auditoría L2.E1). | 50/50 tests backend en dev, 45/45 web, lint 0, tipos 0 |

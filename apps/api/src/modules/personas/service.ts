@@ -80,21 +80,27 @@ export async function obtenerPersona(id: string): Promise<PersonaFila> {
 
 export async function crearPersona(ctx: Ctx, datos: { nombre: string; ci: string; cargo?: string; departamento?: string }) {
   try {
-    const [p] = await sql<PersonaFila[]>`
-      INSERT INTO persona (nombre, ci, cargo, departamento)
-      VALUES (${datos.nombre}, ${datos.ci}, ${datos.cargo ?? null}, ${datos.departamento ?? null})
-      RETURNING id, nombre, ci, cargo, departamento, jefe_id, activo, created_at, updated_at,
-                NULL::uuid AS usuario_id, NULL::varchar AS username
-    `;
-    await auditar({
-      usuarioId: ctx.usuarioId,
-      accion: 'PERSONA_CREAR',
-      recurso: 'persona',
-      recursoId: p.id,
-      ip: ctx.ip,
-      metadata: { nombre: p.nombre, ci: p.ci },
+    // Auditoría dentro de la misma transacción que la mutación (TRASPASO §3, CA-0.5)
+    return await sql.begin(async (tx) => {
+      const [p] = await tx<PersonaFila[]>`
+        INSERT INTO persona (nombre, ci, cargo, departamento)
+        VALUES (${datos.nombre}, ${datos.ci}, ${datos.cargo ?? null}, ${datos.departamento ?? null})
+        RETURNING id, nombre, ci, cargo, departamento, jefe_id, activo, created_at, updated_at,
+                  NULL::uuid AS usuario_id, NULL::varchar AS username
+      `;
+      await auditar(
+        {
+          usuarioId: ctx.usuarioId,
+          accion: 'persona.crear',
+          recurso: 'persona',
+          recursoId: p.id,
+          ip: ctx.ip,
+          metadata: { nombre: p.nombre, ci: p.ci },
+        },
+        tx,
+      );
+      return p;
     });
-    return p;
   } catch (e) {
     traducirErrorPg(e);
   }
