@@ -151,8 +151,9 @@ jobs:
 
           # 3c. Verificación funcional de default privileges para funciones nuevas en la base restaurada (D5-1)
           fn_defacl_test=$(psql "$VERIF" -v ON_ERROR_STOP=1 -Atc "BEGIN; CREATE FUNCTION public.zz_probe_defacl() RETURNS int LANGUAGE sql AS 'select 1'; SELECT has_function_privilege('anon', 'public.zz_probe_defacl()', 'EXECUTE'); ROLLBACK;")
-          echo "anon execute función nueva en base restaurada (D5-1): $fn_defacl_test"
-          [ "$fn_defacl_test" = "f" ]
+          fn_defacl_val=$(echo "$fn_defacl_test" | grep -E '^[tf]$')
+          echo "anon execute función nueva en base restaurada (D5-1): $fn_defacl_val"
+          [ "$fn_defacl_val" = "f" ]
 
           # 4. Verificaciones estructurales (igualdad exacta origen = destino)
           t_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
