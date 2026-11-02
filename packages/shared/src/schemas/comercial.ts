@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ESTADOS_OT } from '../machines/ot.js';
+import { itemTareaEnOTSchema } from './tareas.js';
 
 const fechaISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const updatedAtField = z.string().refine((s) => !Number.isNaN(Date.parse(s)), 'updatedAt inválido');
@@ -84,6 +85,7 @@ export const nuevaOTSchema = z.object({
   titulo: z.string().trim().min(1).max(255),
   descripcion: z.string().trim().max(5000).optional(),
   fechaPrometida: fechaISO.optional(),
+  tareas: z.array(itemTareaEnOTSchema).max(30).optional(),
 });
 
 export const transicionSchema = z.object({

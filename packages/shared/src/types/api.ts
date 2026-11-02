@@ -1,4 +1,5 @@
 import type { EstadoOT } from '../machines/ot.js';
+import type { TipoTarea, EstadoTarea } from '../machines/tarea.js';
 
 export type Pagina<T> = {
   items: T[];
@@ -167,4 +168,76 @@ export const CLAVES_PERSONA_ASIGNABLE = [
 
 export const CLAVES_TARIFA_FILA = [
   'id', 'persona_id', 'tarifa_hora_gs', 'fecha_inicio', 'fecha_fin', 'created_at', 'updated_at'
+] as const;
+
+export type TareaFila = {
+  id: string;
+  orden_trabajo_id: string;
+  persona_asignada_id: string | null;
+  persona_asignada_nombre: string | null;
+  tipo: TipoTarea;
+  descripcion: string;
+  orden_secuencia: number;
+  estado: EstadoTarea;
+  minutos_trabajados: number;
+  creado_por: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TareaEventoFila = {
+  id: string;
+  tarea_id: string;
+  estado_anterior: EstadoTarea | null;
+  estado_nuevo: EstadoTarea;
+  autor_id: string;
+  comentario: string | null;
+  created_at: string;
+};
+
+export type MiTrabajoTarea = {
+  id: string;
+  orden_trabajo_id: string;
+  codigo_ot: string;
+  ot_titulo: string;
+  cliente_nombre: string;
+  tipo: TipoTarea;
+  descripcion: string;
+  estado: EstadoTarea;
+  minutos_trabajados_hoy: number;
+  intervalo_abierto: {
+    id: string;
+    hora_inicio: string;
+  } | null;
+  updated_at: string;
+};
+
+export type MiTrabajoRespuesta = {
+  servidor_ahora: string;
+  persona: {
+    id: string;
+    nombre: string;
+  };
+  intervalo_abierto_actual: {
+    tarea_id: string;
+    intervalo_id: string;
+    hora_inicio: string;
+  } | null;
+  minutos_hoy_total: number;
+  tareas: MiTrabajoTarea[];
+};
+
+export const CLAVES_TAREA_FILA = [
+  'id',
+  'orden_trabajo_id',
+  'persona_asignada_id',
+  'persona_asignada_nombre',
+  'tipo',
+  'descripcion',
+  'orden_secuencia',
+  'estado',
+  'minutos_trabajados',
+  'creado_por',
+  'created_at',
+  'updated_at',
 ] as const;

@@ -4,6 +4,7 @@ import { puedeTransicionar, esEstadoFinal, type EstadoOT, type OTDetalle, type O
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import { TAM_PAGINA, desplazamiento, escaparLike, armarPagina } from '../../lib/paginacion.js';
 import { type Ctx, esperarAvanceReloj, verificarUpdatedAt } from '../clientes/service.js';
+import { insertarTareasIniciales, type ItemTareaInput } from './tareas.service.js';
 
 const anioAsuncion = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion', year: 'numeric' }).format(new Date());
@@ -99,7 +100,14 @@ export async function obtenerDetalleOT(id: string): Promise<OTDetalle> {
   }
 }
 
-export type NuevaOT = { clienteId: string; sucursalId?: string; titulo: string; descripcion?: string; fechaPrometida?: string };
+export type NuevaOT = {
+  clienteId: string;
+  sucursalId?: string;
+  titulo: string;
+  descripcion?: string;
+  fechaPrometida?: string;
+  tareas?: ItemTareaInput[];
+};
 
 export async function crearOT(ctx: Ctx, d: NuevaOT) {
   try {
@@ -124,6 +132,9 @@ export async function crearOT(ctx: Ctx, d: NuevaOT) {
         INSERT INTO ot_evento (orden_trabajo_id, estado_anterior, estado_nuevo, autor_id)
         VALUES (${ot.id}, NULL, 'PENDIENTE', ${ctx.usuarioId})
       `;
+      if (d.tareas && d.tareas.length > 0) {
+        await insertarTareasIniciales(tx, ctx, ot.id as string, d.tareas);
+      }
       await auditar(
         { usuarioId: ctx.usuarioId, accion: 'ot.crear', recurso: 'orden_trabajo', recursoId: ot.id, ip: ctx.ip, metadata: { codigo } },
         tx,

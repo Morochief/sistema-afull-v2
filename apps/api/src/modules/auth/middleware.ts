@@ -46,6 +46,15 @@ export const requireCapacidad = (cap: string): MiddlewareHandler => async (c, ne
   await next();
 };
 
+export const requireAlgunaCapacidad = (...caps: string[]): MiddlewareHandler => async (c, next) => {
+  const usuario = c.get('usuario');
+  if (!usuario) throw new ErrorApp(401, 'No autenticado');
+  if (!usuario.capacidades.includes('admin') && !caps.some((cap) => usuario.capacidades.includes(cap))) {
+    throw new ErrorApp(403, `Permiso denegado: requiere una de las siguientes capacidades: ${caps.join(', ')}`);
+  }
+  await next();
+};
+
 const METODOS_ESCRITURA = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
 // CSRF: SameSite=Lax + Origin. En producción falla cerrado (exige APP_ORIGIN y Origin).
