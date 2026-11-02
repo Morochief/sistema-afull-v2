@@ -31,11 +31,13 @@ export type SucursalFila = {
   id: string;
   cliente_id: string;
   nombre: string;
+  ciudad: string | null;
   direccion: string | null;
-  gps_lat: string | null;
-  gps_lng: string | null;
+  gps_lat: string;
+  gps_lng: string;
   activo: boolean;
   created_at: string;
+  updated_at: string;
 };
 
 export type ContactoFila = {
@@ -81,10 +83,10 @@ export type OTFila = {
 
 export type OTEvento = {
   id: string;
-  ot_id: string;
+  orden_trabajo_id: string;
   estado_anterior: EstadoOT | null;
   estado_nuevo: EstadoOT;
-  usuario_id: string;
+  autor_id: string;
   comentario: string | null;
   created_at: string;
 };

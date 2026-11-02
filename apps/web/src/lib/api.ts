@@ -17,6 +17,17 @@ export class ErrorApi extends Error {
   }
 }
 
+let limpiadorCacheSesion: (() => void) | null = null;
+let redireccionadorLogin: ((volver: string) => void) | null = null;
+
+export function setLimpiadorCache(fn: (() => void) | null) {
+  limpiadorCacheSesion = fn;
+}
+
+export function setRedireccionadorLogin(fn: ((volver: string) => void) | null) {
+  redireccionadorLogin = fn;
+}
+
 type OpcionesFetch = RequestInit & {
   params?: Record<string, string | number | boolean | undefined | null>;
 };
@@ -70,6 +81,25 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesFetch = {}): P
 
     if (status === 401) {
       mensaje = cuerpo?.error || 'Sesión expirada o no autenticado';
+      if (limpiadorCacheSesion) {
+        try {
+          limpiadorCacheSesion();
+        } catch {
+          // Ignorar error al limpiar cache
+        }
+      }
+      if (redireccionadorLogin) {
+        const rutaActual = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '';
+        redireccionadorLogin(rutaActual);
+      } else if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        const rutaActual = window.location.pathname + window.location.search;
+        const volver = encodeURIComponent(rutaActual);
+        try {
+          window.location.href = `/login?volver=${volver}`;
+        } catch {
+          // Entorno de test (jsdom no permite navegación completa)
+        }
+      }
     } else if (status === 403) {
       mensaje = cuerpo?.error || 'No tenés permisos para realizar esta acción';
     } else if (status === 409) {

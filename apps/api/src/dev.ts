@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env.js';
 import { serve } from '@hono/node-server';
 import { app } from './index.js';
 

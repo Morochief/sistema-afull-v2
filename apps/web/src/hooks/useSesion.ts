@@ -40,9 +40,14 @@ export function useSesion() {
 
   const mutacionLogout = useMutation({
     mutationFn: async () => {
-      await apiFetch<{ ok: boolean }>('/api/auth/logout', { method: 'POST' });
+      try {
+        await apiFetch<{ ok: boolean }>('/api/auth/logout', { method: 'POST' });
+      } catch {
+        // Si el endpoint de logout falla (red, 500), no atrapar al usuario:
+        // se continúa y se limpia el cliente en onSettled.
+      }
     },
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.setQueryData(['sesion', 'yo'], null);
       queryClient.clear();
     },

@@ -48,13 +48,16 @@ export function AppLayout() {
       titulo: 'Órdenes de Trabajo',
       ruta: '/ots',
       icono: FileText,
-      visible: tieneCapacidad('comercial') || tieneCapacidad('taller') || tieneCapacidad('montaje'),
+      visible: tieneCapacidad('comercial'),
     },
   ].filter((item) => item.visible);
 
   const handleLogout = async () => {
-    await logout();
-    navigate({ to: '/login' });
+    try {
+      await logout();
+    } finally {
+      navigate({ to: '/login' });
+    }
   };
 
   return (

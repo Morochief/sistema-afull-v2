@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { ErrorApi } from './api.js';
+import { ErrorApi, setLimpiadorCache } from './api.js';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,4 +18,8 @@ export const queryClient = new QueryClient({
       retry: false,
     },
   },
+});
+
+setLimpiadorCache(() => {
+  queryClient.clear();
 });

@@ -1,15 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { apiFetch, ErrorApi } from './api.js';
+import { apiFetch, ErrorApi, setLimpiadorCache, setRedireccionadorLogin } from './api.js';
+import { sanitizarDestinoVolver } from '../routes/login.js';
 
 describe('apiFetch', () => {
   const fetchOriginal = globalThis.fetch;
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    setRedireccionadorLogin(vi.fn());
   });
 
   afterEach(() => {
     globalThis.fetch = fetchOriginal;
+    setLimpiadorCache(null);
+    setRedireccionadorLogin(null);
   });
 
   it('devuelve el JSON de la respuesta en peticiones exitosas (200 OK)', async () => {
@@ -129,5 +133,34 @@ describe('apiFetch', () => {
       expect(apiErr.status).toBe(0);
       expect(apiErr.mensaje).toContain('No se pudo conectar con el servidor');
     }
+  });
+
+  it('ejecuta el limpiador de caché y redirige a login en 401 (CA-1.12)', async () => {
+    const limpiadorMock = vi.fn();
+    const redireccionMock = vi.fn();
+    setLimpiadorCache(limpiadorMock);
+    setRedireccionadorLogin(redireccionMock);
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({ error: 'Sesión expirada' }),
+    });
+
+    await expect(apiFetch('/api/protegido')).rejects.toThrow(ErrorApi);
+    expect(limpiadorMock).toHaveBeenCalledTimes(1);
+    expect(redireccionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('sanitiza destinos de retorno protegiendo contra open redirect', () => {
+    expect(sanitizarDestinoVolver('/clientes?pagina=2')).toBe('/clientes?pagina=2');
+    expect(sanitizarDestinoVolver('/ots/123')).toBe('/ots/123');
+    // Vectores maliciosos
+    expect(sanitizarDestinoVolver('//sitio-ajeno.com')).toBe('/clientes');
+    expect(sanitizarDestinoVolver('/\\sitio-ajeno.com')).toBe('/clientes');
+    expect(sanitizarDestinoVolver('https://sitio-ajeno.com')).toBe('/clientes');
+    expect(sanitizarDestinoVolver('')).toBe('/clientes');
+    expect(sanitizarDestinoVolver(undefined)).toBe('/clientes');
   });
 });

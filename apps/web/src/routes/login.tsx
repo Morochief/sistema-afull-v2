@@ -12,6 +12,15 @@ type LoginForm = {
   clave: string;
 };
 
+export function sanitizarDestinoVolver(volver?: string): string {
+  if (!volver) return '/clientes';
+  // Debe empezar con '/' pero NO con '//' ni contener '\' (evita open redirect a URLs absolutas o relativas al esquema)
+  if (volver.startsWith('/') && !volver.startsWith('//') && !volver.includes('\\')) {
+    return volver;
+  }
+  return '/clientes';
+}
+
 export function LoginPage() {
   const { login } = useSesion();
   const navigate = useNavigate();
@@ -30,8 +39,7 @@ export function LoginPage() {
     setErrorLogin(null);
     try {
       await login({ username: data.usuario.trim(), password: data.clave });
-      const destino = search.volver && search.volver.startsWith('/') ? search.volver : '/clientes';
-      navigate({ to: destino });
+      navigate({ to: sanitizarDestinoVolver(search.volver) });
     } catch (err) {
       if (err instanceof ErrorApi) {
         setErrorLogin(err.mensaje);
