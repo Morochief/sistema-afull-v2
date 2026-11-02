@@ -317,4 +317,5 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `2570c07` | feat(api): incluir nombres de cliente y sucursal en OTs y habilitar busqueda por cliente (E3.1). | CI Run `#41511309493` green |
 | 2026-11-02 | `2ea59d8` | feat(web): implementar detalle de cliente con sucursales, contactos y marcas (E3.2). | CI Run `#41512140776` green |
 | 2026-11-02 | `078ca00` | feat(web): implementar OTs lista, detalle, modales de transicion y edicion (E3.3). | CI Run `#41513931532` green |
-| 2026-11-02 | `2546057` | test(smoke): agregar script de prueba de humo automatizada de 9 puntos en Vercel (E3). | CI Run `#41514332924` green |
+| 2026-11-02 | `2546057` | test(smoke): agregar script de prueba de humo automatizada de 9 puntos en Vercel (E3). | — |
+| 2026-11-02 | `5de4ec4` | fix(smoke): tipado local y limite de lineas en script de prueba de humo. | CI Run `#41515506474` green |
