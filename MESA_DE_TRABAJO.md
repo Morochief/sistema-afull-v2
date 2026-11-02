@@ -595,3 +595,60 @@ Se implementó el ciclo de vida operativo de tareas, cronómetro de operarios y 
 - **Build:** `pnpm build` -> Compilación limpia de shared, api y web.
 - **GitHub Actions:** CI Run [#41541135985](https://github.com/Morochief/sistema-afull-v2/actions/runs/41541135985) (Run #43) completado con **éxito** (`success`).
 
+---
+
+## Entrega L2.E3: Módulo Live (Servidor y Cliente), Broadcast Realtime y Control en Vivo
+
+**Fecha:** 2026-11-02 20:20  
+**Commit:** `d38e9b7` (`feat(api,web): implementar modulo live, publicar broadcast y endpoint estado (L2.E3)`)  
+**GitHub Actions CI Run:** [#41544442358](https://github.com/Morochief/sistema-afull-v2/actions/runs/41544442358) (Run #45) — **Success** (Lint 0, Tipos 0, 57 tests backend, 47 tests web, Build Vite 8).
+
+### 1. Verificaciones Literales Previas (`docs/LOOP_2_DISENO.md` §5)
+1. **(a) Estado de Realtime en `afull-dev`:** Activo y respondiendo peticiones de broadcast.
+2. **(b) Autenticación del endpoint REST Realtime:** Se realizó la prueba diagnóstica directa de envío de broadcast REST a `POST https://oxthxdnyxabupeebzwmn.supabase.co/realtime/v1/api/broadcast` con la clave anon publicable (`SUPABASE_ANON_KEY`) tanto en `apikey` como en `Authorization: Bearer <anon_key>`:
+   ```text
+   Status with anon key: 202
+   Response with anon key:
+   ```
+   **Conclusión confirmada:** El endpoint REST de Realtime acepta el canal público `afull-live` directamente con la clave anon publicable devolviendo `202 Accepted`. No se requiere ni se expone la clave `service_role`.
+
+### 2. Resumen de Implementación
+1. **Paquete Compartido (`@afull/shared`):**
+   - `src/types/live.ts`: Contratos TypeScript `LivePersonaItem`, `LiveIntervaloAbierto`, `LiveEstadoRespuesta` y constantes `CLAVES_LIVE_ESTADO_RESPUESTA`, `CLAVES_LIVE_PERSONA_ITEM` (29 líneas).
+   - Re-exportado en `src/index.ts`.
+
+2. **Servidor — Emisión y Endpoint de Estado (`apps/api/src/modules/live/`):**
+   - `publicar.ts`: Función `publicarLive(tipo: string, id: string): Promise<void>` que realiza `POST` al endpoint REST de Supabase Realtime con timeout de 2 s (`AbortSignal.timeout(2000)`). Solo envía `{ tipo, id }` (**nunca nombres, descripciones ni datos sensibles**). Si la conexión o Supabase falla, se atrapa el error con `console.error` y la petición HTTP del usuario continúa sin romperse (34 líneas).
+   - `service.ts`: Función `obtenerEstadoLive()` que mediante consulta optimizada retorna `servidor_ahora` y el listado de personas activas con su estado en vivo (`en_curso: boolean`), `intervalo_abierto` (con `minutos_transcurridos` en tiempo real, tipo de tarea, descripción y datos de la OT: `codigo_ot`, `titulo`, `cliente_nombre`) y `minutos_hoy` acumulados (84 líneas).
+   - `routes.ts`: Montado en `/api/live/estado` con middleware `requireSesion` y `requireCapacidad('comercial')` (8 líneas).
+   - `apps/api/src/index.ts`: Registrada ruta `/api/live` (27 líneas).
+   - **Llamadas pos-commit:** `publicarLive` integrado estrictamente **después** del commit de `sql.begin` en `iniciarTarea` (`tarea.iniciar`), `pausarTarea` (`tarea.pausar`), `finalizarTarea` (`tarea.finalizar`), `cancelarTarea` (`tarea.cancelar`) y `editarTarea` (`tarea.editar`).
+   - Modularización de `tareas.mutaciones.service.ts` (107 líneas) y `tareas.service.ts` (127 líneas) preservando la regla de ≤ 250 líneas.
+
+3. **Cliente — Módulo Realtime Portable (`apps/web/src/lib/live.ts`):**
+   - Implementada función `suscribirseLive(cb: (evento: EventoLive) => void): () => void` usando `@supabase/supabase-js` conectado al tema público `afull-live`.
+   - Incorpora debounce de 1 segundo para agrupar ráfagas de cambios de estado y retorna una función de limpieza para cancelar la suscripción (46 líneas).
+   - Test unitario en `apps/web/src/lib/live.test.ts` (2 tests, 24 líneas).
+
+### 3. Criterios de Aceptación Verificados
+- **CA-2.5 (Permisos de Live):** `GET /api/live/estado` responde `401` sin sesión activa, responde `403` si el usuario no tiene capacidad `comercial`, y responde `200` con la estructura esperada si tiene capacidad `comercial`.
+- **CA-2.6 (Live Resiliente y Payload Mínimo):**
+  - Verificado mediante interceptor/espía que el cuerpo emitido por `publicarLive` contiene exclusivamente `{ tipo, id }` (sin nombres ni datos privados).
+  - Verificado que ante una simulación de caída total de red / fallo de Supabase Realtime, las mutaciones operativas (`POST /api/mi-trabajo/tareas/:id/iniciar`, etc.) responden `201 OK`, persistiendo el intervalo en la base de datos sin afectación para el operario.
+- **Sincronización en vivo del estado:** El inicio de cronómetro transiciona inmediatamente la persona en `/api/live/estado` a `en_curso = true` con los metadatos de la OT, y la pausa transiciona la persona a `en_curso = false` con `intervalo_abierto = null`.
+
+### 4. Evidencia de Tests y Calidad
+- **Backend Tests:** **20 suites pasadas, 59/59 tests en verde** en local (57/57 en CI de GitHub Actions por exclusión de `anon.test.ts`).
+  - `tests/loop2/live.test.ts`: 3 tests pasando.
+  - `tests/loop2/cronometro.test.ts`: 5 tests pasando.
+  - `tests/loop2/tareas-ot.test.ts`: 1 suite completa pasando.
+  - `tests/loop2/personas.test.ts`: 2 tests pasando.
+  - `tests/loop2/tarifas.test.ts`: 1 test pasando.
+  - `tests/loop2/auditoria-personas.test.ts`: 3 tests pasando.
+- **Web Tests:** **10 suites pasadas, 47/47 tests en verde** (incluyendo `src/lib/live.test.ts`).
+- **Linter:** `eslint . --max-warnings 0` -> **0 errores, 0 advertencias**.
+- **Typecheck:** `pnpm typecheck` -> **0 errores** en packages, apps y tests.
+- **Build:** `pnpm build` -> Compilación limpia de shared, api y web.
+- **GitHub Actions:** CI Run [#41544442358](https://github.com/Morochief/sistema-afull-v2/actions/runs/41544442358) (Run #45) completado con **éxito** (`success`).
+
+
