@@ -320,4 +320,4 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `2546057` | test(smoke): agregar script de prueba de humo automatizada de 9 puntos en Vercel (E3). | — |
 | 2026-11-02 | `5de4ec4` | fix(smoke): tipado local y limite de lineas en script de prueba de humo. | CI Run `#41515506474` green |
 | 2026-11-02 | `99151ff` | fix(web): sesión completa tras login y campos opcionales vacíos (auditoría E3). | CI Run `#41519975658` green |
-| 2026-11-02 | `pend` | test(ui): recorrido Playwright de 15 pasos en Vercel y remoción de Toaster duplicado. | 15/15 pasos Playwright UI en Vercel green |
+| 2026-11-02 | `fd38c0b` | test(ui): recorrido Playwright de 15 pasos en Vercel y remoción de Toaster duplicado. | 15/15 pasos Playwright UI en Vercel green |
