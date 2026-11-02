@@ -7,9 +7,11 @@ Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cer
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
-**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las 4 consultas de comprobación dieron los resultados exactos esperados y la suite `tests/loop0` pasó 18 de 18 tests en verde contra Supabase `dev` (incluyendo `anon.test.ts` endurecido con validación de error `42501` y `seed.test.ts`).
-- **Loop 0 parcialmente verificado:** 18/18 tests en verde (incluye seed idempotente del primer admin y bloqueo real de `anon` con SQLSTATE `42501`). Queda abierto: CA-0.10 (prueba de 20 requests HTTP simultáneas contra la API Hono), CA-0.1 (medición de login con cold start en Vercel post-deploy), CA-0.9 (backups y restore manual documentado en `RESTAURAR.md`) y workflows de backup/`tests-dev.yml`.
-- **Loop 1A parcialmente verificado (no cerrado):** 7 de 7 tests iniciales de `tests/loop1` en verde contra Supabase `dev` (carrera de 20 OT, 409 stale data, transiciones 400, CHECK de cancelar 23514, FK compuesta 23503, polígono Paraguay 23514). Pendiente para cerrar Loop 1A: endpoints de sucursales, contactos, marcas, detalle y desactivar/reactivar de cliente y OT; tests de CA-1.1 (paginación de 25), CA-1.7 (desactivar/reactivar sin borrado físico) y CA-1.10 (exigencia de `comercial` o `admin`); y ajustar `busqueda.test.ts` (CA-1.2) para medir la consulta real del servicio.
+**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las 4 consultas de comprobación dieron los resultados exactos esperados y `pnpm test` pasa **29 de 29 tests en verde** (10 archivos) contra Supabase `dev`.
+- **Loop 0 parcialmente verificado:** 18/18 tests en verde (incluye seed idempotente del primer admin en `scripts/seed-admin.ts` + `seed.test.ts`, y bloqueo real de `anon` con SQLSTATE `42501` en `anon.test.ts`). Queda abierto: CA-0.10 (prueba de 20 requests HTTP simultáneas contra la API Hono), CA-0.1 (medición de login con cold start en Vercel post-deploy), CA-0.9 (backups y restore manual documentado en `RESTAURAR.md`) y workflows de backup/`tests-dev.yml`.
+- **Loop 1A parcialmente verificado (Entrega 1 cerrada, falta Entrega 2):** 11/11 tests de `tests/loop1` en verde contra Supabase `dev`.
+  - **Entrega 1 (cerrada en commit `b9d0d58`):** Clientes (listado con `q`, `activo`, `desde`/`hasta`, detalle completo, edición con `updatedAt` → `409`, desactivar/reactivar advirtiendo OTs abiertas), sucursales (`sucursales.service.ts`), contactos con cambio atómico de contacto principal y marcas (`subrecursos.service.ts`), benchmark CA-1.2 ejecutando `queryListarClientes` real (`busqueda.test.ts`), y `clientes.test.ts` cubriendo CA-1.1 (paginación 25), CA-1.7 (bloqueo `DELETE` real con `42501`) y CA-1.10 (recorrido dinámico de `app.routes` en `/api/clientes`).
+  - **Entrega 2 (pendiente para cerrar Loop 1A):** Detalle de OT (`GET /api/comercial/ot/:id` con historial `ot_evento`), filtro por `clienteId` en `listarOTs`, edición de OT (`PATCH /api/comercial/ot/:id` exigiendo `updatedAt` → `409` y bloqueando con `400` si está en estado final `TERMINADO` o `CANCELADO`), y CA-1.1 / CA-1.10 para `/api/comercial/ot`.
 
 | Pieza | Estado |
 | :--- | :--- |
@@ -18,7 +20,7 @@ Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cer
 | Migraciones `0001` a `0004` (SQL) | **Aplicadas con éxito en Supabase `afull-dev`** con Drizzle journal. |
 | Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev`**. Loop 0 parcialmente verificado (18/18 tests en verde; pendientes CA-0.1 en Vercel, CA-0.9 restore manual y CA-0.10 HTTP concurrente). |
 | Tests Loop 0 (Vitest) | **18/18 en verde contra Supabase `dev`** (RLS, anon key `42501`, auth, seed idempotente, inmutabilidad y concurrencia por pooler). |
-| Tests Loop 1 (Vitest) | **7/7 iniciales en verde contra Supabase `dev`**. Loop 1A abierto: faltan endpoints y tests de CA-1.1, CA-1.7, CA-1.10 y ajuste de CA-1.2. |
+| Tests Loop 1 (Vitest) | **11/11 en verde contra Supabase `dev`** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`). Entrega 1 cerrada; falta Entrega 2 (detalle/edición OT y CA-1.10 en OT) para cerrar Loop 1A. |
 | Workflows de GitHub Actions | `ci.yml` configurado y pusheado a `main` en GitHub. |
 | `backup-storage.mjs` | Escrito de memoria, sin probar contra la API real. |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
@@ -246,9 +248,9 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 ## 12. Siguiente paso
 
-1. **Seed del primer admin y bloqueo `anon` (`42501`) verificados:** `pnpm test` pasa 25 de 25 tests en verde (18 Loop 0 + 7 Loop 1A), con lint y typecheck sin advertencias.
-2. **Completar el módulo comercial de Loop 1A:**
-   - Sucursales, contactos, marcas, detalle y endpoints de desactivar/reactivar para cliente y OT.
-   - Tests para CA-1.1 (paginación fija de 25), CA-1.7 (desactivar/reactivar sin borrado físico) y CA-1.10 (exigencia de capacidad `comercial` o `admin` en todos los endpoints).
-   - Ajustar `busqueda.test.ts` (CA-1.2) para medir la consulta real del servicio.
-3. **Cerrar Loop 1A con CI en verde** y recién entonces iniciar Loop 1B (definiendo primero el contrato de `TablaAdmin` y `useClientes`).
+1. **Seed del primer admin y bloqueo `anon` (`42501`) cerrados (commit `2352a53`):** `scripts/seed-admin.ts`, `apps/api/src/modules/auth/seed.ts`, `tests/loop0/seed.test.ts` y `tests/loop0/anon.test.ts` en verde; admins de prueba `zz_test_%` desactivados en `dev`.
+2. **Entrega 1 de Loop 1A cerrada (commit `b9d0d58`):** Clientes, detalle, edición con `updatedAt` → `409`, desactivación con advertencia de OTs abiertas, `sucursales.service.ts`, `subrecursos.service.ts` (contactos con cambio atómico de principal y marcas), `busqueda.test.ts` (CA-1.2 real) y `clientes.test.ts` (CA-1.1, CA-1.7 con error `42501` en `DELETE` y CA-1.10 dinámico sobre `app.routes`). Suite total: **29/29 tests en verde**, ningún archivo supera las 174 líneas efectivas.
+3. **Ejecutar Entrega 2 de Loop 1A (siguiente paso inmediato):**
+   - Detalle de OT (`GET /api/comercial/ot/:id` con historial `ot_evento`), filtro por `clienteId` en `listarOTs`, edición de OT (`PATCH /api/comercial/ot/:id` exigiendo `updatedAt` → `409` y bloqueando con `400` en estados finales `TERMINADO`/`CANCELADO`).
+   - Tests en `tests/loop1/ot.test.ts` para detalle, edición, bloqueo en estados finales, paginación y recorrido dinámico de `app.routes` (CA-1.10) en `/api/comercial/ot`.
+4. **Cerrar Loop 1A con CI en verde** y recién entonces iniciar Loop 1B (definiendo primero el contrato de `TablaAdmin` y `useClientes`).
