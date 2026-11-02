@@ -1,7 +1,7 @@
 # Traspaso del proyecto aFull
 
-Última actualización: 2 de noviembre de 2026.
-Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cerrar cada tarea.
+Última actualización: 2 de noviembre de 2026 — 11:13 (America/Asuncion).
+Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada tarea o commit.
 
 ---
 
@@ -24,7 +24,7 @@ Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cer
 | Workflows de GitHub Actions | `ci.yml` (en verde en cada push) y `tests-dev.yml` (**escrito, sin ejecutar**; requiere cargar los 4 secrets `DEV_*` en la UI de GitHub y disparar `workflow_dispatch`). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar contra la API real. |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
-| Proyecto Vercel | Entrypoint listo (`api/index.js`, `apps/api/src/vercel.ts`, `vercel.json` en `gru1`, `pnpm build` precompilando `@afull/shared` y `@afull/api`). Pendiente de desplegar y medir en el panel de Vercel. |
+| Proyecto Vercel | Entrypoint listo (`api/index.js`, `apps/api/src/vercel.ts`, `vercel.json` en `gru1` con `outputDirectory: "public"`, `public/index.html` y `engines.node: "22.x"` en commit `ba3e970`). Desplegando en `sistema-afull-v2-api` para tomar las 4 mediciones. |
 
 ---
 
@@ -269,3 +269,17 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
      3) 20 requests simultáneas a `GET /api/clientes` con sesión válida (cuántas responden `200` y tiempo total).
      4) Un `POST /api/auth/login` con `Origin` incorrecto que responda `403`, y presencia de `Secure` y `HttpOnly` en la cookie `Set-Cookie`.
 3. **Cierre completo de Loop 0 (Backups y Restore manual — CA-0.9) e inicio de Loop 1B (`TablaAdmin` y `useClientes`).**
+
+---
+
+## 13. Bitácora histórica de commits (`main`)
+
+| Fecha | Commit | Resumen | Verificación |
+| :--- | :--- | :--- | :--- |
+| 2026-11-02 | `2352a53` | Seed idempotente del primer admin (`scripts/seed-admin.ts`, `seed.ts`, `seed.test.ts`) y bloqueo real `42501` en `anon.test.ts`. | 25/25 tests en `dev`, CI Run `#4` green |
+| 2026-11-02 | `b9d0d58` | **Loop 1A — Entrega 1:** CRUD completo de clientes, sucursales, contactos (principal atómico) y marcas; `busqueda.test.ts` (CA-1.2 real) y `clientes.test.ts` (CA-1.1, CA-1.7 `42501`, CA-1.10 `app.routes`). | 29/29 tests en `dev`, CI Run `#5` green |
+| 2026-11-02 | `cc6a1b4` | Registro de Entrega 1 y conteo de líneas en `TRASPASO.md`. | CI Run `#6` green |
+| 2026-11-02 | `ed0621b` | **Loop 1A — Entrega 2 (Cierre Loop 1A):** Detalle de OT con `ot_evento` (CA-1.8), filtro `clienteId`, edición de OT con `409` y bloqueo `400` en estados finales (`esEstadoFinal`), CA-1.10 global sobre `app.routes` y CA-0.10 (20 requests HTTP simultáneas en `ot-api.test.ts`). | 34/34 tests en `dev`, CI Run `#7` green |
+| 2026-11-02 | `f672ea4` | Mitigación de fondo del pooler 6543 (`sinPipelining` en `client.ts`), auditoría de consultas en `apps/api/src`, tests de 40 consultas mixtas y auditoría estática en `secuencia.test.ts`, y creación de `.github/workflows/tests-dev.yml`. | 36/36 tests en `dev`, CI Run `#8` green |
+| 2026-11-02 | `b34a5a8` | Fijación de versión exacta `postgres@3.4.9` (sin `^`), entrypoint de Vercel (`api/index.js`, `apps/api/src/vercel.ts`, `vercel.json` en `gru1`) con precompilación de `@afull/shared` y `@afull/api`. | CI Run `#9` green |
+| 2026-11-02 | `ba3e970` | Ajuste de build para Vercel (`public/index.html`, `outputDirectory: "public"` en `vercel.json` y `"engines": { "node": "22.x" }` en `package.json`). | CI Run `#10` green |
