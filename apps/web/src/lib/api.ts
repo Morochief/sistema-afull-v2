@@ -111,3 +111,21 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesFetch = {}): P
 
   return cuerpo as T;
 }
+
+/**
+ * Texto para mostrar al usuario a partir de cualquier error.
+ * `detalle` es la lista de issues de Zod (400); nunca se convierte con String() porque daría
+ * "[object Object]" o "undefined".
+ */
+export function mensajeDeError(err: unknown, porDefecto = 'Ocurrió un error inesperado'): string {
+  if (err instanceof ErrorApi) {
+    const primero = err.detalle?.[0];
+    if (primero?.message) {
+      const campo = primero.path?.length ? `${primero.path.join('.')}: ` : '';
+      return `${err.mensaje} (${campo}${primero.message})`;
+    }
+    return err.mensaje;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return porDefecto;
+}

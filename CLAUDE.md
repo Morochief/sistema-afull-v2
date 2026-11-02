@@ -80,15 +80,16 @@
 
 ## 12. Protocolo de Trabajo Conjunto (Antigravity ↔ Claude Code)
 
-En este proyecto operamos en esquema de **control cruzado**:
-- **Antigravity (Proponente / Ejecutor):** redacta propuestas técnicas, escribe el código y ejecuta comandos en terminal nativa de Windows (`pnpm test`, `lint`, `typecheck`, `git`, mediciones HTTP/DB) dado que la unidad `C:` tiene poco espacio libre para levantar la VM de Claude.
-- **Claude Code (Auditor / Revisor):** tiene lectura y escritura directa sobre `D:\sistema-afull` (sin ejecutar terminal). Verifica propuestas e implementaciones leyendo directamente los archivos del repositorio, contrasta contra `TRASPASO.md` y `ARQUITECTURA_V3.md`, detecta huecos o supuestos no demostrados y escribe su dictamen en `MESA_DE_TRABAJO.md`.
+Vigente desde 2026-11-02 16:20 (decisión del usuario):
+1. **Claude Code plantea cada entrega** en `MESA_CLAUDE.md` (orden de trabajo con diseño, métodos, rutas y criterios).
+2. **Antigravity implementa**, hace commit y push, y registra en `MESA_DE_TRABAJO.md` la evidencia literal (CI run, comandos y salidas).
+3. **Claude Code audita** clonando el repositorio público. **Lo que esté mal lo corrige directamente en el disco (`D:\sistema-afull`)**, sin commit, y lo anota en `MESA_CLAUDE.md` bajo "Correcciones aplicadas por Claude Code".
+4. **Antigravity lee esa sección**, revisa los cambios, corre lint, tipos y tests, hace el commit de las correcciones y continúa con la siguiente orden de trabajo.
 
-### Reglas de `D:\sistema-afull\MESA_DE_TRABAJO.md`
-1. **Evidencia cruda, no resumida:** Para toda afirmación empírica (ej. "36/36 en verde", "1253 ms", "HTTP 200"), Antigravity debe pegar en `MESA_DE_TRABAJO.md` el comando ejecutado y la salida literal de terminal (o link/ID del CI run), sin editar.
-2. **Rondas numeradas con fecha y cierre exclusivo del usuario:** Cada ciclo lleva el encabezado `Ronda N (YYYY-MM-DD HH:mm)` con las secciones `### Propuesta / Entrega (Antigravity)`, `### Dictamen (Claude Code)`, `### Respuesta / Ejecución (Antigravity)` y `**Cerrado por:** [pendiente del usuario]`. Ninguno de los dos agentes da una ronda por cerrada por su cuenta.
-3. **Ninguno de los dos resume ni sobrescribe el texto del otro:** Dentro de una ronda abierta, cada agente únicamente **agrega** su nueva sección al final del archivo (`append`), conservando íntegros todos los dictámenes, propuestas y evidencias previas de esa ronda.
-4. **Mesa efímera (sin acumulación entre rondas cerradas):** Solo cuando el usuario marca una ronda como cerrada, se pasa un resumen de una línea a la bitácora de `TRASPASO.md` (Sección 13) y se vacía `MESA_DE_TRABAJO.md` para la ronda siguiente.
+### Reglas de la Mesa y Archivos
+- `MESA_CLAUDE.md`: exclusivo para órdenes de trabajo y correcciones aplicadas por Claude Code.
+- `MESA_DE_TRABAJO.md`: exclusivo para reportes y evidencias literales de Antigravity.
+- Ninguno de los dos agentes sobrescribe el archivo del otro. Evidencia cruda y literal siempre.
 
 
 

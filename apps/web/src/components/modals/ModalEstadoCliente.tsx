@@ -2,6 +2,7 @@ import { toast } from 'sonner';
 import { AlertTriangle, Power } from 'lucide-react';
 import type { ClienteFila } from '@afull/shared';
 import { useCambiarEstadoCliente } from '../../hooks/clientes/useMutacionesCliente.js';
+import { mensajeDeError } from '../../lib/api.js';
 import {
   Dialog,
   DialogHeader,
@@ -48,13 +49,8 @@ export function ModalEstadoCliente({
       }
       onCerrar();
     } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'detalle' in err
-          ? String(err.detalle)
-          : err instanceof Error
-          ? err.message
-          : 'Error al cambiar estado del cliente';
-      toast.error(msg);
+      // 409: el cliente cambió desde que se cargó la lista; el hook ya invalidó la caché.
+      toast.error(mensajeDeError(err, 'Error al cambiar estado del cliente'));
     }
   };
 

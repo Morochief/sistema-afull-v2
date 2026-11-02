@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { patchClienteSchema, type ClienteFila } from '@afull/shared';
 import { useEditarCliente } from '../../hooks/clientes/useMutacionesCliente.js';
 import { obtenerCliente, type PatchCliente } from '../../lib/api-clientes.js';
-import { ErrorApi } from '../../lib/api.js';
+import { ErrorApi, mensajeDeError } from '../../lib/api.js';
 import {
   Dialog,
   DialogHeader,
@@ -16,6 +16,21 @@ import {
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Label } from '../ui/label.js';
+
+const ETIQUETAS: Record<string, string> = {
+  nombre: 'nombre',
+  razon_social: 'razón social',
+  ruc: 'RUC',
+  telefono: 'teléfono',
+  email: 'email',
+  activo: 'estado',
+};
+
+function camposCambiados(antes: ClienteFila, despues: ClienteFila): string[] {
+  return Object.keys(ETIQUETAS)
+    .filter((k) => antes[k as keyof ClienteFila] !== despues[k as keyof ClienteFila])
+    .map((k) => ETIQUETAS[k]);
+}
 
 export type ModalEditarClienteProps = {
   cliente: ClienteFila | null;
@@ -79,29 +94,23 @@ export function ModalEditarCliente({
       onCerrar();
     } catch (err: unknown) {
       if (err instanceof ErrorApi && err.status === 409) {
-        // CA-1.13: Concurrencia visible sin perder lo escrito en el formulario
+        // CA-1.13: se conserva lo escrito y se avisa QUÉ cambió el otro usuario. Si vuelve a
+        // guardar, sobrescribe esos cambios a sabiendas (no se reintenta solo, D5).
         try {
           const fresco = await obtenerCliente(cliente.id);
           setValue('updatedAt', fresco.updated_at);
-          toast.error(
-            'Conflicto de concurrencia (409): el registro fue modificado por otro usuario. Se actualizó la versión base sin perder tus cambios. Revisa y vuelve a presionar Guardar.',
-            { duration: 8000 }
+          const cambiados = camposCambiados(cliente, fresco);
+          toast.warning(
+            `Otro usuario modificó este cliente${cambiados.length ? ` (${cambiados.join(', ')})` : ''}. ` +
+              'Tus datos siguen en el formulario: si guardás de nuevo, reemplazás sus cambios.',
+            { duration: 10000 },
           );
-        } catch {
-          toast.error('Conflicto 409 al guardar. No se pudo refrescar la versión remota.');
+        } catch (e) {
+          toast.error(mensajeDeError(e, 'Conflicto al guardar y no se pudo leer la versión actual.'));
         }
         return;
       }
-
-      const msg =
-        err instanceof ErrorApi
-          ? typeof err.detalle === 'string'
-            ? err.detalle
-            : err.message
-          : err instanceof Error
-          ? err.message
-          : 'Error al actualizar cliente';
-      toast.error(msg);
+      toast.error(mensajeDeError(err, 'Error al actualizar cliente'));
     }
   };
 

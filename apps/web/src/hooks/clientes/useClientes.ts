@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useSearch, useNavigate } from '@tanstack/react-router';
 import { obtenerClientes } from '../../lib/api-clientes.js';
@@ -35,7 +36,9 @@ export function useClientes(): {
     placeholderData: keepPreviousData,
   });
 
-  const setFiltros = (cambio: Partial<FiltrosTabla>) => {
+  // useCallback: BarraFiltros usa onFiltros como dependencia del debounce; una función nueva
+  // en cada render reiniciaría el temporizador de 300 ms.
+  const setFiltros = useCallback((cambio: Partial<FiltrosTabla>) => {
     navigate({
       to: '/clientes',
       search: (prev) => {
@@ -49,7 +52,7 @@ export function useClientes(): {
         };
       },
     });
-  };
+  }, [navigate]);
 
   return {
     datos,

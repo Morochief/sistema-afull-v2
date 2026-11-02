@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { nuevoClienteSchema } from '@afull/shared';
 import { useCrearCliente } from '../../hooks/clientes/useMutacionesCliente.js';
 import type { NuevoCliente } from '../../lib/api-clientes.js';
+import { mensajeDeError } from '../../lib/api.js';
 import {
   Dialog,
   DialogHeader,
@@ -55,13 +56,7 @@ export function ModalNuevoCliente({ abierto, onCerrar }: ModalNuevoClienteProps)
       reset();
       onCerrar();
     } catch (err: unknown) {
-      const errorMsg =
-        err && typeof err === 'object' && 'detalle' in err
-          ? String(err.detalle)
-          : err instanceof Error
-          ? err.message
-          : 'Error al registrar cliente';
-      toast.error(errorMsg);
+      toast.error(mensajeDeError(err, 'Error al registrar cliente'));
     }
   };
 

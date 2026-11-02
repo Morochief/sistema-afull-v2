@@ -53,7 +53,7 @@ export async function crearCliente(datos: NuevoCliente): Promise<ClienteFila> {
 
 export async function editarCliente(id: string, datos: PatchCliente): Promise<ClienteFila> {
   return apiFetch<ClienteFila>(`/api/clientes/${id}`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(datos),
   });
 }
@@ -64,7 +64,7 @@ export async function cambiarEstadoCliente(
   updatedAt: string
 ): Promise<ClienteFila & { advertencia: string | null }> {
   return apiFetch<ClienteFila & { advertencia: string | null }>(`/api/clientes/${id}/estado`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify({ activo, updatedAt }),
   });
 }
