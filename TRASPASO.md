@@ -31,10 +31,10 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 | Documento maestro v3.x | Copiado en `D:\sistema-afull\ARQUITECTURA_V3.md` (con aviso de que `TRASPASO.md` gana en caso de diferencia); `CLAUDE.md` sincronizado. |
 | Repositorio y monorepo | Inicializado en `D:\sistema-afull`. Remoto: `https://github.com/Morochief/sistema-afull-v2.git` (rama `main`). `lint` y `typecheck` en verde. |
 | Migraciones `0001` a `0005` (SQL) | **Aplicadas con éxito en Supabase `afull-dev`** con Drizzle journal (`0005` cierra `EXECUTE` implícito de `PUBLIC` en funciones nuevas). |
-| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev` y en Vercel (`gru1`)**. CA-0.1 cumplido en caliente (`147–163 ms`, mediana `152 ms` sobre `a588fbb`), pero en frío dio `1253 ms` sobre `703c0ec` (**excede 100–300 ms; pendiente decisión del usuario**); CA-0.10 por HTTP (20/20 en 754 ms) verificado; pendientes secrets de `tests-dev.yml` y CA-0.9 (`backup-db.yml` corrida #2 en verde + D5-1 + restore manual + `RESTAURAR.md`). |
+| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev` y en Vercel (`gru1`)**. CA-0.1 cumplido en caliente (`147–163 ms`, mediana `152 ms` sobre `a588fbb`); cold start en frío dio `1253 ms` sobre `703c0ec` (excede 100–300 ms; verificado en caliente y registrado como excepción en Sección 3 para confirmación formal del usuario); CA-0.10 por HTTP (20/20 en 754 ms) verificado; pendientes secrets de `tests-dev.yml` y CA-0.9 (`backup-db.yml` corrida #5 en verde con D5-1 verificado + restore manual + `RESTAURAR.md`). |
 | Tests Loop 0 (Vitest) | **22/22 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, funciones y default privileges cerrados en `funciones.test.ts`, auth, seed idempotente con limpieza de `zz_test_%`, inmutabilidad, concurrencia por pooler + `sinPipelining` y auditoría estática de parámetros). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
-| Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corrida #2 con D5-1 incorporado**). |
+| Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2 y #5 con D5-1 incorporado y probado**). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 3** (hoy no se usa Storage). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
 | Proyecto Vercel | **Desplegado en `gru1` (Node 22)**: `@node-rs/argon2` operativo, login cálido `147–163 ms` (mediana `152 ms` en commit `a588fbb`), login cold start `1253 ms` (en commit `703c0ec`, excede objetivo de 100–300 ms), 20 GET concurrentes 20/20 `200 OK` en `754 ms` (atendidas casi en serie), CSRF `403` y cookies `HttpOnly; Secure; SameSite=Lax`. |
@@ -102,7 +102,7 @@ El proyecto anterior se rompió por acumulación de parches. Por eso se rediseñ
 
 ### Autenticación
 - Argon2id con `@node-rs/argon2` (OWASP: 19 MiB, 2 iteraciones, 1 hilo; apuntar a 100–300 ms en Vercel). Alternativa si el binario nativo no carga: `scrypt` de `node:crypto`.
-- **Excepción documentada CA-0.1 (login en frío en Vercel gru1):** Aceptada por el usuario el 2026-11-02. El tiempo en caliente cumple holgadamente el objetivo (`147–163 ms`, mediana `152 ms` con red incluida desde Paraguay y Argon2id en Node 22). El cold start tras >20 min sin tráfico (`1253 ms`, 1,25 s) es aceptable para la operativa de una oficina chica de cartelería y evita la complejidad de soluciones alternativas como `scrypt` o funciones de pago.
+- **Excepción documentada CA-0.1 (login en frío en Vercel gru1):** Registrada en espera de confirmación formal del usuario. El tiempo en caliente cumple holgadamente el objetivo (`147–163 ms`, mediana `152 ms` con red incluida desde Paraguay y Argon2id en Node 22). El cold start tras >20 min sin tráfico (`1253 ms`, 1,25 s) corresponde al arranque en frío del contenedor serverless de Node en Vercel y el handshake TCP/TLS con Supabase São Paulo (no atribuible al algoritmo Argon2id). Es admisible para la operativa de una oficina chica de cartelería y evita la necesidad de planes de pago con instancias siempre activas.
 - Token de 32 bytes aleatorios en la cookie `afull_session` (`HttpOnly`, `Secure`, `SameSite=Lax`). En la base solo se guarda su SHA-256.
 - Sesión validada en cada request contra `sesion` y `usuario.activo` (revocación instantánea). Expiración deslizante de 30 días; `last_active_at` se refresca como máximo cada 5 minutos.
 - CSRF: `SameSite=Lax` más verificación del header `Origin` en toda petición que modifica datos.
@@ -158,6 +158,7 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 | `0002_rol_api` | Rol `afull_api` (`NOINHERIT`, `NOBYPASSRLS`, `statement_timeout 15s`), `GRANT` mínimos, políticas. La contraseña se asigna aparte con `ALTER ROLE` y **no va en el repo** (`openssl rand -hex 32`) |
 | `0003_intento_login` | Tabla de intentos de login |
 | `0004_clientes_ot` | `pg_trgm` (esquema `extensions`), `cliente`, `cliente_contacto`, `cliente_marca`, `sucursal` (GPS dentro de Paraguay), `orden_trabajo` (FK compuesta sucursal-cliente), `ot_evento` (inmutable) |
+| `0005_default_privileges_funciones` | `ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;` (global, sin `IN SCHEMA`) y barrido idempotente en `public`. Cierra la herencia implícita de `EXECUTE` en funciones nuevas para `anon`/`authenticated`/`afull_api`. |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
@@ -168,12 +169,12 @@ Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guar
 Orden: 0 Base → 1 Clientes + OT → 2 Tareas, cronómetro y Control en Vivo → 3 Campo offline + flota → 4 Stock → 5 Costeo → 6 Pre-prensa → 7 RR.HH. → 8 Portal B2B.
 (Costeo va temprano porque es lo que justifica el sistema.)
 
-### Loop 0: Base (20/20 tests + CA-0.1 en caliente y CA-0.10 por HTTP en Vercel verificados; pendientes decisión sobre cold start de CA-0.1, `tests-dev.yml` y CA-0.9)
+### Loop 0: Base (22/22 tests + CA-0.1 en caliente y CA-0.10 por HTTP en Vercel verificados; pendientes confirmación de decisión de cold start de CA-0.1, `tests-dev.yml` y restore manual de CA-0.9)
 
-Tareas: 1 decidir API (Vercel Node, cerrada) · 2 repo + reglas de lint · 3 dos proyectos Supabase · 4 conexión y migraciones · 5 migraciones 0001–0003 · 6 auth · 7 capacidades + seed del primer admin · 8 auditoría · 9 CI · 10 backups · 11 deploy y prueba de humo.
+Tareas: 1 decidir API (Vercel Node, cerrada) · 2 repo + reglas de lint · 3 dos proyectos Supabase · 4 conexión y migraciones · 5 migraciones 0001–0003 y 0005 · 6 auth · 7 capacidades + seed del primer admin · 8 auditoría · 9 CI · 10 backups · 11 deploy y prueba de humo.
 
 Criterios de aceptación:
-- **CA-0.1** Login con Argon2id, cookie segura, fila en `sesion`; **medido en el entorno desplegado (`gru1`, Node 22)**: ráfaga de 9 muestras cálidas entre `147 ms` y `163 ms` (mediana `152 ms`, promedio `153 ms`, total con red incluida sobre `a588fbb`, dentro del objetivo de `100–300 ms`), cookie con `HttpOnly; Secure; SameSite=Lax`; el arranque en frío real del login con Argon2 + DB dio `1253 ms` (sobre `703c0ec` tras >23 min sin tráfico), seguido de `318 ms` en la 2.ª llamada inmediata. (**Verificado en caliente; arranque en frío de 1253 ms aceptado como excepción documentada por el usuario el 2026-11-02 en Sección 3**)
+- **CA-0.1** Login con Argon2id, cookie segura, fila en `sesion`; **medido en el entorno desplegado (`gru1`, Node 22)**: ráfaga de 9 muestras cálidas entre `147 ms` y `163 ms` (mediana `152 ms`, promedio `153 ms`, total con red incluida sobre `a588fbb`, dentro del objetivo de `100–300 ms`), cookie con `HttpOnly; Secure; SameSite=Lax`; el arranque en frío real del login con Argon2 + DB dio `1253 ms` (sobre `703c0ec` tras >23 min sin tráfico), seguido de `318 ms` en la 2.ª llamada inmediata. (**Verificado en caliente; cold start de 1253 ms registrado como excepción en Sección 3 para confirmación formal del usuario**)
 - **CA-0.2** Desactivar un usuario invalida su cookie en la siguiente request (401). (**Verificado**)
 - **CA-0.4** Sin la capacidad: 403. (**Verificado**)
 - **CA-0.5** Toda acción sensible genera `evento_auditoria`; si la mutación falla, la auditoría se revierte con ella. (**Verificado**)
@@ -295,3 +296,8 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `56ddd08` | Registro de mediciones de Vercel `gru1` en `TRASPASO.md`. | CI Run `#12` green |
 | 2026-11-02 | `703c0ec` | Refinamiento en `TRASPASO.md`: distinción entre login cálido y cold start pendiente, observación de serialización en las 20 concurrentes y checklist de cierre del Loop 0. | CI Run `#13` green |
 | 2026-11-02 | `e896d54` | Medición de cold start de login (`1253 ms` sobre `703c0ec`), sincronización de `CLAUDE.md` y copia de `ARQUITECTURA_V3.md` en la raíz. | CI Run `#14` green |
+| 2026-11-02 | `752d8f4` | ci(backup): agregar workflow backup-db.yml y guia RESTAURAR.md (CA-0.9). | CI Run `#41474185921` green |
+| 2026-11-02 | `cbd4a7c` | fix(backup): anteponer /usr/lib/postgresql/17/bin en GITHUB_PATH para usar pg_dump 17. | CI Run `#41477871806` green, Backup Run #2 green |
+| 2026-11-02 | `cfb5767` | feat(security): migracion 0005 default privileges funciones, test loop0 y D5-1 en backup. | 38/38 tests en dev, CI Run `#41482469212` green |
+| 2026-11-02 | `82f4921` | fix(backup): corregir sintaxis bash en roles dinamicos y chequeo D5-1, cerrar CA-0.1 con decision de cold start. | CI Run `#41484116136` green |
+| 2026-11-02 | `e24dc12` | fix(backup): filtrar comando multi-sentencia para extraer valor booleano en chequeo D5-1. | CI Run `#41485136748` green, Backup Run #5 (`#41485209561`) green |
