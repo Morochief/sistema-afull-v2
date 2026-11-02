@@ -5,6 +5,7 @@ dist/
 .env.*
 !.env.example
 *.log
+*.tsbuildinfo
 .DS_Store
 storage-backup/
 afull-*.tar.gz.gpg

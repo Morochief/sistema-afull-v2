@@ -6,19 +6,19 @@ import { Button } from '../components/ui/button.js';
 import { Badge } from '../components/ui/badge.js';
 
 export function AppLayout() {
-  const { usuario, cargando, tieneCapacidad, logout } = useSesion();
+  const { usuario, cargando, error, refetch, tieneCapacidad, logout } = useSesion();
   const navigate = useNavigate();
   const routerState = useRouterState();
 
   useEffect(() => {
-    if (!cargando && !usuario) {
+    if (!cargando && !usuario && !error) {
       const rutaActual = routerState.location.pathname;
       navigate({
         to: '/login',
         search: rutaActual !== '/' ? { volver: rutaActual } : undefined,
       });
     }
-  }, [usuario, cargando, navigate, routerState.location.pathname]);
+  }, [usuario, cargando, error, navigate, routerState.location.pathname]);
 
   if (cargando) {
     return (
@@ -28,6 +28,25 @@ export function AppLayout() {
             aF
           </div>
           <p className="text-xs">Cargando sesión...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#090a0f] p-4 text-neutral-200">
+        <div className="w-full max-w-sm rounded-md border border-[#1f2937] bg-[#111318] p-6 text-center shadow-xl">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded bg-red-950/60 text-red-500 font-bold text-lg">
+            !
+          </div>
+          <h2 className="mb-2 font-semibold text-lg text-white">No se pudo conectar con el servidor</h2>
+          <p className="mb-5 text-xs text-neutral-400">
+            {error instanceof Error ? error.message : 'Error al verificar la sesión. Verifique su conexión.'}
+          </p>
+          <Button onClick={() => void refetch()} className="w-full">
+            Reintentar
+          </Button>
         </div>
       </div>
     );

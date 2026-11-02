@@ -56,7 +56,15 @@ export const verificarOrigen: MiddlewareHandler = async (c, next) => {
     const produccion = process.env.NODE_ENV === 'production';
     if (produccion && !appOrigin) throw new ErrorApp(403, 'APP_ORIGIN no configurada');
     if (produccion && !origin) throw new ErrorApp(403, 'Origen requerido (CSRF)');
-    if (appOrigin && origin && origin !== appOrigin) throw new ErrorApp(403, 'Origen no permitido (CSRF)');
+
+    const permitidos = appOrigin ? appOrigin.split(',').map((o) => o.trim()).filter(Boolean) : [];
+    if (!produccion && !permitidos.includes('http://localhost:5173')) {
+      permitidos.push('http://localhost:5173');
+    }
+
+    if (appOrigin && origin && !permitidos.includes(origin)) {
+      throw new ErrorApp(403, 'Origen no permitido (CSRF)');
+    }
   }
   await next();
 };
