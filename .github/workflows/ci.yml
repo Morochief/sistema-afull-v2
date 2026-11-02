@@ -48,3 +48,9 @@ jobs:
 
       - name: Tests (sin el test REST de anon key, que corre en tests-dev.yml)
         run: pnpm vitest run tests --exclude tests/loop0/anon.test.ts
+
+      - name: Tests Web (Vitest frontend)
+        run: pnpm --filter @afull/web test
+
+      - name: Build (Shared + API + Web)
+        run: pnpm build

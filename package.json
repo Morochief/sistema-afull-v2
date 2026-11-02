@@ -8,9 +8,10 @@
   },
   "scripts": {
     "prepare": "pnpm --filter @afull/shared build",
-    "build": "pnpm --filter @afull/shared build && pnpm --filter @afull/api build",
+    "build": "pnpm --filter @afull/shared build && pnpm --filter @afull/api build && pnpm --filter @afull/web build",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "pnpm -r run typecheck && tsc -p tests/tsconfig.json --noEmit",
+    "test:web": "pnpm --filter @afull/web test",
     "test:loop0": "vitest run tests/loop0",
     "test:loop1": "vitest run tests/loop1",
     "test": "vitest run tests",
