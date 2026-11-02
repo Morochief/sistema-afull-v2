@@ -1,6 +1,6 @@
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
-import { puedeTransicionar, esEstadoFinal, type EstadoOT } from '@afull/shared';
+import { puedeTransicionar, esEstadoFinal, type EstadoOT, type OTDetalle, type OTFila, type Pagina } from '@afull/shared';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import { TAM_PAGINA, desplazamiento, escaparLike, armarPagina } from '../../lib/paginacion.js';
 import { type Ctx, esperarAvanceReloj, verificarUpdatedAt } from '../clientes/service.js';
@@ -21,32 +21,69 @@ function dondeOTs(f: FiltroOT) {
   const patron = f.q?.trim() ? `%${escaparLike(f.q.trim())}%` : null;
   // Se parametriza ${true} para que incluso sin filtros la consulta tenga >= 1 parámetro (describeFirst = true en pooler 6543)
   return sql`WHERE ${true}
-    ${f.estado ? sql`AND estado = ${f.estado}` : sql``}
-    ${f.clienteId ? sql`AND cliente_id = ${f.clienteId}` : sql``}
-    ${patron ? sql`AND (titulo ILIKE ${patron} OR codigo_ot ILIKE ${patron})` : sql``}
-    ${f.desde ? sql`AND created_at >= (${f.desde}::date)::timestamp AT TIME ZONE 'America/Asuncion'` : sql``}
-    ${f.hasta ? sql`AND created_at < ((${f.hasta}::date + 1)::timestamp AT TIME ZONE 'America/Asuncion')` : sql``}`;
+    ${f.estado ? sql`AND o.estado = ${f.estado}` : sql``}
+    ${f.clienteId ? sql`AND o.cliente_id = ${f.clienteId}` : sql``}
+    ${patron ? sql`AND (o.titulo ILIKE ${patron} OR o.codigo_ot ILIKE ${patron} OR c.nombre ILIKE ${patron})` : sql``}
+    ${f.desde ? sql`AND o.created_at >= (${f.desde}::date)::timestamp AT TIME ZONE 'America/Asuncion'` : sql``}
+    ${f.hasta ? sql`AND o.created_at < ((${f.hasta}::date + 1)::timestamp AT TIME ZONE 'America/Asuncion')` : sql``}`;
 }
 
-export async function listarOTs(f: FiltroOT) {
+export async function listarOTs(f: FiltroOT): Promise<Pagina<OTFila>> {
   try {
-    const [{ total }] = await sql`SELECT count(*)::int AS total FROM orden_trabajo ${dondeOTs(f)}`;
-    const items = await sql`
-      SELECT id, codigo_ot, cliente_id, sucursal_id, titulo, descripcion, estado, fecha_prometida, created_at, updated_at
-      FROM orden_trabajo ${dondeOTs(f)}
-      ORDER BY created_at DESC, id LIMIT ${TAM_PAGINA} OFFSET ${desplazamiento(f.pagina)}
+    const [{ total }] = await sql`
+      SELECT count(*)::int AS total
+      FROM orden_trabajo o
+      JOIN cliente c ON c.id = o.cliente_id
+      LEFT JOIN sucursal s ON s.id = o.sucursal_id
+      ${dondeOTs(f)}
     `;
-    return armarPagina([...items], total, f.pagina);
+    const items = await sql`
+      SELECT
+        o.id,
+        o.codigo_ot,
+        o.cliente_id,
+        c.nombre AS cliente_nombre,
+        o.sucursal_id,
+        s.nombre AS sucursal_nombre,
+        o.titulo,
+        o.descripcion,
+        o.estado,
+        o.fecha_prometida,
+        o.created_at,
+        o.updated_at
+      FROM orden_trabajo o
+      JOIN cliente c ON c.id = o.cliente_id
+      LEFT JOIN sucursal s ON s.id = o.sucursal_id
+      ${dondeOTs(f)}
+      ORDER BY o.created_at DESC, o.id LIMIT ${TAM_PAGINA} OFFSET ${desplazamiento(f.pagina)}
+    `;
+    return armarPagina([...items], total, f.pagina) as Pagina<OTFila>;
   } catch (e) {
     traducirErrorPg(e);
   }
 }
 
-export async function obtenerDetalleOT(id: string) {
+export async function obtenerDetalleOT(id: string): Promise<OTDetalle> {
   try {
     const [ot] = await sql`
-      SELECT id, codigo_ot, cliente_id, sucursal_id, titulo, descripcion, estado, fecha_prometida, creado_por, created_at, updated_at
-      FROM orden_trabajo WHERE id = ${id}
+      SELECT
+        o.id,
+        o.codigo_ot,
+        o.cliente_id,
+        c.nombre AS cliente_nombre,
+        o.sucursal_id,
+        s.nombre AS sucursal_nombre,
+        o.titulo,
+        o.descripcion,
+        o.estado,
+        o.fecha_prometida,
+        o.creado_por,
+        o.created_at,
+        o.updated_at
+      FROM orden_trabajo o
+      JOIN cliente c ON c.id = o.cliente_id
+      LEFT JOIN sucursal s ON s.id = o.sucursal_id
+      WHERE o.id = ${id}
     `;
     if (!ot) throw new ErrorApp(404, 'OT no encontrada');
 
@@ -55,7 +92,7 @@ export async function obtenerDetalleOT(id: string) {
       FROM ot_evento WHERE orden_trabajo_id = ${id}
       ORDER BY created_at ASC, id ASC
     `;
-    return { ...ot, eventos: [...eventos] };
+    return { ...ot, eventos: [...eventos] } as unknown as OTDetalle;
   } catch (e) {
     if (e instanceof ErrorApp) throw e;
     traducirErrorPg(e);

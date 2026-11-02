@@ -8,6 +8,7 @@ import {
   CLAVES_SUCURSAL_FILA,
   CLAVES_CONTACTO_FILA,
   CLAVES_MARCA_FILA,
+  CLAVES_OT_FILA,
   CLAVES_OT_DETALLE,
   CLAVES_OT_EVENTO,
 } from '../../packages/shared/src/index.js';
@@ -113,6 +114,15 @@ describe('Test de Contrato: Verificación de Claves API vs Tipos TypeScript (Loo
       });
       expect(resOT.status).toBe(201);
       const otCreada = await resOT.json();
+
+      // 5.b Verificar claves de GET /api/comercial/ot (OTFila)
+      const resOTLista = await req('GET', `/api/comercial/ot?clienteId=${clienteId}`, cookie);
+      expect(resOTLista.status).toBe(200);
+      const paginaOT = await resOTLista.json();
+      expect(paginaOT.items.length).toBeGreaterThan(0);
+      const clavesOTFilaReal = Object.keys(paginaOT.items[0]).sort();
+      const clavesOTFilaEsperadas = [...CLAVES_OT_FILA].sort();
+      expect(clavesOTFilaReal).toEqual(clavesOTFilaEsperadas);
 
       const resOTDetalle = await req('GET', `/api/comercial/ot/${otCreada.id}`, cookie);
       expect(resOTDetalle.status).toBe(200);

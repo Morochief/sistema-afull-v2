@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { admin, cerrarConexiones } from '../loop0/helpers.js';
 import { crearUsuario } from '../loop0/auth-helpers.js';
-import { crearOT, transicionar } from '../../apps/api/src/modules/comercial/ot.service.js';
+import { crearOT, transicionar, listarOTs, obtenerDetalleOT } from '../../apps/api/src/modules/comercial/ot.service.js';
 
 afterAll(cerrarConexiones);
 
@@ -88,5 +88,47 @@ describe('CA-1.3: Validación de coordenadas de Paraguay', () => {
       INSERT INTO sucursal (cliente_id, nombre, gps_lat, gps_lng)
       VALUES (${c}, 'suc_invalida', -57.6, -25.3)
     `).rejects.toMatchObject({ code: '23514' });
+  });
+});
+
+describe('E3.1: Nombres en OTs y búsqueda por nombre de cliente', () => {
+  it('buscar por nombre de cliente devuelve sus OTs, el total coincide, escaparLike protege % y trae cliente_nombre', async () => {
+    const u = await crearUsuario(['comercial']);
+    const tag = Date.now().toString(36);
+    const nombreUnico = `zz_test_cli_busq_${tag}`;
+    const clienteId = await clienteTest(nombreUnico);
+
+    const [suc] = await admin`
+      INSERT INTO sucursal (cliente_id, nombre, gps_lat, gps_lng, activo)
+      VALUES (${clienteId}, ${'suc_' + tag}, -25.3, -57.6, true) RETURNING id
+    `;
+
+    const ot = (await crearOT(
+      { usuarioId: u.id },
+      { clienteId, sucursalId: suc.id, titulo: `Titulo_${tag}` }
+    ))!;
+
+    try {
+      // (a) Buscar por parte del nombre de cliente devuelve la OT y total coincide
+      const res = await listarOTs({ pagina: 1, q: `cli_busq_${tag}` });
+      expect(res.total).toBe(1);
+      expect(res.items).toHaveLength(1);
+      expect(res.items[0].id).toBe(ot.id);
+
+      // (c) El ítem trae cliente_nombre y sucursal_nombre
+      expect(res.items[0].cliente_nombre).toBe(nombreUnico);
+      expect(res.items[0].sucursal_nombre).toBe(`suc_${tag}`);
+
+      // Detalle también trae los nombres
+      const det = await obtenerDetalleOT(ot.id);
+      expect(det.cliente_nombre).toBe(nombreUnico);
+      expect(det.sucursal_nombre).toBe(`suc_${tag}`);
+
+      // (b) Buscar '%' literal no devuelve todo (escaparLike)
+      const resPct = await listarOTs({ pagina: 1, q: '%' });
+      expect(resPct.total).toBe(0);
+    } finally {
+      await admin`UPDATE cliente SET activo = false WHERE id = ${clienteId}`;
+    }
   });
 });

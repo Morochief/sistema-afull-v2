@@ -70,9 +70,9 @@ export type OTFila = {
   id: string;
   codigo_ot: string;
   cliente_id: string;
-  cliente_nombre?: string;
+  cliente_nombre: string;
   sucursal_id: string | null;
-  sucursal_nombre?: string | null;
+  sucursal_nombre: string | null;
   titulo: string;
   descripcion: string | null;
   estado: EstadoOT;
@@ -117,7 +117,7 @@ export const CLAVES_CLIENTE_DETALLE = [
 ] as const;
 
 export const CLAVES_OT_FILA = [
-  'id', 'codigo_ot', 'cliente_id', 'sucursal_id', 'titulo', 'descripcion', 'estado', 'fecha_prometida', 'created_at', 'updated_at'
+  'id', 'codigo_ot', 'cliente_id', 'cliente_nombre', 'sucursal_id', 'sucursal_nombre', 'titulo', 'descripcion', 'estado', 'fecha_prometida', 'created_at', 'updated_at'
 ] as const;
 
 export const CLAVES_OT_DETALLE = [
