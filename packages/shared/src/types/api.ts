@@ -95,3 +95,35 @@ export type OTDetalle = OTFila & {
   creado_por: string;
   eventos: OTEvento[];
 };
+
+export const CLAVES_CLIENTE_FILA = [
+  'id', 'codigo', 'nombre', 'razon_social', 'ruc', 'telefono', 'email', 'activo', 'created_at', 'updated_at'
+] as const;
+
+export const CLAVES_SUCURSAL_FILA = [
+  'id', 'cliente_id', 'nombre', 'ciudad', 'direccion', 'gps_lat', 'gps_lng', 'activo', 'created_at', 'updated_at'
+] as const;
+
+export const CLAVES_CONTACTO_FILA = [
+  'id', 'cliente_id', 'nombre', 'cargo', 'telefono', 'email', 'es_principal', 'activo', 'created_at'
+] as const;
+
+export const CLAVES_MARCA_FILA = [
+  'id', 'cliente_id', 'nombre', 'activo', 'created_at'
+] as const;
+
+export const CLAVES_CLIENTE_DETALLE = [
+  ...CLAVES_CLIENTE_FILA, 'sucursales', 'contactos', 'marcas'
+] as const;
+
+export const CLAVES_OT_FILA = [
+  'id', 'codigo_ot', 'cliente_id', 'sucursal_id', 'titulo', 'descripcion', 'estado', 'fecha_prometida', 'created_at', 'updated_at'
+] as const;
+
+export const CLAVES_OT_DETALLE = [
+  ...CLAVES_OT_FILA, 'creado_por', 'eventos'
+] as const;
+
+export const CLAVES_OT_EVENTO = [
+  'id', 'orden_trabajo_id', 'estado_anterior', 'estado_nuevo', 'autor_id', 'comentario', 'created_at'
+] as const;

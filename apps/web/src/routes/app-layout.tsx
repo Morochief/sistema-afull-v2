@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useRouterState } from '@tanstack/react-router';
+import { Toaster } from 'sonner';
 import { useSesion } from '../hooks/useSesion.js';
 import { Users, FileText, LogOut } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
@@ -81,6 +82,7 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-[#090a0f] text-neutral-100">
+      <Toaster richColors position="top-right" theme="dark" />
       {/* Barra lateral */}
       <aside className="w-60 border-r border-[#1f2937] bg-[#111318] flex flex-col shrink-0">
         <div className="flex h-14 items-center gap-2.5 border-b border-[#1f2937] px-4">

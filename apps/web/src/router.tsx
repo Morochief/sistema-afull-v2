@@ -4,6 +4,7 @@ import {
   createRouter,
   Navigate,
 } from '@tanstack/react-router';
+import { z } from 'zod';
 import { AppLayout } from './routes/app-layout.js';
 import { LoginPage } from './routes/login.js';
 import { ClientesListaPage } from './routes/clientes/lista.js';
@@ -11,9 +12,14 @@ import { OTsListaPage } from './routes/ots/lista.js';
 
 const rootRoute = createRootRoute();
 
+const loginSearchSchema = z.object({
+  volver: z.string().optional(),
+});
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
+  validateSearch: (search) => loginSearchSchema.parse(search),
   component: LoginPage,
 });
 
@@ -29,9 +35,18 @@ const indexRoute = createRoute({
   component: () => <Navigate to="/clientes" replace />,
 });
 
+const clientesSearchSchema = z.object({
+  q: z.string().optional(),
+  estado: z.string().optional(),
+  desde: z.string().optional(),
+  hasta: z.string().optional(),
+  pagina: z.coerce.number().int().min(1).optional(),
+});
+
 const clientesRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/clientes',
+  validateSearch: (search) => clientesSearchSchema.parse(search),
   component: ClientesListaPage,
 });
 
