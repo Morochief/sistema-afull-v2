@@ -1,27 +1,25 @@
 # Traspaso del proyecto aFull
 
-Última actualización: 28 de octubre de 2026.
+Última actualización: 2 de noviembre de 2026.
 Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cerrar cada tarea.
 
 ---
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
-**Nada del código o SQL de este traspaso fue ejecutado todavía.** Todo se escribió en conversaciones de diseño, sin acceso a Supabase, Vercel ni GitHub. Hasta que corra en `dev`, todo es "especificado, sin verificar".
-
-> Antes de continuar, actualizá esta tabla con lo que sí hayas aplicado y probado.
+**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` y 21 tests de Loop 0 y Loop 1 pasaron en un PostgreSQL 16 local de desarrollo. **Nada ha sido ejecutado aún contra Supabase ni en GitHub Actions.** Hasta que corra en `dev`, la capa de nube sigue como "pendiente de verificación".
 
 | Pieza | Estado |
 | :--- | :--- |
-| Documento maestro v3.x | Escrito, revisado dos veces |
-| Migraciones `0001` a `0004` (SQL) | Escritas, sin aplicar |
-| Auth, sesiones, auditoría (código) | Escrito, sin ejecutar |
-| Tests Loop 0 y Loop 1 (Vitest) | Escritos, sin ejecutar |
-| Workflows de GitHub Actions | Escritos, sin ejecutar |
-| `backup-storage.mjs` | Escrito de memoria, sin probar contra la API real |
-| Proyectos Supabase `dev` y `prod` | Pendientes (a crear en el panel de Supabase) |
-| Proyecto Vercel | Pendiente (a configurar con runtime Node en panel de Vercel) |
-| Repositorio y monorepo | Pendiente (a inicializar monorepo pnpm `apps/api`, `apps/web`, `packages/shared`) |
+| Documento maestro v3.x | Escrito, revisado |
+| Repositorio y monorepo | Inicializado en `D:\sistema-afull`. `lint` y `typecheck` en verde. |
+| Migraciones `0001` a `0004` (SQL) | Listas con journal de Drizzle; pasaron en Postgres 16 local; **sin aplicar en Supabase**. |
+| Auth, sesiones, auditoría (código) | Tipado y lint en verde; verificado en Postgres 16 local. |
+| Tests Loop 0 y Loop 1 (Vitest) | 21/21 pasaron en Postgres 16 local (sin test REST de anon); **sin ejecutar en Supabase**. |
+| Workflows de GitHub Actions | `ci.yml` configurado; **sin ejecutar en Actions (repo aún sin remoto)**. |
+| `backup-storage.mjs` | Escrito de memoria, sin probar contra la API real. |
+| Proyectos Supabase `dev` y `prod` | Pendientes (a crear en el panel de Supabase). |
+| Proyecto Vercel | Pendiente (a configurar con runtime Node en panel de Vercel). |
 
 ---
 
