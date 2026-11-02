@@ -17,10 +17,13 @@ describe('CA-0.7: Clave anónima bloqueada', () => {
     }
   });
 
-  it('PostgREST REST API rechaza consultas con anon key', async () => {
+  it('PostgREST REST API rechaza consultas con anon key con error 42501', async () => {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/usuario?select=*`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      headers: { apikey: SUPABASE_ANON_KEY },
     });
-    expect([401, 403, 404]).toContain(res.status);
+    const body = (await res.json()) as { code?: string; message?: string };
+    expect([401, 403]).toContain(res.status);
+    expect(body.code).toBe('42501');
+    expect(body.message).toContain('permission denied');
   });
 });

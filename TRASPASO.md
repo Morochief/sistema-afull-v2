@@ -7,18 +7,18 @@ Este archivo es la fuente de verdad del estado del proyecto. Se actualiza al cer
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
-**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las 4 consultas de comprobación dieron los resultados exactos esperados y la suite `tests/loop0` pasó 16 de 16 tests en verde contra Supabase `dev`.
-- **Loop 0 parcialmente verificado:** 16/16 tests en verde. Queda abierto: CA-0.10 (prueba de 20 requests HTTP simultáneas contra la API Hono, complementando la prueba ya superada por pooler), CA-0.1 (medición de login con cold start en Vercel post-deploy), CA-0.9 (backups y restore manual documentado en `RESTAURAR.md`), seed del primer admin y workflows de backup.
-- **Loop 1A verificado:** 7 de 7 tests de `tests/loop1` pasaron en verde contra Supabase `dev` (20 creaciones concurrentes sin huecos en códigos de OT, carrera 409 con stale data, transiciones válidas e inválidas 400, motividad obligatoria en cancelación por BD 23514, FK compuesta sucursal-cliente 23503, polígono Paraguay 23514 y benchmark de 5.000 clientes con plan de ejecución < 100 ms).
+**Estado de verificación actual:** El monorepo fue inicializado en `D:\sistema-afull` con lint y tipos en verde. Las migraciones `0001` a `0004` fueron aplicadas con éxito en Supabase `afull-dev` (São Paulo) mediante Drizzle. Se asignó la contraseña al rol `afull_api`, las 4 consultas de comprobación dieron los resultados exactos esperados y la suite `tests/loop0` pasó 18 de 18 tests en verde contra Supabase `dev` (incluyendo `anon.test.ts` endurecido con validación de error `42501` y `seed.test.ts`).
+- **Loop 0 parcialmente verificado:** 18/18 tests en verde (incluye seed idempotente del primer admin y bloqueo real de `anon` con SQLSTATE `42501`). Queda abierto: CA-0.10 (prueba de 20 requests HTTP simultáneas contra la API Hono), CA-0.1 (medición de login con cold start en Vercel post-deploy), CA-0.9 (backups y restore manual documentado en `RESTAURAR.md`) y workflows de backup/`tests-dev.yml`.
+- **Loop 1A parcialmente verificado (no cerrado):** 7 de 7 tests iniciales de `tests/loop1` en verde contra Supabase `dev` (carrera de 20 OT, 409 stale data, transiciones 400, CHECK de cancelar 23514, FK compuesta 23503, polígono Paraguay 23514). Pendiente para cerrar Loop 1A: endpoints de sucursales, contactos, marcas, detalle y desactivar/reactivar de cliente y OT; tests de CA-1.1 (paginación de 25), CA-1.7 (desactivar/reactivar sin borrado físico) y CA-1.10 (exigencia de `comercial` o `admin`); y ajustar `busqueda.test.ts` (CA-1.2) para medir la consulta real del servicio.
 
 | Pieza | Estado |
 | :--- | :--- |
 | Documento maestro v3.x | Escrito, revisado |
 | Repositorio y monorepo | Inicializado en `D:\sistema-afull`. Remoto: `https://github.com/Morochief/sistema-afull-v2.git` (rama `main`). `lint` y `typecheck` en verde. |
 | Migraciones `0001` a `0004` (SQL) | **Aplicadas con éxito en Supabase `afull-dev`** con Drizzle journal. |
-| Auth, sesiones, auditoría (código) | **Verificado contra Supabase `dev`**. Loop 0 parcialmente verificado (16/16 tests en verde; pendientes CA-0.1 en Vercel, CA-0.9 restore manual y CA-0.10 HTTP concurrente). |
-| Tests Loop 0 (Vitest) | **16/16 en verde contra Supabase `dev`** (RLS, anon key, auth, inmutabilidad y concurrencia por pooler). |
-| Tests Loop 1 (Vitest) | **7/7 en verde contra Supabase `dev`** (Loop 1A cerrado: `busqueda.test.ts` y `ot.test.ts`). |
+| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev`**. Loop 0 parcialmente verificado (18/18 tests en verde; pendientes CA-0.1 en Vercel, CA-0.9 restore manual y CA-0.10 HTTP concurrente). |
+| Tests Loop 0 (Vitest) | **18/18 en verde contra Supabase `dev`** (RLS, anon key `42501`, auth, seed idempotente, inmutabilidad y concurrencia por pooler). |
+| Tests Loop 1 (Vitest) | **7/7 iniciales en verde contra Supabase `dev`**. Loop 1A abierto: faltan endpoints y tests de CA-1.1, CA-1.7, CA-1.10 y ajuste de CA-1.2. |
 | Workflows de GitHub Actions | `ci.yml` configurado y pusheado a `main` en GitHub. |
 | `backup-storage.mjs` | Escrito de memoria, sin probar contra la API real. |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
@@ -246,10 +246,9 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 ## 12. Siguiente paso
 
-1. Fase 1, Fase 2 y Fase 3b (Loop 1A) **cerradas con éxito**: migraciones aplicadas en Supabase `dev`, roles y RLS verificados, 16 tests de Loop 0 y 7 tests de Loop 1A en verde, lint y typecheck sin advertencias ni errores.
-2. Registrar pendientes de cierre total de Loop 0: CA-0.10 (concurrencia de 20 requests HTTP a la API), CA-0.1 (latencia en Vercel con cold start), CA-0.9 (restore manual y `RESTAURAR.md`), seed del primer admin.
-3. Iniciar Fase 4 (Loop 1B - Frontend):
-   - Shell frontend (Vite, React 19, TanStack Router, layout autenticado con Tailwind palette `#090a0f`, `#111318`, `#ea580c` y radios 4-6px).
-   - Componente genérico reutilizable `TablaAdmin` (paginación fija de 25, buscador con debounce 300 ms, estados loading/empty/error).
-   - Hook `useClientes` y modales atómicos (≤ 250 líneas por archivo).
-4. Recién después de cerrar 1B, pasar al Loop 2.
+1. **Seed del primer admin y bloqueo `anon` (`42501`) verificados:** `pnpm test` pasa 25 de 25 tests en verde (18 Loop 0 + 7 Loop 1A), con lint y typecheck sin advertencias.
+2. **Completar el módulo comercial de Loop 1A:**
+   - Sucursales, contactos, marcas, detalle y endpoints de desactivar/reactivar para cliente y OT.
+   - Tests para CA-1.1 (paginación fija de 25), CA-1.7 (desactivar/reactivar sin borrado físico) y CA-1.10 (exigencia de capacidad `comercial` o `admin` en todos los endpoints).
+   - Ajustar `busqueda.test.ts` (CA-1.2) para medir la consulta real del servicio.
+3. **Cerrar Loop 1A con CI en verde** y recién entonces iniciar Loop 1B (definiendo primero el contrato de `TablaAdmin` y `useClientes`).
