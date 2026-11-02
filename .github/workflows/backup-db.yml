@@ -1,0 +1,204 @@
+name: Respaldo diario de la base
+on:
+  # Descomentar schedule cuando exista afull-prod y PROD_DATABASE_URL_BACKUP esté configurado:
+  # schedule:
+  #   - cron: '0 6 * * *' # 03:00 en Paraguay (UTC-3)
+  workflow_dispatch:
+    inputs:
+      origen:
+        description: 'Entorno a respaldar (dev o prod)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  contents: read
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    services:
+      verif:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: verif
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=10
+    env:
+      EVENT_NAME: ${{ github.event_name }}
+      INPUT_ORIGEN: ${{ inputs.origen }}
+      PROD_URL: ${{ secrets.PROD_DATABASE_URL_BACKUP }}
+      DEV_URL: ${{ secrets.DEV_DATABASE_URL_ADMIN }}
+      PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      VERIF: postgres://postgres:verif@localhost:5432/postgres
+    steps:
+      - name: Determinar y validar origen y secretos
+        id: cfg
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            ORIGEN="prod"
+          else
+            ORIGEN="${INPUT_ORIGEN:-dev}"
+          fi
+
+          if [ "$ORIGEN" = "prod" ]; then
+            if [ -z "$PROD_URL" ]; then
+              echo "ERROR: Respaldo de prod solicitado pero PROD_DATABASE_URL_BACKUP no está definido." >&2
+              exit 1
+            fi
+            echo "SRC=$PROD_URL" >> "$GITHUB_ENV"
+          elif [ "$ORIGEN" = "dev" ]; then
+            if [ -z "$DEV_URL" ]; then
+              echo "ERROR: Respaldo de dev solicitado pero DEV_DATABASE_URL_ADMIN no está definido." >&2
+              exit 1
+            fi
+            echo "SRC=$DEV_URL" >> "$GITHUB_ENV"
+          else
+            echo "ERROR: Origen inválido: $ORIGEN" >&2
+            exit 1
+          fi
+
+          if [ -z "$PASSPHRASE" ]; then
+            echo "ERROR: BACKUP_PASSPHRASE no está definido en GitHub Secrets." >&2
+            exit 1
+          fi
+
+          echo "ORIGEN=$ORIGEN" >> "$GITHUB_ENV"
+          echo "origen=$ORIGEN" >> "$GITHUB_OUTPUT"
+          echo "Respaldando entorno: $ORIGEN"
+
+      - name: Cliente PostgreSQL 17
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y curl ca-certificates gnupg lsb-release
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update && sudo apt-get install -y postgresql-client-17
+
+      - name: Volcado (public + drizzle, con privilegios y sin owner)
+        run: |
+          set -euo pipefail
+          pg_dump "$SRC" -Fc --schema=public --schema=drizzle --no-owner -f dump.pgdump
+
+      - name: Preparar base limpia y verificar restore
+        run: |
+          set -euo pipefail
+
+          # 1. Esquema de extensiones y roles base de Supabase + rol operativo afull_api (atributos de 0002)
+          psql "$VERIF" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS extensions;
+          CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
+
+          DO $$
+          DECLARE r text;
+          BEGIN
+            FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role', 'supabase_admin'] LOOP
+              IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+                EXECUTE format('CREATE ROLE %I NOLOGIN', r);
+              END IF;
+            END LOOP;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'afull_api') THEN
+              CREATE ROLE afull_api LOGIN NOINHERIT NOBYPASSRLS;
+            END IF;
+          END $$;
+          ALTER ROLE afull_api SET statement_timeout = '15s';
+          SQL
+
+          # 2. Crear dinámicamente cualquier otro rol presente en las ACL de origen
+          psql "$SRC" -Atc "
+            SELECT DISTINCT grantee FROM information_schema.role_table_grants WHERE table_schema IN ('public', 'drizzle')
+            UNION
+            SELECT DISTINCT grantee FROM information_schema.role_routine_grants WHERE routine_schema IN ('public', 'drizzle')
+          " | (grep -vE '^(PUBLIC|postgres|pg_database_owner)$' || true) | while read -r r; do
+            if [ -n "$r" ]; then
+              psql "$VERIF" -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$r') THEN EXECUTE format('CREATE ROLE %I NOLOGIN', '$r'); END IF; END \$\$;"
+            fi
+          done
+
+          # 3. Filtrar del TOC el CREATE SCHEMA public (ya existe) y los DEFAULT ACL de supabase_admin
+          pg_restore -l dump.pgdump \
+            | grep -vE '; [0-9]+ [0-9]+ SCHEMA - public ' \
+            | grep -vE 'DEFAULT ACL.*supabase_admin' > restore.toc
+
+          pg_restore -L restore.toc --no-owner --exit-on-error -d "$VERIF" dump.pgdump
+
+          # 3b. Reaplicar bloqueo de DEFAULT PRIVILEGES en public y verificar paridad con origen (FOR ROLE postgres)
+          psql "$VERIF" -v ON_ERROR_STOP=1 <<'SQL'
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC, anon, authenticated;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM PUBLIC, anon, authenticated;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+          SQL
+
+          defacl_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM pg_default_acl WHERE defaclnamespace = 'public'::regnamespace AND defaclrole = 'postgres'::regrole")
+          defacl_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM pg_default_acl WHERE defaclnamespace = 'public'::regnamespace AND defaclrole = 'postgres'::regrole")
+          [ "$defacl_src" -eq "$defacl_dst" ]
+
+          # 4. Verificaciones estructurales (igualdad exacta origen = destino)
+          t_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
+          t_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
+          m_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM drizzle.__drizzle_migrations")
+          m_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM drizzle.__drizzle_migrations")
+          trg_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid WHERE p.proname = 'bloquear_modificacion_inmutable' AND NOT t.tgisinternal AND t.tgenabled = 'O'")
+          trg_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid WHERE p.proname = 'bloquear_modificacion_inmutable' AND NOT t.tgisinternal AND t.tgenabled = 'O'")
+
+          # 5. Conteos de datos (destino <= origen por si hubo inserciones en vivo después del dump)
+          u_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM usuario")
+          u_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM usuario")
+          c_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM cliente")
+          c_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM cliente")
+          ot_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM orden_trabajo")
+          ot_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM orden_trabajo")
+
+          echo "tablas: $t_src -> $t_dst | migraciones: $m_src -> $m_dst | triggers_inmutables: $trg_src -> $trg_dst | defacl_postgres: $defacl_src -> $defacl_dst"
+          echo "usuarios: $u_src -> $u_dst | clientes: $c_src -> $c_dst | ots: $ot_src -> $ot_dst"
+
+          [ "$t_src" -eq "$t_dst" ]
+          [ "$m_src" -eq "$m_dst" ] && [ "$m_dst" -ge 4 ]
+          [ "$trg_src" -eq "$trg_dst" ] && [ "$trg_dst" -ge 4 ]
+          [ "$u_dst" -le "$u_src" ] && [ "$c_dst" -le "$c_src" ] && [ "$ot_dst" -le "$ot_src" ]
+
+          # 6. Verificación de privilegios restaurados conectando directamente como afull_api (no destructiva y exigiendo 42501)
+          psql "$VERIF" -v ON_ERROR_STOP=1 -c "ALTER ROLE afull_api WITH PASSWORD 'verif_api_pass';"
+          VERIF_API="postgres://afull_api:verif_api_pass@localhost:5432/postgres"
+
+          psql "$VERIF_API" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM usuario;" >/dev/null
+
+          api_sel=$(psql "$VERIF" -Atc "SELECT has_table_privilege('afull_api', 'usuario', 'SELECT')")
+          api_del=$(psql "$VERIF" -Atc "SELECT has_table_privilege('afull_api', 'cliente', 'DELETE')")
+          [ "$api_sel" = "t" ] && [ "$api_del" = "f" ]
+
+          set +e
+          del_err=$(psql "$VERIF_API" -v ON_ERROR_STOP=1 -v VERBOSITY=verbose -Atc "BEGIN; DELETE FROM cliente WHERE false; ROLLBACK;" 2>&1)
+          del_rc=$?
+          set -e
+          echo "Resultado prueba DELETE como afull_api (rc=$del_rc): $del_err"
+          [ "$del_rc" -ne 0 ]
+          echo "$del_err" | grep -Eqi '42501|permission denied for table cliente'
+
+          anon_fn=$(psql "$VERIF" -Atc "SELECT has_function_privilege('anon', 'siguiente_valor(varchar)', 'EXECUTE')")
+          anon_tbl=$(psql "$VERIF" -Atc "SELECT has_table_privilege('anon', 'usuario', 'SELECT')")
+          echo "afull_api select/delete: $api_sel/$api_del | anon execute siguiente_valor: $anon_fn | anon select usuario: $anon_tbl"
+          [ "$anon_fn" = "f" ] && [ "$anon_tbl" = "f" ]
+
+      - name: Cifrar con GPG (AES-256)
+        run: |
+          set -euo pipefail
+          ARCHIVO="afull-db-${ORIGEN}-$(date -u +%F).pgdump.gpg"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \
+            --symmetric --cipher-algo AES256 -o "$ARCHIVO" dump.pgdump
+          rm -f dump.pgdump restore.toc
+          echo "Archivo cifrado generado: $ARCHIVO"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-db-${{ steps.cfg.outputs.origen }}
+          path: afull-db-*.pgdump.gpg
+          retention-days: 30

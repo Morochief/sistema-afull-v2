@@ -45,7 +45,7 @@
 - Capacidades atómicas (`admin`, `comercial`, `diseno`, `taller`, `montaje`, `ver_costos`, `rrhh`) con `CHECK` en la base. Los "roles" son solo plantillas de interfaz. `admin` pasa siempre.
 
 ### Autenticación
-- Argon2id con `@node-rs/argon2` (OWASP: 19 MiB, 2 iteraciones, 1 hilo; medido en Vercel `gru1`: ~152 ms en caliente y ~1253 ms en cold start).
+- Argon2id con `@node-rs/argon2` (OWASP: 19 MiB, 2 iteraciones, 1 hilo; apuntar a 100–300 ms en Vercel; medido en `gru1`: `147–163 ms`, mediana `152 ms` en caliente sobre `a588fbb`, y `1253 ms` en cold start sobre `703c0ec` — pendiente decisión del usuario si se acepta el cold start como excepción).
 - Token de 32 bytes aleatorios en la cookie `afull_session` (`HttpOnly`, `Secure`, `SameSite=Lax`). En la base solo se guarda su SHA-256.
 - Sesión validada en cada request contra `sesion` y `usuario.activo` (revocación instantánea). Expiración deslizante de 30 días; `last_active_at` se refresca como máximo cada 5 minutos.
 - CSRF: `SameSite=Lax` más verificación del header `Origin` en toda petición que modifica datos.
@@ -67,11 +67,27 @@
 
 ## 11. Cómo trabajar (para Claude Code o una sesión nueva)
 
-1. Leer `TRASPASO.md` completo (que incluye e invalida diferencias previas del documento maestro v3.x). Resumir el estado en 10 líneas para confirmar alineación.
+1. Leer `TRASPASO.md` completo (que incluye e invalida diferencias previas del documento maestro `ARQUITECTURA_V3.md`). Resumir el estado en 10 líneas para confirmar alineación.
 2. Tratar todo lo "sin verificar" como tal. Marcar con claridad lo que no se pudo ejecutar.
 3. No reabrir decisiones de la sección 3 sin un problema real; si lo hay, explicarlo.
 4. Verificar precios, límites y versiones actuales de servicios externos antes de afirmarlos.
 5. Antes de cerrar una tarea: tests en verde, lint en verde, archivo ≤ 250 líneas, y actualizar la sección 0 y "Siguiente paso" de `TRASPASO.md`.
 6. Los fallos de tests no se "ajustan para que pasen": primero se investiga si revelan un permiso o una restricción mal puestos.
 7. En scripts de prueba contra `dev`, el bloque `finally` debe limpiar **únicamente** los datos creados por ese script (ej. `WHERE username = 'zz_test_...'`), sin barrer filas ajenas.
+
+---
+
+## 12. Protocolo de Trabajo Conjunto (Antigravity ↔ Claude Code)
+
+En este proyecto operamos en esquema de **control cruzado**:
+- **Antigravity (Proponente / Ejecutor):** redacta propuestas técnicas, escribe el código y ejecuta comandos en terminal nativa de Windows (`pnpm test`, `lint`, `typecheck`, `git`, mediciones HTTP/DB) dado que la unidad `C:` tiene poco espacio libre para levantar la VM de Claude.
+- **Claude Code (Auditor / Revisor):** tiene lectura y escritura directa sobre `D:\sistema-afull` (sin ejecutar terminal). Verifica propuestas e implementaciones leyendo directamente los archivos del repositorio, contrasta contra `TRASPASO.md` y `ARQUITECTURA_V3.md`, detecta huecos o supuestos no demostrados y escribe su dictamen en `MESA_DE_TRABAJO.md`.
+
+### Reglas de `D:\sistema-afull\MESA_DE_TRABAJO.md`
+1. **Evidencia cruda, no resumida:** Para toda afirmación empírica (ej. "36/36 en verde", "1253 ms", "HTTP 200"), Antigravity debe pegar en `MESA_DE_TRABAJO.md` el comando ejecutado y la salida literal de terminal (o link/ID del CI run), sin editar.
+2. **Rondas numeradas con fecha y cierre exclusivo del usuario:** Cada ciclo lleva el encabezado `Ronda N (YYYY-MM-DD HH:mm)` con las secciones `### Propuesta / Entrega (Antigravity)`, `### Dictamen (Claude Code)`, `### Respuesta / Ejecución (Antigravity)` y `**Cerrado por:** [pendiente del usuario]`. Ninguno de los dos agentes da una ronda por cerrada por su cuenta.
+3. **Ninguno de los dos resume ni sobrescribe el texto del otro:** Dentro de una ronda abierta, cada agente únicamente **agrega** su nueva sección al final del archivo (`append`), conservando íntegros todos los dictámenes, propuestas y evidencias previas de esa ronda.
+4. **Mesa efímera (sin acumulación entre rondas cerradas):** Solo cuando el usuario marca una ronda como cerrada, se pasa un resumen de una línea a la bitácora de `TRASPASO.md` (Sección 13) y se vacía `MESA_DE_TRABAJO.md` para la ronda siguiente.
+
+
 
