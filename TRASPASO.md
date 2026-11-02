@@ -31,13 +31,13 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 | Documento maestro v3.x | Copiado en `D:\sistema-afull\ARQUITECTURA_V3.md` (con aviso de que `TRASPASO.md` gana en caso de diferencia); `CLAUDE.md` sincronizado. |
 | Repositorio y monorepo | Inicializado en `D:\sistema-afull`. Remoto: `https://github.com/Morochief/sistema-afull-v2.git` (rama `main`). `lint` y `typecheck` en verde. |
 | Migraciones `0001` a `0005` (SQL) | **Aplicadas con éxito en Supabase `afull-dev`** con Drizzle journal (`0005` cierra `EXECUTE` implícito de `PUBLIC` en funciones nuevas). |
-| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev` y en Vercel (`gru1`)**. CA-0.1 cumplido en caliente (`147–163 ms`, mediana `152 ms` sobre `a588fbb`); cold start en frío dio `1253 ms` sobre `703c0ec` (excede 100–300 ms; verificado en caliente y registrado como excepción en Sección 3 para confirmación formal del usuario); CA-0.10 por HTTP (20/20 en 754 ms) verificado; pendientes secrets de `tests-dev.yml` y CA-0.9 (`backup-db.yml` corrida #5 en verde con D5-1 verificado + restore manual + `RESTAURAR.md`). |
+| Auth, sesiones, auditoría y seed admin | **Verificado contra Supabase `dev` y en Vercel (`gru1`)**. CA-0.1 cerrado con excepción: verificado en caliente (`147–163 ms`, mediana `152 ms` sobre `a588fbb`); cold start en frío de `1253 ms` sobre `703c0ec` aceptado por el usuario el 2026-11-02 como excepción documentada en Sección 3; CA-0.10 por HTTP (20/20 en 754 ms) verificado; pendientes secrets de `tests-dev.yml` y restore manual de CA-0.9 (`backup-db.yml` corrida #5 en verde con D5-1 verificado + `RESTAURAR.md`). |
 | Tests Loop 0 (Vitest) | **22/22 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, funciones y default privileges cerrados en `funciones.test.ts`, auth, seed idempotente con limpieza de `zz_test_%`, inmutabilidad, concurrencia por pooler + `sinPipelining` y auditoría estática de parámetros). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
 | Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2 y #5 con D5-1 incorporado y probado**). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 3** (hoy no se usa Storage). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
-| Proyecto Vercel | **Desplegado en `gru1` (Node 22)**: `@node-rs/argon2` operativo, login cálido `147–163 ms` (mediana `152 ms` en commit `a588fbb`), login cold start `1253 ms` (en commit `703c0ec`, excede objetivo de 100–300 ms), 20 GET concurrentes 20/20 `200 OK` en `754 ms` (atendidas casi en serie), CSRF `403` y cookies `HttpOnly; Secure; SameSite=Lax`. |
+| Proyecto Vercel | **Desplegado en `gru1` (Node 22)**: `@node-rs/argon2` operativo, login cálido `147–163 ms` (mediana `152 ms` en commit `a588fbb`), login cold start `1253 ms` (en commit `703c0ec`; excepción aceptada por el usuario), 20 GET concurrentes 20/20 `200 OK` en `754 ms` (atendidas casi en serie), CSRF `403` y cookies `HttpOnly; Secure; SameSite=Lax`. |
 
 ---
 
@@ -102,7 +102,7 @@ El proyecto anterior se rompió por acumulación de parches. Por eso se rediseñ
 
 ### Autenticación
 - Argon2id con `@node-rs/argon2` (OWASP: 19 MiB, 2 iteraciones, 1 hilo; apuntar a 100–300 ms en Vercel). Alternativa si el binario nativo no carga: `scrypt` de `node:crypto`.
-- **Excepción documentada CA-0.1 (login en frío en Vercel gru1):** Registrada en espera de confirmación formal del usuario. El tiempo en caliente cumple holgadamente el objetivo (`147–163 ms`, mediana `152 ms` con red incluida desde Paraguay y Argon2id en Node 22). El cold start tras >20 min sin tráfico (`1253 ms`, 1,25 s) corresponde al arranque en frío del contenedor serverless de Node en Vercel y el handshake TCP/TLS con Supabase São Paulo (no atribuible al algoritmo Argon2id). Es admisible para la operativa de una oficina chica de cartelería y evita la necesidad de planes de pago con instancias siempre activas.
+- **Excepción documentada CA-0.1 (login en frío en Vercel gru1):** Aceptada por el usuario el 2026-11-02. El tiempo en caliente cumple holgadamente el objetivo (`147–163 ms`, mediana `152 ms` con red incluida desde Paraguay y Argon2id en Node 22). El cold start tras >20 min sin tráfico (`1253 ms`, 1,25 s; causa probable: arranque de la instancia serverless y primera conexión TLS a Supabase) es admisible para la operativa de una oficina chica de cartelería y evita la necesidad de planes de pago con instancias siempre activas.
 - Token de 32 bytes aleatorios en la cookie `afull_session` (`HttpOnly`, `Secure`, `SameSite=Lax`). En la base solo se guarda su SHA-256.
 - Sesión validada en cada request contra `sesion` y `usuario.activo` (revocación instantánea). Expiración deslizante de 30 días; `last_active_at` se refresca como máximo cada 5 minutos.
 - CSRF: `SameSite=Lax` más verificación del header `Origin` en toda petición que modifica datos.
@@ -169,12 +169,12 @@ Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guar
 Orden: 0 Base → 1 Clientes + OT → 2 Tareas, cronómetro y Control en Vivo → 3 Campo offline + flota → 4 Stock → 5 Costeo → 6 Pre-prensa → 7 RR.HH. → 8 Portal B2B.
 (Costeo va temprano porque es lo que justifica el sistema.)
 
-### Loop 0: Base (22/22 tests + CA-0.1 en caliente y CA-0.10 por HTTP en Vercel verificados; pendientes confirmación de decisión de cold start de CA-0.1, `tests-dev.yml` y restore manual de CA-0.9)
+### Loop 0: Base (22/22 tests + CA-0.1 en caliente y CA-0.10 por HTTP en Vercel verificados; CA-0.1 cerrado con excepción; pendientes tests-dev.yml y restore manual de CA-0.9)
 
 Tareas: 1 decidir API (Vercel Node, cerrada) · 2 repo + reglas de lint · 3 dos proyectos Supabase · 4 conexión y migraciones · 5 migraciones 0001–0003 y 0005 · 6 auth · 7 capacidades + seed del primer admin · 8 auditoría · 9 CI · 10 backups · 11 deploy y prueba de humo.
 
 Criterios de aceptación:
-- **CA-0.1** Login con Argon2id, cookie segura, fila en `sesion`; **medido en el entorno desplegado (`gru1`, Node 22)**: ráfaga de 9 muestras cálidas entre `147 ms` y `163 ms` (mediana `152 ms`, promedio `153 ms`, total con red incluida sobre `a588fbb`, dentro del objetivo de `100–300 ms`), cookie con `HttpOnly; Secure; SameSite=Lax`; el arranque en frío real del login con Argon2 + DB dio `1253 ms` (sobre `703c0ec` tras >23 min sin tráfico), seguido de `318 ms` en la 2.ª llamada inmediata. (**Verificado en caliente; cold start de 1253 ms registrado como excepción en Sección 3 para confirmación formal del usuario**)
+- **CA-0.1** Login con Argon2id, cookie segura, fila en `sesion`; **medido en el entorno desplegado (`gru1`, Node 22)**: ráfaga de 9 muestras cálidas entre `147 ms` y `163 ms` (mediana `152 ms`, promedio `153 ms`, total con red incluida sobre `a588fbb`, dentro del objetivo de `100–300 ms`), cookie con `HttpOnly; Secure; SameSite=Lax`; el arranque en frío real del login con Argon2 + DB dio `1253 ms` (sobre `703c0ec` tras >23 min sin tráfico), seguido de `318 ms` en la 2.ª llamada inmediata. (**Verificado en caliente; cold start de 1253 ms aceptado por el usuario el 2026-11-02 como excepción documentada en Sección 3**)
 - **CA-0.2** Desactivar un usuario invalida su cookie en la siguiente request (401). (**Verificado**)
 - **CA-0.4** Sin la capacidad: 403. (**Verificado**)
 - **CA-0.5** Toda acción sensible genera `evento_auditoria`; si la mutación falla, la auditoría se revierte con ella. (**Verificado**)
@@ -273,11 +273,12 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 ## 12. Siguiente paso
 
-1. **Orden recomendado para cerrar el Loop 0 antes de iniciar Loop 1B:**
-   1) **Decisión sobre cold start de `CA-0.1` (usuario):** definir si se acepta el arranque en frío de `1253 ms` como excepción documentada en Sección 3 (dado que en caliente cumple con `147–163 ms`, mediana `152 ms`).
-   2) **Secrets `DEV_*` y corrida manual de `tests-dev.yml` (usuario):** cargar `DEV_DATABASE_URL_ADMIN`, `DEV_DATABASE_URL_API`, `DEV_SUPABASE_URL`, `DEV_SUPABASE_ANON_KEY` en GitHub Settings y disparar `workflow_dispatch`.
-   3) **Backup diario y restore manual (CA-0.9):** auditar e implementar `.github/workflows/backup-db.yml` y `RESTAURAR.md` (Ronda 1 en `MESA_DE_TRABAJO.md`), y realizar el restore manual completo hecho por una persona antes de cargar cualquier dato real. (`backup-storage` queda pospuesto al Loop 3).
-   4) **Cerrar Loop 0 en `TRASPASO.md` y comenzar Loop 1B (`TablaAdmin` y `useClientes`).** *(Si se decide iniciar 1B en paralelo mientras solo haya datos de prueba, anotarlo explícitamente aquí como excepción al principio 7 con fecha y bloqueo de carga de datos reales hasta cerrar CA-0.9).*
+> **Excepción al principio 7 (2026-11-02, decisión del usuario):** se inicia Loop 1B con el Loop 0 abierto en dos puntos: (a) CA-0.9, el simulacro manual de restore en `afull-restore-drill`; (b) los secrets `DEV_*` restantes y la corrida de `tests-dev.yml`. **Bloqueo:** no se crea `afull-prod` con datos reales ni se carga ningún dato real hasta cerrar (a) y (b). Nota: los artefactos de backup duran 30 días; si el simulacro se hace después del 2026-12-02, volver a correr `backup-db.yml`.
+
+1. **Ronda 2 — Diseño e Implementación del Loop 1B:**
+   - Leer y evaluar el documento maestro de diseño del frontend en `docs/LOOP_1B_DISENO.md`.
+   - Implementar Entregas E1 a E5 según la propuesta aprobada.
+   - Mantener el bloqueo activo sobre producción y datos reales hasta el cierre de (a) y (b).
 
 ---
 
