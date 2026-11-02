@@ -41,6 +41,7 @@
   CREATE POLICY api_acceso ON nueva FOR ALL TO afull_api USING (true) WITH CHECK (true);
   ```
   Tablas append-only (auditoría, eventos): políticas separadas de `SELECT` e `INSERT`, y trigger que bloquea `UPDATE`, `DELETE` y `TRUNCATE`.
+- **Regla para toda función nueva (desde 0005):** por defecto, ninguna función nueva es ejecutable por nadie más que `postgres` (ni siquiera por `afull_api`). Toda migración que cree una función que la API llame directamente debe incluir `GRANT EXECUTE ON FUNCTION ... TO afull_api`. Las funciones de trigger **no** lo necesitan (PostgreSQL no revisa `EXECUTE` al disparar triggers). Si se olvida un `GRANT`, falla cerrado con `42501` en los tests.
 - Códigos secuenciales (`OT-2026-0001`, `CLI-0001`) con la función atómica `siguiente_valor()`, **dentro de la misma transacción** que el insert. Nunca `MAX()+1`.
 - Capacidades atómicas (`admin`, `comercial`, `diseno`, `taller`, `montaje`, `ver_costos`, `rrhh`) con `CHECK` en la base. Los "roles" son solo plantillas de interfaz. `admin` pasa siempre.
 

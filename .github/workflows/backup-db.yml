@@ -123,27 +123,43 @@ jobs:
             SELECT DISTINCT grantee FROM information_schema.role_routine_grants WHERE routine_schema IN ('public', 'drizzle')
           " | (grep -vE '^(PUBLIC|postgres|pg_database_owner)$' || true) | while read -r r; do
             if [ -n "$r" ]; then
-              psql "$VERIF" -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$r') THEN EXECUTE format('CREATE ROLE %I NOLOGIN', '$r'); END IF; END \$\$;"
+              psql "$VERIF" -v ON_ERROR_STOP=1 -v rol="$r" <<'SQL'
+              SELECT format('CREATE ROLE %I NOLOGIN', :'rol')
+              WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'rol') \gexec
+              SQL
             fi
           done
 
-          # 3. Filtrar del TOC el CREATE SCHEMA public (ya existe) y los DEFAULT ACL de supabase_admin
+          # 3. Filtrar del TOC el CREATE/COMMENT SCHEMA public (ya existe) y los DEFAULT ACL de supabase_admin
           pg_restore -l dump.pgdump \
             | grep -vE '; [0-9]+ [0-9]+ SCHEMA - public ' \
+            | grep -vE '; [0-9]+ [0-9]+ COMMENT - SCHEMA public ' \
             | grep -vE 'DEFAULT ACL.*supabase_admin' > restore.toc
 
           pg_restore -L restore.toc --no-owner --exit-on-error -d "$VERIF" dump.pgdump
 
-          # 3b. Reaplicar bloqueo de DEFAULT PRIVILEGES en public y verificar paridad con origen (FOR ROLE postgres)
+          # 3b. Verificar paridad de pg_default_acl (FOR ROLE postgres en public) antes de reaplicar cinturón de seguridad
+          defacl_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM pg_default_acl WHERE defaclnamespace = 'public'::regnamespace AND defaclrole = 'postgres'::regrole")
+          defacl_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM pg_default_acl WHERE defaclnamespace = 'public'::regnamespace AND defaclrole = 'postgres'::regrole")
+          [ "$defacl_src" -eq "$defacl_dst" ]
+
           psql "$VERIF" -v ON_ERROR_STOP=1 <<'SQL'
+          ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
           ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC, anon, authenticated;
           ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM PUBLIC, anon, authenticated;
           ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM PUBLIC, anon, authenticated;
           SQL
 
-          defacl_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM pg_default_acl WHERE defaclnamespace = 'public'::regnamespace AND defaclrole = 'postgres'::regrole")
-          defacl_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM pg_default_acl WHERE defaclnamespace = 'public'::regnamespace AND defaclrole = 'postgres'::regrole")
-          [ "$defacl_src" -eq "$defacl_dst" ]
+          # 3c. Verificación funcional de default privileges para funciones nuevas en la base restaurada (D5-1)
+          fn_defacl_test=$(psql "$VERIF" -v ON_ERROR_STOP=1 -At <<'SQL'
+          BEGIN;
+          CREATE FUNCTION public.zz_probe_defacl() RETURNS int LANGUAGE sql AS 'select 1';
+          SELECT has_function_privilege('anon', 'public.zz_probe_defacl()', 'EXECUTE');
+          ROLLBACK;
+          SQL
+          )
+          echo "anon execute función nueva en base restaurada (D5-1): $fn_defacl_test"
+          [ "$fn_defacl_test" = "f" ]
 
           # 4. Verificaciones estructurales (igualdad exacta origen = destino)
           t_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
@@ -165,7 +181,7 @@ jobs:
           echo "usuarios: $u_src -> $u_dst | clientes: $c_src -> $c_dst | ots: $ot_src -> $ot_dst"
 
           [ "$t_src" -eq "$t_dst" ]
-          [ "$m_src" -eq "$m_dst" ] && [ "$m_dst" -ge 4 ]
+          [ "$m_src" -eq "$m_dst" ] && [ "$m_dst" -ge 5 ]
           [ "$trg_src" -eq "$trg_dst" ] && [ "$trg_dst" -ge 4 ]
           [ "$u_dst" -le "$u_src" ] && [ "$c_dst" -le "$c_src" ] && [ "$ot_dst" -le "$ot_src" ]
 
@@ -196,7 +212,7 @@ jobs:
         run: |
           set -euo pipefail
           ARCHIVO="afull-db-${ORIGEN}-$(date -u +%F).pgdump.gpg"
-          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \
+          printf '%s' "$PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
             --symmetric --cipher-algo AES256 -o "$ARCHIVO" dump.pgdump
           rm -f dump.pgdump restore.toc
           echo "Archivo cifrado generado: $ARCHIVO"

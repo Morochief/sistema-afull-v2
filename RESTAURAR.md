@@ -38,19 +38,11 @@ postgresql://postgres.<project-ref>:<password>@aws-1-sa-east-1.pooler.supabase.c
 
 1. En GitHub → **Actions → Respaldo diario de la base**, ejecutar `Run workflow` eligiendo el entorno (`dev` o `prod`), o elegir la última corrida verde.
 2. Descargar el artefacto `respaldo-db-<origen>` y descomprimir el `.zip` de GitHub en una carpeta temporal en `D:` (por ejemplo `D:\restore-temp\`), obteniendo `afull-db-<origen>-YYYY-MM-DD.pgdump.gpg`.
-3. Descifrar el archivo con `gpg` ingresando `BACKUP_PASSPHRASE` de forma oculta (para que **no** quede guardada en el historial de `PSReadLine` de PowerShell):
+3. Descifrar el archivo con `gpg` (usando `--pinentry-mode loopback` sin `--passphrase` para que `gpg` pida la clave de forma interactiva sin eco, sin alterar caracteres por el pipe de PowerShell y sin dejarla en el historial de `PSReadLine`):
    ```powershell
    Set-Location D:\restore-temp
-   $secPass = Read-Host -Prompt "Ingresar BACKUP_PASSPHRASE" -AsSecureString
-   $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secPass)
-   try {
-     $plainPass = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-     $plainPass | & "C:\Program Files\Git\usr\bin\gpg.exe" --batch --yes --pinentry-mode loopback `
-       --passphrase-fd 0 --decrypt -o dump_restaurado.pgdump afull-db-dev-YYYY-MM-DD.pgdump.gpg
-   } finally {
-     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-     Remove-Variable plainPass, secPass -ErrorAction SilentlyContinue
-   }
+   & "C:\Program Files\Git\usr\bin\gpg.exe" --pinentry-mode loopback `
+     --decrypt -o dump_restaurado.pgdump afull-db-dev-YYYY-MM-DD.pgdump.gpg
    ```
 
 ### Paso 2 — Preparar la base de datos de destino
@@ -91,11 +83,15 @@ ALTER ROLE afull_api SET statement_timeout = '15s';
 ### Paso 3 — Filtrar el índice del volcado (TOC) y ejecutar `pg_restore`
 
 El volcado incluye tanto el esquema `public` como `drizzle` (historial de migraciones `drizzle.__drizzle_migrations`) y conserva todos los `GRANT`/`REVOKE`.
-Para evitar que `pg_restore --exit-on-error` falle al intentar recrear el esquema `public` (que ya existe) o al ejecutar `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin` (sobre el cual `postgres` no tiene permiso en un proyecto Supabase nuevo), se filtra el listado TOC antes de restaurar:
+Para evitar que `pg_restore --exit-on-error` falle al intentar recrear o comentar el esquema `public` (que ya existe) o al ejecutar `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin` (sobre el cual `postgres` no tiene permiso en un proyecto Supabase nuevo), se filtra el listado TOC antes de restaurar:
 
 ```powershell
 pg_restore -l dump_restaurado.pgdump |
-  Where-Object { $_ -notmatch '; \d+ \d+ SCHEMA - public ' -and $_ -notmatch 'DEFAULT ACL.*supabase_admin' } |
+  Where-Object {
+    $_ -notmatch '; \d+ \d+ SCHEMA - public ' -and
+    $_ -notmatch '; \d+ \d+ COMMENT - SCHEMA public ' -and
+    $_ -notmatch 'DEFAULT ACL.*supabase_admin'
+  } |
   Set-Content -Encoding ASCII restore.toc
 
 pg_restore -L restore.toc --no-owner --exit-on-error -d "$env:DEST_URL" dump_restaurado.pgdump
@@ -103,36 +99,31 @@ pg_restore -L restore.toc --no-owner --exit-on-error -d "$env:DEST_URL" dump_res
 
 ### Paso 4 — Reaplicar bloqueo de privilegios por defecto y asignar clave a `afull_api`
 
-Reaplicar el bloqueo de `DEFAULT PRIVILEGES` para objetos futuros en `public` y asignar una contraseña nueva al rol `afull_api` sin dejarla en el historial de comandos de PowerShell:
+Reaplicar el bloqueo de `DEFAULT PRIVILEGES` (incluyendo el `REVOKE EXECUTE ON FUNCTIONS` global de `postgres` para anular el privilegio implícito de `PUBLIC`) y asignar una contraseña nueva al rol `afull_api` con `\password afull_api` (que solicita y confirma la clave sin eco y sin dejarla en el historial de PowerShell):
 
 ```powershell
 @'
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC, anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM PUBLIC, anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM PUBLIC, anon, authenticated;
 '@ | psql "$env:DEST_URL" -v ON_ERROR_STOP=1
 
-$secApiPass = Read-Host -Prompt "Ingresar nueva contraseña para afull_api" -AsSecureString
-$bstrApi = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secApiPass)
-try {
-  $apiPass = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstrApi)
-  psql "$env:DEST_URL" -v ON_ERROR_STOP=1 -v newpass="$apiPass" -c "ALTER ROLE afull_api WITH PASSWORD :'newpass';"
-  $secApiUrl = Read-Host -Prompt "Pegar DEST_API_URL (conectando como afull_api.<ref-destino>)" -AsSecureString
-  $bstrApiUrl = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secApiUrl)
-  $env:DEST_API_URL = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstrApiUrl)
-  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstrApiUrl)
-} finally {
-  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstrApi)
-  Remove-Variable apiPass, secApiPass, secApiUrl -ErrorAction SilentlyContinue
-}
+psql "$env:DEST_URL" -v ON_ERROR_STOP=1 -c "\password afull_api"
+
+$secApiUrl = Read-Host -Prompt "Pegar DEST_API_URL (conectando como afull_api.<ref-destino>)" -AsSecureString
+$bstrApiUrl = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secApiUrl)
+$env:DEST_API_URL = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstrApiUrl)
+[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstrApiUrl)
+Remove-Variable secApiUrl -ErrorAction SilentlyContinue
 ```
 
 ### Paso 5 — Verificación de integridad, triggers inmutables y permisos (no destructiva)
 
-Ejecutar las siguientes consultas de comprobación contra `$env:DEST_URL` y `$env:DEST_API_URL`:
+Ejecutar las siguientes consultas de comprobación contra `$env:DEST_URL` y `$env:DEST_API_URL`, y **comparar los resultados contra las líneas `tablas: ... | migraciones: ... | triggers_inmutables: ... | defacl_postgres: ...` y `usuarios: ... | clientes: ... | ots: ...` del log del run de GitHub Actions** del cual se descargó el artefacto:
 
 ```powershell
-# 1. Conteo de tablas en public y migraciones de Drizzle (>= 4)
+# 1. Conteo de tablas en public y migraciones de Drizzle (>= 5)
 psql "$env:DEST_URL" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public';"
 psql "$env:DEST_URL" -Atc "SELECT count(*) FROM drizzle.__drizzle_migrations;"
 
@@ -151,6 +142,10 @@ psql "$env:DEST_URL" -Atc "SELECT has_function_privilege('anon', 'siguiente_valo
 psql "$env:DEST_API_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM usuario;"
 #    b) DELETE no destructivo dentro de transacción con ROLLBACK (debe fallar con SQLSTATE 42501 permission denied for table cliente):
 psql "$env:DEST_API_URL" -v VERBOSITY=verbose -Atc "BEGIN; DELETE FROM cliente WHERE false; ROLLBACK;"
+
+# 6. Comprobación funcional de privilegios por defecto (D5-1):
+#    Toda función nueva debe nacer con EXECUTE cerrado para anon (debe devolver 'f')
+psql "$env:DEST_URL" -v ON_ERROR_STOP=1 -Atc "BEGIN; CREATE FUNCTION public.zz_probe_defacl() RETURNS int LANGUAGE sql AS 'select 1'; SELECT has_function_privilege('anon', 'public.zz_probe_defacl()', 'EXECUTE'); ROLLBACK;"
 ```
 
 ### Paso 6 — Conectar la API y borrar archivos temporales
@@ -173,7 +168,8 @@ psql "$env:DEST_API_URL" -v VERBOSITY=verbose -Atc "BEGIN; DELETE FROM cliente W
 - **Destino utilizado:** *(ej. proyecto temporal Supabase `afull-restore-drill` o PostgreSQL 17 local en `D:`)*
 - **Resultado de verificaciones (Paso 5):**
   - Tablas en `public`: *(origen -> destino)*
-  - Filas en `drizzle.__drizzle_migrations`: *(origen -> destino)*
+  - Filas en `drizzle.__drizzle_migrations`: *(origen -> destino, >= 5)*
   - Triggers `bloquear_modificacion_inmutable`: *(origen -> destino)*
   - `DELETE FROM cliente` como `afull_api`: *(confirmar rechazo `42501`)*
   - `anon` bloqueado (`f|f`): *(confirmar)*
+  - Función nueva con `anon` bloqueado (`f`, D5-1): *(confirmar)*

@@ -5,6 +5,7 @@
     { "idx": 0, "version": "7", "when": 1793000000000, "tag": "0001_fundacion", "breakpoints": true },
     { "idx": 1, "version": "7", "when": 1793000001000, "tag": "0002_rol_api", "breakpoints": true },
     { "idx": 2, "version": "7", "when": 1793000002000, "tag": "0003_intento_login", "breakpoints": true },
-    { "idx": 3, "version": "7", "when": 1793000003000, "tag": "0004_clientes_ot", "breakpoints": true }
+    { "idx": 3, "version": "7", "when": 1793000003000, "tag": "0004_clientes_ot", "breakpoints": true },
+    { "idx": 4, "version": "7", "when": 1793000004000, "tag": "0005_default_privileges_funciones", "breakpoints": true }
   ]
 }
