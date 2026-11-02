@@ -10,6 +10,7 @@ import { LoginPage } from './routes/login.js';
 import { ClientesListaPage } from './routes/clientes/lista.js';
 import { ClientesDetallePage } from './routes/clientes/detalle.js';
 import { OTsListaPage } from './routes/ots/lista.js';
+import { OTsDetallePage } from './routes/ots/detalle.js';
 
 const rootRoute = createRootRoute();
 
@@ -57,15 +58,37 @@ const clientesDetalleRoute = createRoute({
   component: ClientesDetallePage,
 });
 
+const otsSearchSchema = z.object({
+  q: z.string().optional(),
+  estado: z.string().optional(),
+  clienteId: z.string().optional(),
+  desde: z.string().optional(),
+  hasta: z.string().optional(),
+  pagina: z.coerce.number().int().min(1).optional(),
+});
+
 const otsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/ots',
+  validateSearch: (search) => otsSearchSchema.parse(search),
   component: OTsListaPage,
+});
+
+const otsDetalleRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/ots/$id',
+  component: OTsDetallePage,
 });
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appLayoutRoute.addChildren([indexRoute, clientesRoute, clientesDetalleRoute, otsRoute]),
+  appLayoutRoute.addChildren([
+    indexRoute,
+    clientesRoute,
+    clientesDetalleRoute,
+    otsRoute,
+    otsDetalleRoute,
+  ]),
 ]);
 
 function PaginaNoEncontrada() {
