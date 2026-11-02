@@ -1,12 +1,13 @@
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
+import { publicarLive } from '../live/publicar.js';
 import { puedeTransicionarTarea, type MotivoCierreIntervalo, type EstadoTarea } from '@afull/shared';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
 
 export async function pausarTarea(ctx: Ctx, tareaId: string, motivo: MotivoCierreIntervalo, claveIdempotencia: string) {
   try {
-    return await sql.begin(async (tx) => {
+    const r = await sql.begin(async (tx) => {
       const [u] = await tx<{ persona_id: string | null }[]>`
         SELECT persona_id FROM usuario WHERE id = ${ctx.usuarioId}
       `;
@@ -57,6 +58,8 @@ export async function pausarTarea(ctx: Ctx, tareaId: string, motivo: MotivoCierr
 
       return { tareaId, estado: 'PAUSADA' };
     });
+    await publicarLive('tarea.pausar', tareaId);
+    return r;
   } catch (e) {
     if (e instanceof ErrorApp) throw e;
     traducirErrorPg(e);
@@ -65,7 +68,7 @@ export async function pausarTarea(ctx: Ctx, tareaId: string, motivo: MotivoCierr
 
 export async function finalizarTarea(ctx: Ctx, tareaId: string, comentario?: string, claveIdempotencia?: string) {
   try {
-    return await sql.begin(async (tx) => {
+    const r = await sql.begin(async (tx) => {
       const [u] = await tx<{ persona_id: string | null }[]>`
         SELECT persona_id FROM usuario WHERE id = ${ctx.usuarioId}
       `;
@@ -116,6 +119,8 @@ export async function finalizarTarea(ctx: Ctx, tareaId: string, comentario?: str
 
       return { tareaId, estado: 'LISTO' };
     });
+    await publicarLive('tarea.finalizar', tareaId);
+    return r;
   } catch (e) {
     if (e instanceof ErrorApp) throw e;
     traducirErrorPg(e);

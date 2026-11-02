@@ -1,5 +1,6 @@
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
+import { publicarLive } from '../live/publicar.js';
 import { puedeTransicionarTarea, type MiTrabajoRespuesta, type MiTrabajoTarea, type EstadoTarea } from '@afull/shared';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
@@ -96,7 +97,7 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
 
 export async function iniciarTarea(ctx: Ctx, tareaId: string, claveIdempotencia: string) {
   try {
-    return await sql.begin(async (tx) => {
+    const r = await sql.begin(async (tx) => {
       const [u] = await tx<{ persona_id: string | null }[]>`
         SELECT persona_id FROM usuario WHERE id = ${ctx.usuarioId}
       `;
@@ -183,6 +184,11 @@ export async function iniciarTarea(ctx: Ctx, tareaId: string, claveIdempotencia:
         autoPausadaTareaId,
       };
     });
+
+    if (!r?.esIdempotente) {
+      await publicarLive('tarea.iniciar', tareaId);
+    }
+    return r;
   } catch (e) {
     if (e instanceof ErrorApp) throw e;
     traducirErrorPg(e);
