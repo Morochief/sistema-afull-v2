@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { ZodError } from 'zod';
 import { authRoutes } from './modules/auth/routes.js';
+import { usuariosRoutes } from './modules/auth/usuarios.routes.js';
 import { clientesRoutes } from './modules/clientes/routes.js';
 import { otRoutes } from './modules/comercial/ot.routes.js';
 import { tareasRoutes } from './modules/comercial/tareas.routes.js';
@@ -14,6 +15,7 @@ export const app = new Hono();
 
 app.use('*', verificarOrigen);
 app.route('/api/auth', authRoutes);
+app.route('/api/usuarios', usuariosRoutes);
 app.route('/api/clientes', clientesRoutes);
 app.route('/api/comercial/ot', otRoutes);
 app.route('/api/tareas', tareasRoutes);

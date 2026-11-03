@@ -7,19 +7,14 @@ import { Button } from '../components/ui/button.js';
 import { Lock, User } from 'lucide-react';
 import { ErrorApi } from '../lib/api.js';
 
+import { sanitizarDestinoVolver } from '../lib/rutas.js';
+
 type LoginForm = {
   usuario: string;
   clave: string;
 };
 
-export function sanitizarDestinoVolver(volver?: string): string {
-  if (!volver) return '/clientes';
-  // Debe empezar con '/' pero NO con '//' ni contener '\' (evita open redirect a URLs absolutas o relativas al esquema)
-  if (volver.startsWith('/') && !volver.startsWith('//') && !volver.includes('\\')) {
-    return volver;
-  }
-  return '/clientes';
-}
+export { sanitizarDestinoVolver };
 
 export function LoginPage() {
   const { login } = useSesion();
@@ -38,8 +33,8 @@ export function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     setErrorLogin(null);
     try {
-      await login({ username: data.usuario.trim(), password: data.clave });
-      navigate({ to: sanitizarDestinoVolver(search.volver) });
+      const sesion = await login({ username: data.usuario.trim(), password: data.clave });
+      navigate({ to: sanitizarDestinoVolver(search.volver, sesion.capacidades) });
     } catch (err) {
       if (err instanceof ErrorApi) {
         setErrorLogin(err.mensaje);

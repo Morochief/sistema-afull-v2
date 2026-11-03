@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useSesion } from '../hooks/useSesion.js';
-import { Users, FileText, LogOut } from 'lucide-react';
+import { Users, FileText, LogOut, Clock, Radio, UserCheck } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
 import { Badge } from '../components/ui/badge.js';
 
@@ -58,6 +58,12 @@ export function AppLayout() {
 
   const itemsNavegacion = [
     {
+      titulo: 'Mi Trabajo',
+      ruta: '/mi-trabajo',
+      icono: Clock,
+      visible: tieneCapacidad('taller') || tieneCapacidad('montaje'),
+    },
+    {
       titulo: 'Clientes',
       ruta: '/clientes',
       icono: Users,
@@ -68,6 +74,18 @@ export function AppLayout() {
       ruta: '/ots',
       icono: FileText,
       visible: tieneCapacidad('comercial'),
+    },
+    {
+      titulo: 'Control en Vivo',
+      ruta: '/en-vivo',
+      icono: Radio,
+      visible: tieneCapacidad('comercial'),
+    },
+    {
+      titulo: 'Personas',
+      ruta: '/personas',
+      icono: UserCheck,
+      visible: tieneCapacidad('rrhh'),
     },
   ].filter((item) => item.visible);
 

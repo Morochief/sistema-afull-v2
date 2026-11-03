@@ -10,6 +10,7 @@ import { Badge, type BadgeVariant } from '../../components/ui/badge.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
 import { ModalEditarOT } from '../../components/modals/ModalEditarOT.js';
 import { ModalTransicionOT } from '../../components/modals/ModalTransicionOT.js';
+import { SeccionTareasOT } from '../../components/ots/SeccionTareasOT.js';
 
 function badgeEstado(estado: EstadoOT): { variant: BadgeVariant; texto: string } {
   switch (estado) {
@@ -124,6 +125,8 @@ export function OTsDetallePage() {
           </div>
         </div>
       </div>
+
+      <SeccionTareasOT otId={ot.id} otFinalizada={final} />
 
       <div className="rounded-md border border-[#1f2937] bg-[#111318] p-4 space-y-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Línea de Tiempo de Estados</h2>

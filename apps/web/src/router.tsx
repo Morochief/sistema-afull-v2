@@ -11,6 +11,11 @@ import { ClientesListaPage } from './routes/clientes/lista.js';
 import { ClientesDetallePage } from './routes/clientes/detalle.js';
 import { OTsListaPage } from './routes/ots/lista.js';
 import { OTsDetallePage } from './routes/ots/detalle.js';
+import { MiTrabajoPage } from './routes/mi-trabajo.js';
+import { EnVivoPage } from './routes/en-vivo.js';
+import { PersonasPage } from './routes/personas.js';
+import { useSesion } from './hooks/useSesion.js';
+import { rutaInicialSegunCapacidades } from './lib/rutas.js';
 
 const rootRoute = createRootRoute();
 
@@ -31,10 +36,16 @@ const appLayoutRoute = createRoute({
   component: AppLayout,
 });
 
+function RedireccionRaiz() {
+  const { usuario } = useSesion();
+  const destino = rutaInicialSegunCapacidades(usuario?.capacidades);
+  return <Navigate to={destino} replace />;
+}
+
 const indexRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/',
-  component: () => <Navigate to="/clientes" replace />,
+  component: RedireccionRaiz,
 });
 
 const clientesSearchSchema = z.object({
@@ -80,6 +91,24 @@ const otsDetalleRoute = createRoute({
   component: OTsDetallePage,
 });
 
+const miTrabajoRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/mi-trabajo',
+  component: MiTrabajoPage,
+});
+
+const enVivoRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/en-vivo',
+  component: EnVivoPage,
+});
+
+const personasRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/personas',
+  component: PersonasPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   appLayoutRoute.addChildren([
@@ -88,6 +117,9 @@ const routeTree = rootRoute.addChildren([
     clientesDetalleRoute,
     otsRoute,
     otsDetalleRoute,
+    miTrabajoRoute,
+    enVivoRoute,
+    personasRoute,
   ]),
 ]);
 

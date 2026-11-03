@@ -5,3 +5,4 @@ export * from './schemas/personas.js';
 export * from './schemas/tareas.js';
 export * from './types/api.js';
 export * from './types/live.js';
+export * from './types/usuarios.js';

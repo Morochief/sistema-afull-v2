@@ -11,3 +11,4 @@ storage-backup/
 afull-*.tar.gz.gpg
 afull-*.pgdump.gpg
 .tmp-ui/
+.tmp-loop2/

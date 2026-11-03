@@ -4,10 +4,11 @@ import { resolverSinVacios } from '../../lib/formulario.js';
 import { toast } from 'sonner';
 import { nuevaOTSchema, type SucursalFila, type ClienteFila } from '@afull/shared';
 import { useCrearOT } from '../../hooks/ots/useMutacionesOT.js';
-import { obtenerClientes, obtenerCliente } from '../../lib/api-clientes.js';
+import { obtenerCliente } from '../../lib/api-clientes.js';
 import type { NuevaOT } from '../../lib/api-ots.js';
 import { mensajeDeError } from '../../lib/api.js';
-import { useDebounce } from '../../hooks/useDebounce.js';
+import { SelectorClienteOT } from '../forms/SelectorClienteOT.js';
+import { SelectorTareasOT, type TareaFormItem } from '../forms/SelectorTareasOT.js';
 import {
   Dialog,
   DialogHeader,
@@ -28,12 +29,9 @@ export type ModalNuevaOTProps = {
 export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNuevaOTProps) {
   const { mutateAsync: crear, isPending } = useCrearOT();
 
-  const [busquedaCli, setBusquedaCli] = useState('');
-  const debouncedBusqueda = useDebounce(busquedaCli, 300);
-  const [clientesEncontrados, setClientesEncontrados] = useState<ClienteFila[]>([]);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteFila | null>(null);
   const [sucursalesActivas, setSucursalesActivas] = useState<SucursalFila[]>([]);
-  const [cargandoClientes, setCargandoClientes] = useState(false);
+  const [tareas, setTareas] = useState<TareaFormItem[]>([]);
 
   const {
     register,
@@ -65,22 +63,8 @@ export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNueva
     }
   }, [abierto, clienteInicialId, setValue]);
 
-  useEffect(() => {
-    if (!debouncedBusqueda.trim() || clienteSeleccionado) {
-      setClientesEncontrados([]);
-      return;
-    }
-    setCargandoClientes(true);
-    obtenerClientes({ q: debouncedBusqueda, estado: 'activos', pagina: 1 })
-      .then((res) => setClientesEncontrados(res.items))
-      .catch(() => setClientesEncontrados([]))
-      .finally(() => setCargandoClientes(false));
-  }, [debouncedBusqueda, clienteSeleccionado]);
-
   const seleccionarCliente = async (c: ClienteFila) => {
     setClienteSeleccionado(c);
-    setBusquedaCli('');
-    setClientesEncontrados([]);
     setValue('clienteId', c.id, { shouldValidate: true });
     try {
       const detalle = await obtenerCliente(c.id);
@@ -105,6 +89,16 @@ export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNueva
         titulo: datos.titulo.trim(),
         descripcion: datos.descripcion?.trim() || undefined,
         fechaPrometida: datos.fechaPrometida || undefined,
+        tareas:
+          tareas.length > 0
+            ? tareas
+                .filter((t) => t.descripcion.trim())
+                .map((t) => ({
+                  tipo: t.tipo,
+                  descripcion: t.descripcion.trim(),
+                  personaAsignadaId: t.personaAsignadaId || undefined,
+                }))
+            : undefined,
       };
 
       const creada = await crear(payload);
@@ -118,9 +112,8 @@ export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNueva
   const handleCerrar = () => {
     reset();
     setClienteSeleccionado(null);
-    setBusquedaCli('');
-    setClientesEncontrados([]);
     setSucursalesActivas([]);
+    setTareas([]);
     onCerrar();
   };
 
@@ -129,60 +122,17 @@ export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNueva
       <DialogHeader>
         <DialogTitle>Nueva Orden de Trabajo</DialogTitle>
         <DialogDescription>
-          Cree una nueva OT asociándola a un cliente activo y sucursal.
+          Cree una nueva OT asociándola a un cliente activo, sucursal y tareas iniciales.
         </DialogDescription>
       </DialogHeader>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
-        <div>
-          <Label>
-            Cliente <span className="text-[#ea580c]">*</span>
-          </Label>
-          {clienteSeleccionado ? (
-            <div className="flex items-center justify-between rounded border border-[#1f2937] bg-[#161922] p-2 text-xs">
-              <span className="font-semibold text-white">
-                {clienteSeleccionado.nombre} ({clienteSeleccionado.codigo})
-              </span>
-              <button
-                type="button"
-                onClick={deseleccionarCliente}
-                className="text-xs text-[#ea580c] hover:underline"
-              >
-                Cambiar
-              </button>
-            </div>
-          ) : (
-            <div className="relative">
-              <Input
-                placeholder="Buscar cliente por nombre o RUC..."
-                value={busquedaCli}
-                onChange={(e) => setBusquedaCli(e.target.value)}
-                autoFocus
-              />
-              {cargandoClientes && (
-                <span className="absolute right-3 top-2.5 text-xs text-neutral-400">Buscando...</span>
-              )}
-              {clientesEncontrados.length > 0 && (
-                <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded border border-[#1f2937] bg-[#111318] shadow-lg">
-                  {clientesEncontrados.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => void seleccionarCliente(c)}
-                      className="w-full px-3 py-2 text-left text-xs text-neutral-200 hover:bg-[#1f2937] hover:text-white"
-                    >
-                      <span className="font-medium">{c.nombre}</span>{' '}
-                      <span className="text-neutral-400">({c.codigo})</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {errors.clienteId && (
-            <p className="mt-1 text-xs text-red-400">Debe seleccionar un cliente.</p>
-          )}
-        </div>
+        <SelectorClienteOT
+          clienteSeleccionado={clienteSeleccionado}
+          onSeleccionar={(c) => void seleccionarCliente(c)}
+          onDeseleccionar={deseleccionarCliente}
+          error={errors.clienteId ? 'Debe seleccionar un cliente.' : undefined}
+        />
 
         <div>
           <Label htmlFor="sucursalId">Sucursal (opcional)</Label>
@@ -218,7 +168,7 @@ export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNueva
           <textarea
             id="descripcion"
             {...register('descripcion')}
-            rows={3}
+            rows={2}
             placeholder="Detalles técnicos, materiales o requerimientos específicos..."
             className="flex w-full rounded-md border border-[#1f2937] bg-[#161922] px-3 py-2 text-xs text-neutral-200 shadow-sm focus:border-[#ea580c] focus:outline-none focus:ring-1 focus:ring-[#ea580c]"
           />
@@ -233,6 +183,8 @@ export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNueva
             error={errors.fechaPrometida?.message}
           />
         </div>
+
+        <SelectorTareasOT tareas={tareas} onChange={setTareas} />
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleCerrar} disabled={isPending}>
