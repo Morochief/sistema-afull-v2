@@ -300,9 +300,11 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al principio 7 (2026-11-02, decisión del usuario):** se inició y cerró Loop 1B con el Loop 0 abierto en dos puntos: (a) CA-0.9, el simulacro manual de restore en `afull-restore-drill`; (b) los secrets `DEV_*` restantes y la corrida de `tests-dev.yml`. **Bloqueo:** no se crea `afull-prod` con datos reales ni se carga ningún dato real hasta cerrar (a) y (b). Nota: los artefactos de backup duran 30 días; si el simulacro se hace después del 2026-12-02, volver a correr `backup-db.yml`.
 
-1. **Commit del Loop 3 completo** (L3.E1-fix, L3.E2, L3.E3, L3.E4; archivos de Claude Code en el disco, ver `MESA_CLAUDE.md`) y aplicar `0008` en `afull-dev` con `pnpm db:migrate`. Correr `node scripts/prueba-loop3.cjs` contra Vercel.
-2. **Confirmación del usuario** del cierre del Loop 3 (CA-3.1 a CA-3.10) y del supuesto de **IVA incluido**.
-3. **Loop 4:** confirmar los supuestos de `docs/LOOP_4_DISENO.md` §0 (geocerca disuasiva por sede, odómetro con 1 decimal, alerta de desvío al 30 %, permisos). Cargar la sede real (fábrica) y los vehículos. Después: L4.E3 (Storage; crear bucket privado `campo-evidencias` en `afull-dev`) y L4.E4 (pantallas móviles + offline). Mantener bloqueo sobre producción y datos reales hasta el cierre de (a) y (b).
+1. **Confirmación del usuario** del cierre formal del Loop 3 (CA-3.1 a CA-3.10 cumplidos al 100%, recorrido en Vercel 9/9 OK) y del supuesto de precios con **IVA incluido**.
+2. **Loop 4 — Campo y flota:**
+   - Confirmar los supuestos de `docs/LOOP_4_DISENO.md` §0 (geocerca disuasiva por sede, odómetro con 1 decimal, alerta de desvío al 30 %, permisos de cuadrilla/coordinación).
+   - Cargar la sede real (fábrica) y los vehículos.
+   - Siguientes entregas: L4.E3 (Storage; crear bucket privado `campo-evidencias` en `afull-dev`) y L4.E4 (pantallas móviles + offline en Dexie). Mantener bloqueo sobre producción y datos reales hasta el cierre de (a) y (b).
 
 ---
 
@@ -350,3 +352,4 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `8fccd02` | fix(loop2): cronómetro no queda abierto en OT final ni persona inactiva; guarda de rutas por capacidad (auditoría Claude Code). | 65/65 tests backend en dev, 76/76 web, CI Run `#49` (`#41565305619`) green, Playwright Vercel 9/9 OK |
 | 2026-11-02 | `e595e9e` | docs: incorporar diseno de Loop 3 Comercial y mapa de requisitos renumerado. | CI Run `#50` green |
 | 2026-11-03 | `780fe04` | **Loop 3 Comercial — Entrega L3.E1:** Migración 0007 (proyecto, presupuesto, ítems con sucursal opcional y eventos), máquina de estados, fórmulas puras (reparto multi-sucursal con absorción de resto) y suites CA-3.1, 3.2, 3.3, 3.8, 3.9. | 87/87 tests backend en dev, 76/76 web, CI Run `#41575493940` green |
+| 2026-11-03 | `6d75aa5` | **Loops 3 y 4 (parte 1):** Circuito comercial completo (presupuestos, proyectos, pantallas, impresión, CA-3.1..CA-3.10) y base/API de campo y flota (sedes, vehículos, hojas de ruta, viajes, asistencia inmutable, CA-4.1..CA-4.6). | 117 tests backend en CI, 84 tests web, CI Run `#41636411667` green, Playwright CA-3.10 9/9 OK en Vercel |
