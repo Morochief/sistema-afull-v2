@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { miDiaCampo } from '../lib/api-campo.js';
+import { miDiaCampoConRespaldo } from '../lib/api-campo.js';
+import { EstadoConexion } from '../components/campo/EstadoConexion.js';
+import { formatearFechaHora } from '../lib/fechas.js';
 import { mensajeDeError, type ErrorApi } from '../lib/api.js';
 import { Skeleton } from '../components/ui/skeleton.js';
 import { Button } from '../components/ui/button.js';
@@ -9,7 +11,7 @@ import { ParadasHoja } from '../components/campo/ParadasHoja.js';
 
 /** "En la calle": la pantalla del celular de la cuadrilla. Marcación, odómetro y paradas de hoy. */
 export function CallePage() {
-  const { data: dia, isLoading, error, refetch } = useQuery({ queryKey: ['campo', 'hoy'], queryFn: miDiaCampo, refetchInterval: 60_000 });
+  const { data: dia, isLoading, error, refetch } = useQuery({ queryKey: ['campo', 'hoy'], queryFn: miDiaCampoConRespaldo, refetchInterval: 60_000 });
   const recargar = () => void refetch();
 
   if (isLoading) return <div className="space-y-3"><Skeleton className="h-20 w-full" /><Skeleton className="h-40 w-full" /></div>;
@@ -28,6 +30,8 @@ export function CallePage() {
         <h1 className="text-xl font-bold tracking-tight text-white">En la calle</h1>
         <p className="text-xs text-neutral-400">{dia.persona.nombre} · hoy {dia.fecha.split('-').reverse().join('/')}</p>
       </div>
+      <EstadoConexion alEnviar={recargar} />
+      {dia.sin_conexion && <p className="text-[11px] text-amber-300">Sin señal: mostrando lo bajado el {formatearFechaHora(dia.sin_conexion)}.</p>}
       <MarcacionCard ultima={dia.ultima_marcacion} onMarcado={recargar} />
       <ViajeCard key={dia.viaje_abierto?.id ?? 'sin-viaje'} dia={dia} onCambio={recargar} />
       {dia.hojas.length === 0 ? (

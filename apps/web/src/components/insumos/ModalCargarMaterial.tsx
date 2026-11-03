@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { cargarConsumo, UNIDAD_CORTA, type Insumo } from '../../lib/api-insumos.js';
+import { UNIDAD_CORTA, type Insumo } from '../../lib/api-insumos.js';
+import { enviarOEncolar } from '../../lib/cola-offline.js';
 import { numero } from '../../lib/numero.js';
 import { mensajeDeError } from '../../lib/api.js';
 import { formatearGs } from '../../lib/formato.js';
@@ -30,8 +31,9 @@ export function ModalCargarMaterial({ otId, tareaId, titulo, onCerrar }: Props) 
     if (!(cant > 0)) return toast.error('Cantidad mayor a 0, hasta 4 decimales');
     setCargando(true);
     try {
-      await cargarConsumo({ otId, tareaId, insumoId: insumo.id, cantidad: cant, esDesperdicio: desperdicio, nota: nota.trim() || undefined, claveIdempotencia: crypto.randomUUID() });
-      toast.success(`Cargado: ${cantidad} ${UNIDAD_CORTA[insumo.unidad]} de ${insumo.nombre}.`);
+      const texto = `${cantidad} ${UNIDAD_CORTA[insumo.unidad]} de ${insumo.nombre}`;
+      const envio = await enviarOEncolar(`Material: ${texto}`, '/api/consumos', { otId, tareaId, insumoId: insumo.id, cantidad: cant, esDesperdicio: desperdicio, nota: nota.trim() || undefined, claveIdempotencia: crypto.randomUUID() });
+      toast.success(envio.encolada ? `Guardado sin señal: ${texto}. Se envía solo.` : `Cargado: ${texto}.`);
       void qc.invalidateQueries({ queryKey: ['consumos', otId] });
       setInsumo(null);
       setCantidad('');

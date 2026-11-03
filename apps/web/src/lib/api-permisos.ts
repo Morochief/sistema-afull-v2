@@ -15,7 +15,7 @@ export type NuevaSolicitud = {
 };
 export type Marcacion = {
   id: string; persona_nombre: string; tipo: string; marcada_at: string; dentro_geocerca: boolean;
-  distancia_m: number | null; precision_m: number | null; sede_nombre: string | null;
+  distancia_m: number | null; precision_m: number | null; sede_nombre: string | null; sin_senal?: boolean; recibida_at?: string;
 };
 
 const json = (body: unknown) => ({ body: JSON.stringify(body) });

@@ -1,6 +1,6 @@
 # Loop 4 — Campo y flota (diseño de Claude Code)
 
-> **Estado (2026-11-03):** L4.E1 y L4.E2 (base y API) en `main`. **L4.E4 pantallas** IMPLEMENTADAS por Claude Code, sin commit: "En la calle" (marcación con GPS, odómetro con motivo cuando el servidor lo pide, paradas con "Ir" a Google Maps, Hecha u Omitida), "Hojas de ruta" (coordinación) y "Flota y sedes" (admin). Recorrido `scripts/prueba-loop4.cjs` 7/7 en local. **Pendientes:** L4.E3 (fotos en Storage: necesita crear el bucket privado en el proyecto real) y la **cola offline** de L4.E4 (Dexie; probar en celular). Supuesto §0.1 (geocerca que registra y avisa) **confirmado por el usuario**.
+> **Estado (2026-11-03):** L4.E1 y L4.E2 (base y API) en `main`. **L4.E4 pantallas** IMPLEMENTADAS por Claude Code, sin commit: "En la calle" (marcación con GPS, odómetro con motivo cuando el servidor lo pide, paradas con "Ir" a Google Maps, Hecha u Omitida), "Hojas de ruta" (coordinación) y "Flota y sedes" (admin). Recorrido `scripts/prueba-loop4.cjs` 7/7 en local. **Cola sin señal (L4.E4) IMPLEMENTADA** por Claude Code el 2026-11-03 (§6), sin commit. **Pendiente:** L4.E3 (fotos en Storage: necesita crear el bucket privado y la clave de servicio en Vercel). Supuesto §0.1 (geocerca que registra y avisa) **confirmado por el usuario**.
 > **Fuentes:** `ARQUITECTURA_V3.md` §5–7 (`vehiculo`, `hoja_ruta*`, `viaje`, `marcacion_asistencia`), `TRASPASO.md` §3 (auditoría de flota informativa, geocerca disuasiva) y §8, `docs/MAPA_REQUISITOS.md`.
 
 ## 0. Supuestos (el usuario no estaba disponible: confirmar o corregir)
@@ -48,3 +48,14 @@ Sin `DELETE` para `afull_api`; RLS + `GRANT` mínimo + política `api_acceso` (a
 - **L4.E2** API de flota, hojas de ruta, campo y asistencia + CA-4.2, 4.5.
 - **L4.E3** Storage (URLs firmadas) + CA-4.7. **Requiere el proyecto Supabase.**
 - **L4.E4** Pantallas: coordinación de hojas de ruta, "Hoy en la calle" para la cuadrilla, marcación; cola offline Dexie + CA-4.8.
+
+## 6. Sin señal (L4.E4, Claude Code 2026-11-03) — migración `0017_sin_senal.sql`
+- **Cola en el celular** (`apps/web/src/lib/cola-offline.ts`, en `localStorage`, sin dependencias nuevas): marcar entrada/salida, iniciar y cerrar viaje, completar u omitir parada y cargar material. Solo acciones **idempotentes**, así reenviar nunca duplica.
+  - Sin señal (el pedido no llega) → se guarda y se avisa. Un **rechazo real** del servidor (4xx) no se encola: se muestra. Lo encolado que después el servidor rechaza queda en "no se pudo registrar" para que la persona lo vea.
+  - Se manda **sola y en orden** al volver la señal (y cada 30 s), o con "Enviar ahora". Con algo pendiente, lo nuevo va detrás (iniciar viaje antes que cerrarlo).
+  - **Celular compartido:** cada acción guarda quién la cargó y solo se manda con esa persona en sesión.
+  - Un `401` frena la cola sin perder nada.
+- **Hora real:** la acción encolada lleva `ocurridaAt` (la hora del celular). La API la acepta solo si no es futura (+2 min) ni de hace más de 72 h, y la **marca "sin señal"** (`marcacion_asistencia.sin_senal` + `recibida_at`, `viaje.inicio_sin_senal`/`cierre_sin_senal`, `hoja_ruta_parada.cierre_sin_senal`). RR.HH. lo ve en Asistencia ("sin señal · llegó …"). Como el GPS, el reloj del celular es falsificable: **disuasivo**.
+- **Abrir la app sin señal:** service worker mínimo (`apps/web/public/sw.js`): páginas primero de la red y si no, la copia guardada; `/assets/*` de la caché; `/api/*` **nunca** se cachea. "En la calle" muestra lo último que se bajó ("Sin señal: mostrando lo bajado el …") y la sesión usa el último usuario conocido (la API igual valida la cookie al mandar).
+- Pruebas: `tests/loop4/sin-senal.test.ts` (CA-4.7: hora real y marca; límites), `apps/web/src/lib/cola-offline.test.ts` (orden, rechazos, 401, celular compartido, regresión de la cola trabada), `scripts/prueba-sin-senal.cjs` 4/4 (sin señal → vuelve → llega todo con la hora real) y `scripts/prueba-sin-senal-recarga.cjs` (sitio compilado: recargar sin señal abre la app).
+- **Probar en un celular real** (Android/Chrome e iPhone/Safari): modo avión, marcar, volver a encender.

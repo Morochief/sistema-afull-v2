@@ -1,6 +1,6 @@
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
-import { iniciarViajeSchema, cerrarViajeSchema, omitirParadaSchema } from '@afull/shared';
+import { iniciarViajeSchema, cerrarViajeSchema, omitirParadaSchema, completarParadaSchema } from '@afull/shared';
 import { requireSesion, requireAlgunaCapacidad } from '../auth/middleware.js';
 import { ipDe } from '../../lib/ip.js';
 import type { Ctx } from '../clientes/service.js';
@@ -20,8 +20,11 @@ export const campoRoutes = new Hono()
     return c.json(r, r.repetido ? 200 : 201);
   })
   .post('/viajes/:id/cerrar', async (c) => c.json(await cerrarViaje(ctxDe(c), idDe(c), cerrarViajeSchema.parse(await cuerpo(c)))))
-  .post('/paradas/:id/completar', async (c) => c.json(await cerrarParada(ctxDe(c), idDe(c), 'COMPLETADA')))
+  .post('/paradas/:id/completar', async (c) => {
+    const b = completarParadaSchema.parse((await cuerpo(c)) ?? {});
+    return c.json(await cerrarParada(ctxDe(c), idDe(c), 'COMPLETADA', undefined, b.ocurridaAt));
+  })
   .post('/paradas/:id/omitir', async (c) => {
     const b = omitirParadaSchema.parse(await cuerpo(c));
-    return c.json(await cerrarParada(ctxDe(c), idDe(c), 'OMITIDA', b.motivo));
+    return c.json(await cerrarParada(ctxDe(c), idDe(c), 'OMITIDA', b.motivo, b.ocurridaAt));
   });

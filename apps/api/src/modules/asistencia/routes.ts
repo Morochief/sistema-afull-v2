@@ -5,7 +5,7 @@ import { requireSesion, requireCapacidad } from '../auth/middleware.js';
 import { auditar } from '../auditoria/service.js';
 import { ipDe } from '../../lib/ip.js';
 import { TAM_PAGINA, desplazamiento, armarPagina, escaparLike } from '../../lib/paginacion.js';
-import { personaDeSesion, enTx } from '../campo/comun.js';
+import { personaDeSesion, enTx, horaDeAccion } from '../campo/comun.js';
 
 /**
  * Marcación de asistencia. La geocerca es DISUASIVA: fuera del radio se guarda igual con
@@ -30,11 +30,13 @@ export const asistenciaRoutes = new Hono()
         .map((s) => ({ s, ...evaluarGeocerca({ lat: d.gpsLat, lng: d.gpsLng }, s, s.radio_m) }))
         .sort((a, b) => a.distanciaM - b.distanciaM);
       const mejor = evaluadas[0] ?? null;
+      const h = await horaDeAccion(tx, d.ocurridaAt);
       const [m] = await tx`
         INSERT INTO marcacion_asistencia
-          (persona_id, sede_id, tipo, gps_lat, gps_lng, precision_m, distancia_m, dentro_geocerca, ip, dispositivo_hash, clave_idempotencia)
+          (persona_id, sede_id, tipo, gps_lat, gps_lng, precision_m, distancia_m, dentro_geocerca, ip, dispositivo_hash, clave_idempotencia, marcada_at, sin_senal)
         VALUES (${persona.id}, ${mejor?.s.id ?? null}, ${d.tipo}, ${d.gpsLat}, ${d.gpsLng}, ${d.precisionM ?? null},
-                ${mejor?.distanciaM ?? null}, ${mejor?.dentro ?? false}, ${ipDe(c) ?? null}, ${d.dispositivoHash.toLowerCase()}, ${d.claveIdempotencia})
+                ${mejor?.distanciaM ?? null}, ${mejor?.dentro ?? false}, ${ipDe(c) ?? null}, ${d.dispositivoHash.toLowerCase()}, ${d.claveIdempotencia},
+                coalesce(${h.hora}::timestamptz, clock_timestamp()), ${h.sinSenal})
         RETURNING id, tipo, marcada_at, dentro_geocerca, distancia_m::float8 AS distancia_m
       `;
       await auditar(
@@ -56,7 +58,8 @@ export const asistenciaRoutes = new Hono()
     const [{ total }] = await sql`SELECT count(*)::int AS total FROM marcacion_asistencia m JOIN persona p ON p.id = m.persona_id ${donde}`;
     const items = await sql`
       SELECT m.id, m.persona_id, p.nombre AS persona_nombre, m.tipo, m.marcada_at, m.dentro_geocerca,
-             m.distancia_m::float8 AS distancia_m, m.precision_m::float8 AS precision_m, s.nombre AS sede_nombre, m.dispositivo_hash
+             m.distancia_m::float8 AS distancia_m, m.precision_m::float8 AS precision_m, s.nombre AS sede_nombre, m.dispositivo_hash,
+             m.sin_senal, m.recibida_at
       FROM marcacion_asistencia m JOIN persona p ON p.id = m.persona_id LEFT JOIN sede s ON s.id = m.sede_id
       ${donde} ORDER BY m.marcada_at DESC LIMIT ${TAM_PAGINA} OFFSET ${desplazamiento(f.pagina)}
     `;

@@ -1,6 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UsuarioSesion } from '@afull/shared';
+import { useEffect } from 'react';
 import { apiFetch, ErrorApi } from '../lib/api.js';
+import { fijarUsuarioCola } from '../lib/cola-offline.js';
+
+// Sin señal se usa el último usuario conocido para poder mostrar la app (la API igual valida la cookie al mandar).
+const CLAVE_SESION = 'afull_sesion_conocida';
+const guardarSesion = (u: UsuarioSesion | null) => {
+  try {
+    if (u) localStorage.setItem(CLAVE_SESION, JSON.stringify(u));
+    else localStorage.removeItem(CLAVE_SESION);
+  } catch {
+    /* sin almacenamiento */
+  }
+};
+const sesionConocida = (): UsuarioSesion | null => {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_SESION) ?? 'null');
+  } catch {
+    return null;
+  }
+};
 
 export function useSesion() {
   const queryClient = useQueryClient();
@@ -14,10 +34,17 @@ export function useSesion() {
     queryKey: ['sesion', 'yo'],
     queryFn: async () => {
       try {
-        return await apiFetch<UsuarioSesion>('/api/auth/yo');
+        const u = await apiFetch<UsuarioSesion>('/api/auth/yo');
+        guardarSesion(u);
+        return u;
       } catch (err) {
         if (err instanceof ErrorApi && err.status === 401) {
+          guardarSesion(null);
           return null;
+        }
+        if (err instanceof ErrorApi && err.status === 0) {
+          const conocida = sesionConocida();
+          if (conocida) return conocida;
         }
         throw err;
       }
@@ -36,6 +63,7 @@ export function useSesion() {
       return apiFetch<UsuarioSesion>('/api/auth/yo');
     },
     onSuccess: (nuevoUsuario) => {
+      guardarSesion(nuevoUsuario);
       queryClient.setQueryData(['sesion', 'yo'], nuevoUsuario);
     },
   });
@@ -50,10 +78,14 @@ export function useSesion() {
       }
     },
     onSettled: () => {
+      guardarSesion(null);
       queryClient.setQueryData(['sesion', 'yo'], null);
       queryClient.clear();
     },
   });
+
+  // La cola sin señal solo manda lo de quien está en sesión (en un celular compartido no se mezcla).
+  useEffect(() => fijarUsuarioCola(usuario?.username ?? null), [usuario?.username]);
 
   const tieneCapacidad = (cap: string): boolean => {
     if (!usuario) return false;

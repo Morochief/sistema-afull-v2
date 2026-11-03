@@ -4,13 +4,13 @@ import { auditar } from '../auditoria/service.js';
 import { publicarLive } from '../live/publicar.js';
 import { ErrorApp } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
-import { personaDeSesion, enTx } from './comun.js';
+import { personaDeSesion, enTx, horaDeAccion } from './comun.js';
 
 type Iniciar = {
   vehiculoId: string; hojaRutaId?: string; kmInicio: number; motivoKmInicio?: string;
-  gpsLat?: number; gpsLng?: number; claveIdempotencia: string;
+  gpsLat?: number; gpsLng?: number; claveIdempotencia: string; ocurridaAt?: string;
 };
-type Cerrar = { kmFin: number; motivoDesvio?: string; gpsLat?: number; gpsLng?: number; claveIdempotencia: string };
+type Cerrar = { kmFin: number; motivoDesvio?: string; gpsLat?: number; gpsLng?: number; claveIdempotencia: string; ocurridaAt?: string };
 
 /** Iniciar viaje: idempotente por clave; un viaje abierto por vehículo y por conductor (lo garantiza el motor). */
 export async function iniciarViaje(ctx: Ctx, d: Iniciar) {
@@ -40,10 +40,12 @@ export async function iniciarViaje(ctx: Ctx, d: Iniciar) {
     if (ult && d.kmInicio < ult.km && !d.motivoKmInicio?.trim()) {
       throw new ErrorApp(400, `El último viaje de este vehículo cerró con ${ult.km} km. Revisá el odómetro o indicá el motivo.`);
     }
+    const h = await horaDeAccion(tx, d.ocurridaAt);
     const [viaje] = await tx`
-      INSERT INTO viaje (vehiculo_id, conductor_persona_id, hoja_ruta_id, km_inicio, motivo_km_inicio, gps_lat_inicio, gps_lng_inicio, clave_idempotencia)
+      INSERT INTO viaje (vehiculo_id, conductor_persona_id, hoja_ruta_id, km_inicio, motivo_km_inicio, gps_lat_inicio, gps_lng_inicio, clave_idempotencia,
+                         hora_inicio, inicio_sin_senal)
       VALUES (${d.vehiculoId}, ${persona.id}, ${d.hojaRutaId ?? null}, ${d.kmInicio}, ${d.motivoKmInicio?.trim() || null},
-              ${d.gpsLat ?? null}, ${d.gpsLng ?? null}, ${d.claveIdempotencia})
+              ${d.gpsLat ?? null}, ${d.gpsLng ?? null}, ${d.claveIdempotencia}, coalesce(${h.hora}::timestamptz, clock_timestamp()), ${h.sinSenal})
       RETURNING id
     `;
     await auditar({ usuarioId: ctx.usuarioId, accion: 'viaje.iniciar', recurso: 'viaje', recursoId: viaje.id, ip: ctx.ip, metadata: { km: d.kmInicio } }, tx);
@@ -87,8 +89,10 @@ export async function cerrarViaje(ctx: Ctx, viajeId: string, d: Cerrar) {
     if (alerta && !d.motivoDesvio?.trim()) {
       throw new ErrorApp(400, `Recorrido de ${recorrido} km contra ${estimado} km estimados: indicá el motivo (paradas extra, desvío, etc.)`);
     }
+    const h = await horaDeAccion(tx, d.ocurridaAt);
     await tx`
-      UPDATE viaje SET km_fin = ${d.kmFin}, hora_fin = greatest(clock_timestamp(), hora_inicio), km_estimado_ruta = ${estimado},
+      UPDATE viaje SET km_fin = ${d.kmFin}, hora_fin = greatest(coalesce(${h.hora}::timestamptz, clock_timestamp()), hora_inicio), cierre_sin_senal = ${h.sinSenal},
+             km_estimado_ruta = ${estimado},
              alerta_desvio = ${alerta}, motivo_desvio = ${d.motivoDesvio?.trim() || null},
              gps_lat_fin = ${d.gpsLat ?? null}, gps_lng_fin = ${d.gpsLng ?? null}, clave_cierre = ${d.claveIdempotencia}
       WHERE id = ${viajeId}

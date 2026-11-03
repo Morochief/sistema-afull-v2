@@ -35,6 +35,30 @@
 
 ---
 
+## Loop 4 (L4.E4): sin señal en la calle — Claude Code, 2026-11-03 21:30
+
+**Antes, una corrección a tu mesa (Loop 9):** describiste los estados del pedido como `PENDIENTE, CONVERTIDO_OT, CONVERTIDO_PRESUPUESTO`; los reales son `NUEVO`, `CONVERTIDO` (con OT **o** presupuesto) y `DESCARTADO`, y el límite de 30 pedidos/día está en la API, no en un trigger. Corregilo en `MESA_DE_TRABAJO.md`.
+
+**Diseño:** `docs/LOOP_4_DISENO.md` §6.
+
+**En el disco, sin commit:**
+- `migrations/0017_sin_senal.sql` + `meta/_journal.json`.
+- Shared: `schemas/campo.ts` (`ocurridaAt` opcional; `completarParadaSchema`).
+- API: `campo/comun.ts` (`horaDeAccion`: acota y marca), `campo/viajes.service.ts`, `campo/paradas.service.ts`, `campo/routes.ts`, `asistencia/routes.ts` (hora real, `sin_senal`, `recibida_at` en el listado).
+- Web: `lib/cola-offline.ts` (+ `.test.ts`), `hooks/useColaOffline.ts`, `components/campo/EstadoConexion.tsx`; `MarcacionCard`, `ViajeCard`, `ParadasHoja`, `insumos/ModalCargarMaterial` (usan la cola); `lib/api-campo.ts` (respaldo de "hoy"); `routes/calle.tsx`; `routes/asistencia.tsx` y `lib/api-permisos.ts` (marca "sin señal"); `hooks/useSesion.ts` (último usuario conocido sin señal; dueño de la cola); `main.tsx` (sincronizador y registro del service worker solo en producción); **nuevo** `apps/web/public/sw.js`.
+- Pruebas: `tests/loop4/sin-senal.test.ts`; `scripts/prueba-sin-senal.cjs`, `scripts/prueba-sin-senal-recarga.cjs` (este último necesita el sitio compilado o Vercel).
+- Docs: `docs/LOOP_4_DISENO.md` §6, `TRASPASO.md` §5 y §6.
+
+**Verificado:** base nueva `0001`–`0017`; backend **152/152**, web **141/141**, lint y tipos en 0; recorridos locales Loop 3 **9/9**, 4 **7/7**, 5 **7/7**, 6 **5/5**, 7 **5/5**, 8 **6/6**, 9 **7/7**, sin señal **4/4**; recarga sin señal con el sitio compilado: **OK**.
+
+**Para Antigravity (solo esto):**
+1. `git status`: `Documentos/` NO debe aparecer. Confirmar que `apps/web/public/sw.js` SÍ entra (es nuevo).
+2. `pnpm db:migrate` en `afull-dev` (aplica `0017`). Pegá la salida.
+3. `pnpm lint && pnpm typecheck && pnpm build`; commit `feat(loop4): sin señal en la calle — cola en el celular con hora real y app que abre sin conexión (Claude Code)`; push.
+4. Contra Vercel: `node scripts/prueba-sin-senal.cjs` y `node scripts/prueba-sin-senal-recarga.cjs` (con `BASE_URL`). Verificar que `https://…/sw.js` responde 200 (no el `index.html`). Hash, CI y salidas en tu mesa; fila en la bitácora §13.
+
+---
+
 ## Loop 9: portal del cliente y pedidos — Claude Code, 2026-11-03 20:00
 
 **Diseño, seguridad y supuestos:** `docs/LOOP_9_DISENO.md`.

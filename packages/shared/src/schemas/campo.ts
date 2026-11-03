@@ -49,6 +49,9 @@ export const paradaSchema = z.object({
   motivoExtra: z.string().trim().max(1000).optional(),
 });
 
+/** Hora real de una acción cargada sin señal (la pone la cola del celular). La API la acota. */
+const ocurridaAt = z.string().datetime({ offset: true }).optional();
+
 export const iniciarViajeSchema = z.object({
   vehiculoId: z.string().uuid(),
   hojaRutaId: z.string().uuid().optional(),
@@ -57,6 +60,7 @@ export const iniciarViajeSchema = z.object({
   gpsLat: lat.optional(),
   gpsLng: lng.optional(),
   claveIdempotencia: clave,
+  ocurridaAt,
 });
 export const cerrarViajeSchema = z.object({
   kmFin: km,
@@ -64,8 +68,10 @@ export const cerrarViajeSchema = z.object({
   gpsLat: lat.optional(),
   gpsLng: lng.optional(),
   claveIdempotencia: clave,
+  ocurridaAt,
 });
-export const omitirParadaSchema = z.object({ motivo: texto(1000) });
+export const omitirParadaSchema = z.object({ motivo: texto(1000), ocurridaAt });
+export const completarParadaSchema = z.object({ ocurridaAt });
 
 export const marcarAsistenciaSchema = z.object({
   tipo: z.enum(['ENTRADA', 'SALIDA']),
@@ -74,6 +80,7 @@ export const marcarAsistenciaSchema = z.object({
   precisionM: z.number().min(0).max(100_000).optional(),
   dispositivoHash: z.string().regex(/^[0-9a-f]{16,64}$/i, 'Huella de dispositivo inválida'),
   claveIdempotencia: clave,
+  ocurridaAt,
 });
 
 export const filtroAsistenciaSchema = z.object({

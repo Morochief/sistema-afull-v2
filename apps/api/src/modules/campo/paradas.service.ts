@@ -2,10 +2,10 @@ import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
 import { ErrorApp } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
-import { personaDeSesion, enTx, hoyAsuncion } from './comun.js';
+import { personaDeSesion, enTx, hoyAsuncion, horaDeAccion } from './comun.js';
 
 /** Completar u omitir una parada de una hoja en la que la persona está. Repetir la misma acción no falla. */
-export function cerrarParada(ctx: Ctx, paradaId: string, accion: 'COMPLETADA' | 'OMITIDA', motivo?: string) {
+export function cerrarParada(ctx: Ctx, paradaId: string, accion: 'COMPLETADA' | 'OMITIDA', motivo?: string, ocurridaAt?: string) {
   return enTx(async (tx) => {
     const persona = await personaDeSesion(tx, ctx.usuarioId);
     const [p] = await tx`
@@ -21,9 +21,10 @@ export function cerrarParada(ctx: Ctx, paradaId: string, accion: 'COMPLETADA' | 
     if (p.estado !== 'PENDIENTE') throw new ErrorApp(409, `La parada ya está ${p.estado}`);
     if (p.hoja_estado === 'FINALIZADA') throw new ErrorApp(409, 'La hoja de ruta está finalizada');
     if (accion === 'OMITIDA' && !motivo?.trim()) throw new ErrorApp(400, 'Omitir una parada requiere motivo');
+    const h = await horaDeAccion(tx, ocurridaAt);
     await tx`
-      UPDATE hoja_ruta_parada SET estado = ${accion}, motivo_omision = ${accion === 'OMITIDA' ? motivo!.trim() : null},
-             completada_at = ${accion === 'COMPLETADA' ? sql`clock_timestamp()` : null}
+      UPDATE hoja_ruta_parada SET estado = ${accion}, motivo_omision = ${accion === 'OMITIDA' ? motivo!.trim() : null}, cierre_sin_senal = ${h.sinSenal},
+             completada_at = ${accion === 'COMPLETADA' ? sql`coalesce(${h.hora}::timestamptz, clock_timestamp())` : null}
       WHERE id = ${paradaId}
     `;
     // Si ya no quedan paradas pendientes, la hoja se finaliza sola.

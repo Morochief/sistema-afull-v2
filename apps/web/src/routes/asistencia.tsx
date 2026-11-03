@@ -14,7 +14,16 @@ const metros = (m: number | null) => (m === null ? '—' : m >= 1000 ? `${(m / 1
 export function AsistenciaPage() {
   const { datos, estado, filtros, setFiltros, reintentar } = useListadoUrl<Marcacion>('/asistencia', 'asistencia', listarAsistencia);
   const columnas: Columna<Marcacion>[] = [
-    { id: 'cuando', encabezado: 'Cuándo', ancho: 'w-40', celda: (f) => <span className="font-mono text-xs text-neutral-300">{formatearFechaHora(f.marcada_at)}</span> },
+    {
+      id: 'cuando', encabezado: 'Cuándo', ancho: 'w-44',
+      celda: (f) => (
+        <div>
+          <span className="font-mono text-xs text-neutral-300">{formatearFechaHora(f.marcada_at)}</span>
+          {/* Cargada sin señal: la hora es la del celular (se acota en la API, pero es falsificable). */}
+          {f.sin_senal && <div className="text-[10px] text-amber-400" title={`Llegó ${formatearFechaHora(f.recibida_at)}`}>sin señal · llegó {formatearFechaHora(f.recibida_at)}</div>}
+        </div>
+      ),
+    },
     { id: 'persona', encabezado: 'Persona', celda: (f) => <span className="text-white">{f.persona_nombre}</span> },
     { id: 'tipo', encabezado: 'Marcó', ancho: 'w-24', celda: (f) => <span className="text-xs text-neutral-300">{f.tipo === 'ENTRADA' ? 'Entrada' : f.tipo === 'SALIDA' ? 'Salida' : f.tipo}</span> },
     {

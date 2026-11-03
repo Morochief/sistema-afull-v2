@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { CheckCircle2, Navigation, Package, XCircle } from 'lucide-react';
-import { completarParada, omitirParada, type MiDiaCampo } from '../../lib/api-campo.js';
+import type { MiDiaCampo } from '../../lib/api-campo.js';
+import { enviarOEncolar } from '../../lib/cola-offline.js';
+import { useColaOffline } from '../../hooks/useColaOffline.js';
 import { enlaceMapa } from '../../lib/dispositivo.js';
 import { mensajeDeError } from '../../lib/api.js';
 import { Badge } from '../ui/badge.js';
@@ -16,11 +18,18 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
   const [omitiendo, setOmitiendo] = useState<string | null>(null);
   const [motivo, setMotivo] = useState('');
   const [material, setMaterial] = useState<Hoja['paradas'][number] | null>(null);
+  const { pendientes } = useColaOffline();
+  const porEnviar = (id: string) => pendientes.find((p) => p.url.startsWith(`/api/campo/paradas/${id}/`));
 
   const accion = async (id: string, completar: boolean) => {
     try {
-      const r = completar ? await completarParada(id) : await omitirParada(id, motivo.trim());
-      if (r.hoja_finalizada) toast.success('¡Hoja de ruta terminada!');
+      const parada = hoja.paradas.find((x) => x.id === id);
+      const etiqueta = `${completar ? 'Parada hecha' : 'Parada omitida'}: ${parada?.codigo_ot ?? ''}`;
+      const envio = completar
+        ? await enviarOEncolar<{ hoja_finalizada?: boolean }>(etiqueta, `/api/campo/paradas/${id}/completar`)
+        : await enviarOEncolar<{ hoja_finalizada?: boolean }>(etiqueta, `/api/campo/paradas/${id}/omitir`, { motivo: motivo.trim() });
+      if (envio.encolada) toast.info('Guardado sin señal: se envía solo cuando vuelva.');
+      else if (envio.respuesta.hoja_finalizada) toast.success('¡Hoja de ruta terminada!');
       setOmitiendo(null);
       setMotivo('');
       onCambio();
@@ -49,7 +58,8 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
                 {p.estado !== 'PENDIENTE' && <Badge variant={p.estado === 'COMPLETADA' ? 'success' : 'danger'}>{p.estado === 'COMPLETADA' ? 'Hecha' : 'Omitida'}</Badge>}
               </div>
             </div>
-            {p.estado === 'PENDIENTE' && (
+            {p.estado === 'PENDIENTE' && porEnviar(p.id) && <p className="text-amber-300">{porEnviar(p.id)!.url.endsWith('/completar') ? 'Hecha' : 'Omitida'} · se envía cuando vuelva la señal</p>}
+            {p.estado === 'PENDIENTE' && !porEnviar(p.id) && (
               omitiendo === p.id ? (
                 <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (motivo.trim()) void accion(p.id, false); }}>
                   <Input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="¿Por qué no se hizo?" className="h-10 text-xs" autoFocus />

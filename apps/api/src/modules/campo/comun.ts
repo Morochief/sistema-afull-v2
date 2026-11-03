@@ -32,3 +32,17 @@ export async function enTx<T>(fn: (tx: TransactionSql) => Promise<T>): Promise<T
 /** Fecha de hoy en Asunción (AAAA-MM-DD): el día laboral no es el día UTC. */
 export const hoyAsuncion = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
+/**
+ * Hora de una acción: la del servidor, o la que guardó el celular sin señal (marcada como tal).
+ * Límites: no más de 2 minutos en el futuro (relojes desfasados) ni más de 72 h atrás.
+ */
+export async function horaDeAccion(tx: TransactionSql, ocurridaAt?: string): Promise<{ hora: Date | null; sinSenal: boolean }> {
+  if (!ocurridaAt) return { hora: null, sinSenal: false };
+  const [{ ok, futura }] = await tx`
+    SELECT ${ocurridaAt}::timestamptz BETWEEN now() - interval '72 hours' AND now() + interval '2 minutes' AS ok,
+           ${ocurridaAt}::timestamptz > now() + interval '2 minutes' AS futura
+  `;
+  if (!ok) throw new ErrorApp(400, futura ? 'La hora del celular está adelantada: revisá la fecha y hora del teléfono' : 'Lo guardado sin señal tiene más de 3 días: cargalo de nuevo o avisá a la oficina');
+  return { hora: new Date(ocurridaAt), sinSenal: true };
+}

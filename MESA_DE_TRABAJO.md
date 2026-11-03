@@ -1398,7 +1398,7 @@ OK   6 Sofi ve la asistencia y filtra "fuera de la sede"
   [✓] 0016_portal.sql applied successfully!
   [✓] migrations applied successfully!
   ```
-- **Esquema:** Tablas `portal_acceso` (hash de token seguro, expiración a 180 días, revocación) y `pedido` (estado PENDIENTE, CONVERTIDO_OT, CONVERTIDO_PRESUPUESTO, DESCARTADO; triggers inmutables y control de rate-limiting a 30 pedidos/día).
+- **Esquema:** Tablas `portal_acceso` (hash de token seguro, expiración a 180 días, revocación) y `pedido` (estados `NUEVO`, `CONVERTIDO` con OT o con presupuesto, y `DESCARTADO`; triggers inmutables; límite de 30 pedidos/día controlado en la API).
 
 ### 2. Recorrido Playwright en Vercel (`scripts/prueba-loop9.cjs`)
 Ejecutado con `$env:BASE_URL="https://sistema-afull-v2-api.vercel.app"`:

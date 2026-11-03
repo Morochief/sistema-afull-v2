@@ -176,7 +176,8 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 | `0013_insumos_consumos` | (Loop 5, sin stock) `insumo`, `insumo_precio` (historial inmutable), `consumo_insumo` (inmutable, costo congelado, corrección por negativo, tarea de la misma OT por FK compuesta). Aplicada en `afull-dev`. |
 | `0014_costeo` | (Loop 6) `ot_costeo`: snapshot **inmutable** del costo real (mano de obra, material, km, total, venta, margen) generado en la misma transacción que pasa la OT a TERMINADO o CANCELADO; único redondeo. Índices para viajes por hoja y paradas por OT. Aplicada en `afull-dev`. |
 | `0015_permisos` | (Loop 8) `solicitud_permiso` (formulario de la empresa; solo cambian estado y descuento; número `PER-AAAA-NNNN`; idempotente) y `solicitud_permiso_evento` (firmas, inmutable). Aplicada en `afull-dev`. |
-| `0016_portal` | (Loop 9) `portal_acceso` (token solo como SHA-256, vence, se revoca sin reactivar) y `pedido` (`PED-AAAA-NNNN`, local del mismo cliente por FK compuesta, se resuelve una vez en OT o presupuesto del mismo cliente o se descarta con motivo); `uq_ot_id_cliente` en `orden_trabajo`. **Pendiente de aplicar en `afull-dev`.** |
+| `0016_portal` | (Loop 9) `portal_acceso` (token solo como SHA-256, vence, se revoca sin reactivar) y `pedido` (`PED-AAAA-NNNN`, local del mismo cliente por FK compuesta, se resuelve una vez en OT o presupuesto del mismo cliente o se descarta con motivo); `uq_ot_id_cliente` en `orden_trabajo`. Aplicada en `afull-dev`. |
+| `0017_sin_senal` | (Loop 4, L4.E4) Marcas "sin señal" y hora real de lo cargado sin conexión: `marcacion_asistencia.sin_senal` y `recibida_at`, `viaje.inicio_sin_senal`/`cierre_sin_senal` (con el trigger de cierre protegiendo el del inicio), `hoja_ruta_parada.cierre_sin_senal`. **Pendiente de aplicar en `afull-dev`.** |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
@@ -206,7 +207,11 @@ Criterios de aceptación:
 
 Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,seed}.test.ts`. El test de la `anon key` no corre en CI (necesita la API REST de Supabase); correrá a diario contra `dev` en `tests-dev.yml` (pendiente). Los tests tienen un guard `TEST_ENV=dev` y **nunca se corren contra `prod`**.
 
-### Loop 9: Portal del cliente — IMPLEMENTADO (Claude Code, 2026-11-03), sin commit
+### Loop 4 (L4.E4): Sin señal en la calle — IMPLEMENTADO (Claude Code, 2026-11-03), sin commit
+
+Cola en el celular para marcación, viajes, paradas y material; se manda sola al volver la señal, en orden, con la hora real (acotada y marcada "sin señal"); la app abre sin señal (service worker). Detalle: `docs/LOOP_4_DISENO.md` §6. **Falta probarlo en celulares reales.** Sigue pendiente L4.E3 (fotos: almacenamiento).
+
+### Loop 9: Portal del cliente — COMPLETO (en main, `ae180f8`)
 
 Enlace sin contraseña (token en el fragmento, hasheado en la base, header `Authorization: Portal`, sin cookies), el cliente ve sus OTs sin montos y pide trabajos por local; Comercial los convierte en OT o presupuesto o los descarta. Detalle y supuestos: `docs/LOOP_9_DISENO.md`. **No dar enlaces a clientes reales hasta salir a producción** (bloqueo §12).
 

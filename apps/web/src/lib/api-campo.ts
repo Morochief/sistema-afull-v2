@@ -1,4 +1,4 @@
-import { apiFetch } from './api.js';
+import { apiFetch, ErrorApi } from './api.js';
 
 const json = (body: unknown) => ({ body: JSON.stringify(body) });
 
@@ -59,6 +59,25 @@ export const agregarParadaHoja = (id: string, d: { ordenTrabajoId: string; horaE
 
 // Cuadrilla
 export const miDiaCampo = () => apiFetch<MiDiaCampo>('/api/campo/hoy');
+
+const CLAVE_DIA = 'afull_campo_hoy';
+/**
+ * "Hoy en la calle" con respaldo: si no hay señal se muestra lo último que se bajó (y se avisa).
+ * Los errores del servidor (403, etc.) no se tapan con el respaldo.
+ */
+export async function miDiaCampoConRespaldo(): Promise<MiDiaCampo & { sin_conexion?: string }> {
+  try {
+    const d = await miDiaCampo();
+    try { localStorage.setItem(CLAVE_DIA, JSON.stringify({ d, at: new Date().toISOString() })); } catch { /* sin almacenamiento */ }
+    return d;
+  } catch (e) {
+    if (!(e instanceof ErrorApi && e.status === 0)) throw e;
+    let guardado: { d: MiDiaCampo; at: string } | null = null;
+    try { guardado = JSON.parse(localStorage.getItem(CLAVE_DIA) ?? 'null'); } catch { /* corrupto */ }
+    if (!guardado) throw e;
+    return { ...guardado.d, sin_conexion: guardado.at };
+  }
+}
 export const iniciarViaje = (d: { vehiculoId: string; hojaRutaId?: string; kmInicio: number; motivoKmInicio?: string; gpsLat?: number; gpsLng?: number; claveIdempotencia: string }) =>
   apiFetch<{ id: string }>('/api/campo/viajes/iniciar', { method: 'POST', ...json(d) });
 export const cerrarViaje = (id: string, d: { kmFin: number; motivoDesvio?: string; gpsLat?: number; gpsLng?: number; claveIdempotencia: string }) =>
