@@ -1334,3 +1334,50 @@ OK   5 Edu (taller) no ve "Rentabilidad" y si escribe la URL vuelve a su pantall
   ```
 - **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
 - **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
+
+
+---
+
+## Entrega: Loop 8 — RR.HH. (Solicitudes de Permiso con Firmas y Pantalla de Asistencia)
+
+**Fecha:** 2026-11-03 17:00  
+**Commit:** `a9780e1` — `feat(loop8): RR.HH. — solicitudes de permiso con firmas y pantalla de asistencia (Claude Code)`  
+**GitHub Actions CI Run:** [#41707638174](https://github.com/Morochief/sistema-afull-v2/actions/runs/41707638174) — **Success** (Lint 0, Tipos 0, 146 tests backend en CI, 122 tests web, Build Vite 8).
+
+### 1. Migración 0015 aplicada en `afull-dev`
+- **Comando:** `pnpm db:migrate`
+- **Salida:**
+  ```text
+  [✓] 0015_permisos.sql applied successfully!
+  [✓] migrations applied successfully!
+  ```
+- **Esquema:** Tablas `solicitud_permiso` y `solicitud_permiso_evento` con máquina de estados (PENDIENTE → AUTORIZADO / RECHAZADO / REGISTRADO / ANULADO), trazabilidad de firmas inmutables por trigger, y control estricto de borrado/truncate.
+
+### 2. Recorrido Playwright en Vercel (`scripts/prueba-loop8.cjs`)
+Ejecutado con `$env:BASE_URL="https://sistema-afull-v2-api.vercel.app"`:
+```text
+OK   1 fixtures: Edu (taller, persona), Juan (admin), Sofi (rrhh) y una marcación de Edu fuera de la sede
+OK   2 Edu pide permiso para retirarse antes (15:00 a 17:00) desde el menú Permisos
+OK   3 Juan (jefe) lo autoriza
+OK   4 Sofi (RR.HH.) lo registra sin descuento
+OK   5 Edu lo ve registrado, sin descuento, con las tres firmas
+OK   6 Sofi ve la asistencia y filtra "fuera de la sede"
+
+>>> RECORRIDO LOOP 8 EN VERDE: 6/6 PASOS OK <<<
+```
+
+### 3. Estado de la Suite Completa
+- **Vitest Backend:**
+  ```text
+   Test Files  38 passed (38)
+        Tests  148 passed (148)
+  ```
+  *(En GitHub Actions CI sin `anon.test.ts`: 37 suites, 146 tests pasando en verde)*
+- **Vitest Web:**
+  ```text
+   Test Files  24 passed (24)
+        Tests  122 passed (122)
+     Duration  7.02s
+  ```
+- **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
