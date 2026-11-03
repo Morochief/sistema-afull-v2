@@ -1201,3 +1201,89 @@ OK   5 Edu lo ve con el botón "Abrir en Drive" apuntando al original
   ```
 - **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
 - **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
+
+---
+
+## Entrega: Loop 5 (Partes 2 y 3) — Pantallas de Material, Precios Protegidos e Importación de Catálogo Real
+
+**Fecha:** 2026-11-03 15:20  
+**Commits:**
+1. `074988d` — `feat(loop5): pantallas de material — cargar, merma, compartido, material por OT y catálogo (Claude Code)`
+2. `4683c1c` — `feat(loop5): precios solo para admin y comercial; importador acepta filas sin costo (Claude Code)`
+**GitHub Actions CI Run:** [#41692783914](https://github.com/Morochief/sistema-afull-v2/actions/runs/41692783914) — **Success** (Lint 0, Tipos 0, 138 tests backend en CI, 110 tests web, Build Vite 8).
+
+### 1. Importación Autorizada del Catálogo Real en `afull-dev`
+- **Verificación de conexión:** `DATABASE_URL_ADMIN` apunta a `aws-1-sa-east-1.pooler.supabase.com:5432` (`postgres.oxthxdnyxabupeebzwmn`, base `afull-dev`). Producción y otros datos reales permanecen bloqueados.
+- **Salida Dry-Run (`pnpm tsx scripts/importar-insumos.ts Documentos/insumos_corregido.csv`):**
+  ```text
+  Filas leídas: 260 · para importar: 255 (sin precio: 1) · repetidas idénticas: 5 · a revisar: 0
+  Por unidad: {
+    M2: 49,
+    PLANCHA: 17,
+    METRO: 49,
+    UNIDAD: 100,
+    LITRO: 24,
+    LATA: 3,
+    ROLLO: 5,
+    KM: 1,
+    MINUTO: 2,
+    KG: 1,
+    BOLSA: 1,
+    TIRA: 2,
+    PAR: 1
+  }
+    · sin precio (cargarlo en Insumos): Barniz PU 7800
+
+  Prueba sin escribir (agregá --aplicar para cargar).
+  ```
+- **Salida con `--aplicar` (`pnpm tsx scripts/importar-insumos.ts Documentos/insumos_corregido.csv --aplicar`):**
+  ```text
+  Filas leídas: 260 · para importar: 255 (sin precio: 1) · repetidas idénticas: 5 · a revisar: 0
+  Por unidad: {
+    M2: 49,
+    PLANCHA: 17,
+    METRO: 49,
+    UNIDAD: 100,
+    LITRO: 24,
+    LATA: 3,
+    ROLLO: 5,
+    KM: 1,
+    MINUTO: 2,
+    KG: 1,
+    BOLSA: 1,
+    TIRA: 2,
+    PAR: 1
+  }
+    · sin precio (cargarlo en Insumos): Barniz PU 7800
+
+  Importados: 255 (los que ya existían se saltearon).
+  ```
+
+### 2. Recorrido Playwright en Vercel (`scripts/prueba-loop5.cjs`)
+```text
+OK   1 fixtures: Juan (admin), Edu (taller, persona) y OT con tarea de impresión para Edu
+OK   2 Juan da de alta Lona (m², Gs 35.000) y Ojal (u., Gs 500) en Insumos
+OK   3 Edu carga la merma desde Mi trabajo: 1,52 × 2 m, 2 piezas de 1 × 1 → 65,8 % aprovechado
+OK   4 Edu carga 10 ojales con "Material"
+OK   5 Juan ve en la OT: total Gs 111.400 (70.000 + 36.400 de desperdicio + 5.000)
+OK   6 Juan corrige la línea de ojales con motivo → total Gs 106.400
+OK   7 Juan sube el precio de la lona y lo ya cargado no cambia
+
+>>> RECORRIDO LOOP 5 EN VERDE: 7/7 PASOS OK <<<
+```
+
+### 3. Estado de la Suite Completa
+- **Vitest Backend (local con `anon.test.ts`):**
+  ```text
+   Test Files  36 passed (36)
+        Tests  140 passed (140)
+  ```
+  *(En GitHub Actions CI sin `anon.test.ts`: 35 suites, 138 tests pasando en verde)*
+- **Vitest Web:**
+  ```text
+   Test Files  22 passed (22)
+        Tests  110 passed (110)
+     Duration  10.35s
+  ```
+- **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
