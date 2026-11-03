@@ -27,6 +27,9 @@ import { FlotaPage } from './routes/flota.js';
 import { ProcesosPage } from './routes/procesos.js';
 import { InsumosPage } from './routes/insumos.js';
 import { RentabilidadPage } from './routes/rentabilidad.js';
+import { PermisosListaPage } from './routes/permisos/lista.js';
+import { PermisoDetallePage } from './routes/permisos/detalle.js';
+import { AsistenciaPage } from './routes/asistencia.js';
 import { useSesion } from './hooks/useSesion.js';
 import { rutaInicialSegunCapacidades } from './lib/rutas.js';
 
@@ -175,9 +178,12 @@ const hojaRutaDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute,
 const flotaRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/flota', component: FlotaPage });
 const procesosRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/procesos', component: ProcesosPage });
 const insumosRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/insumos', component: InsumosPage });
-const rentabilidadRoute = createRoute({
-  getParentRoute: () => appLayoutRoute, path: '/rentabilidad', validateSearch: (search) => listadoSearchSchema.parse(search), component: RentabilidadPage,
-});
+// Listados administrativos: filtros en la URL. El path va literal en cada ruta (TanStack necesita el tipo exacto).
+const listado = () => ({ getParentRoute: () => appLayoutRoute, validateSearch: (search: Record<string, unknown>) => listadoSearchSchema.parse(search) });
+const rentabilidadRoute = createRoute({ ...listado(), path: '/rentabilidad', component: RentabilidadPage });
+const permisosRoute = createRoute({ ...listado(), path: '/permisos', component: PermisosListaPage });
+const permisoDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/permisos/$id', component: PermisoDetallePage });
+const asistenciaRoute = createRoute({ ...listado(), path: '/asistencia', component: AsistenciaPage });
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
@@ -203,6 +209,9 @@ const routeTree = rootRoute.addChildren([
     procesosRoute,
     insumosRoute,
     rentabilidadRoute,
+    permisosRoute,
+    permisoDetalleRoute,
+    asistenciaRoute,
   ]),
 ]);
 

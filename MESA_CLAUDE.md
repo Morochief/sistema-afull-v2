@@ -35,6 +35,27 @@
 
 ---
 
+## Loop 8: RR.HH. (permisos y asistencia) — Claude Code, 2026-11-03 18:30
+
+**Diseño y supuestos:** `docs/LOOP_8_DISENO.md` (basado en el formulario de permiso de la empresa; jefe = admin).
+
+**En el disco, sin commit:**
+- `migrations/0015_permisos.sql` + `meta/_journal.json`.
+- Shared: `machines/permiso.ts`, `schemas/permisos.ts` (+ exports), `schemas/campo.ts` (`q` en el filtro de asistencia).
+- API: `modules/permisos/` (`mutaciones.service.ts`, `consultas.service.ts`, `routes.ts`), ruta `/api/permisos` en `index.ts`; `asistencia/routes.ts` (búsqueda por persona).
+- Web: `lib/api-permisos.ts` (+ `.test.ts`), `components/permisos/` (`etiquetas.ts`, `ModalNuevaSolicitud.tsx`), `routes/permisos/lista.tsx` y `detalle.tsx`, `routes/asistencia.tsx`; `router.tsx`, `routes/app-layout.tsx` (menú Permisos para todos, Asistencia para RR.HH.), `hooks/useListadoUrl.ts`.
+- Pruebas: `tests/loop8/permisos-api.test.ts`; `scripts/prueba-loop8.cjs`.
+- Docs: `docs/LOOP_8_DISENO.md`, `MAPA_REQUISITOS.md`, `TRASPASO.md` §5 y §6.
+
+**Verificado:** base nueva `0001`–`0015`; backend **146/146**, web **122/122**, lint y tipos en 0; recorridos locales Loop 3 **9/9**, 4 **7/7**, 5 **7/7**, 6 **5/5**, 7 **5/5**, 8 **6/6**.
+
+**Para Antigravity (solo esto):**
+1. `git status`: `Documentos/` NO debe aparecer.
+2. `pnpm db:migrate` en `afull-dev` (aplica `0015`). Pegá la salida.
+3. `pnpm lint && pnpm typecheck && pnpm build`; commit `feat(loop8): RR.HH. — solicitudes de permiso con firmas y pantalla de asistencia (Claude Code)`; push. Correr `node scripts/prueba-loop8.cjs` contra Vercel. Hash, CI y línea de Vitest en tu mesa; fila en la bitácora §13.
+
+---
+
 ## Loop 6: costeo real por OT — Claude Code, 2026-11-03 17:00
 
 **Diseño y supuestos:** `docs/LOOP_6_DISENO.md` (reparto de km en partes iguales, umbral 20 %, tiempo de viaje no imputado).

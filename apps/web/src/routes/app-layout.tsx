@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, Link, Navigate, useNavigate, useRouterState } from '@tanstack/react-router';
 import { rutaInicialSegunCapacidades } from '../lib/rutas.js';
 import { useSesion } from '../hooks/useSesion.js';
-import { Users, FileText, LogOut, Clock, Radio, UserCheck, Calculator, FolderKanban, Palette, Truck, Route, MapPinned, ListChecks, Package, TrendingUp } from 'lucide-react';
+import { Users, FileText, LogOut, Clock, Radio, UserCheck, Calculator, FolderKanban, Palette, Truck, Route, MapPinned, ListChecks, Package, TrendingUp, CalendarCheck, FileSignature } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
 import { Badge } from '../components/ui/badge.js';
 
@@ -136,6 +136,14 @@ export function AppLayout() {
       icono: Radio,
       visible: tieneCapacidad('comercial'),
     },
+    {
+      titulo: 'Asistencia',
+      ruta: '/asistencia',
+      icono: CalendarCheck,
+      visible: tieneCapacidad('rrhh'),
+    },
+    // Todos piden permisos (cada uno ve los suyos; RR.HH. y el jefe, todos).
+    { titulo: 'Permisos', ruta: '/permisos', icono: FileSignature, visible: true },
     {
       titulo: 'Personas',
       ruta: '/personas',

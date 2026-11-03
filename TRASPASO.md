@@ -174,7 +174,8 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 | `0011_iva_disenos` | (A) `presupuesto.iva_gs` (IVA 10 % aparte, congelado al enviar). (B) `diseno_version` (enlace de Drive, origen cliente/diseñadora, una pendiente por OT, una sola revisión, inmutable). Aplicada en `afull-dev`. |
 | `0012_procesos_margen` | Catálogo `tipo_tarea` (procesos administrables, `tarea.tipo` pasa de `CHECK` a FK, 26 procesos iniciales de las planillas); margen **sobre la venta** (`CHECK margen_pct < 100`, default 30) y `precio_final_gs` (redondeo manual) congelado al enviar. Aplicada en `afull-dev`. |
 | `0013_insumos_consumos` | (Loop 5, sin stock) `insumo`, `insumo_precio` (historial inmutable), `consumo_insumo` (inmutable, costo congelado, corrección por negativo, tarea de la misma OT por FK compuesta). Aplicada en `afull-dev`. |
-| `0014_costeo` | (Loop 6) `ot_costeo`: snapshot **inmutable** del costo real (mano de obra, material, km, total, venta, margen) generado en la misma transacción que pasa la OT a TERMINADO o CANCELADO; único redondeo. Índices para viajes por hoja y paradas por OT. **Pendiente de aplicar en `afull-dev`.** |
+| `0014_costeo` | (Loop 6) `ot_costeo`: snapshot **inmutable** del costo real (mano de obra, material, km, total, venta, margen) generado en la misma transacción que pasa la OT a TERMINADO o CANCELADO; único redondeo. Índices para viajes por hoja y paradas por OT. Aplicada en `afull-dev`. |
+| `0015_permisos` | (Loop 8) `solicitud_permiso` (formulario de la empresa; solo cambian estado y descuento; número `PER-AAAA-NNNN`; idempotente) y `solicitud_permiso_evento` (firmas, inmutable). **Pendiente de aplicar en `afull-dev`.** |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
@@ -204,7 +205,11 @@ Criterios de aceptación:
 
 Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,seed}.test.ts`. El test de la `anon key` no corre en CI (necesita la API REST de Supabase); correrá a diario contra `dev` en `tests-dev.yml` (pendiente). Los tests tienen un guard `TEST_ENV=dev` y **nunca se corren contra `prod`**.
 
-### Loop 6: Costeo real — IMPLEMENTADO (Claude Code, 2026-11-03), sin commit
+### Loop 8: RR.HH. — IMPLEMENTADO (Claude Code, 2026-11-03), sin commit
+
+Solicitudes de permiso como el formulario de papel: el empleado pide → el jefe (admin) autoriza → RR.HH. registra con descuento sí/no; firmas inmutables, plazo de 24 h marcado, comprobante por enlace. Pantalla de asistencia para RR.HH. Detalle y supuestos: `docs/LOOP_8_DISENO.md`.
+
+### Loop 6: Costeo real — COMPLETO (en main, `650a0fe`)
 
 Costo real por OT = horas cronometradas × tarifa vigente del día + material con costo congelado + km de viajes repartidos entre las OTs de la hoja. Se congela (único redondeo) al terminar o cancelar la OT. Sección en la OT y en el proyecto, y listado "Rentabilidad". Solo admin y comercial. Supuestos a confirmar en `docs/LOOP_6_DISENO.md` §6.
 

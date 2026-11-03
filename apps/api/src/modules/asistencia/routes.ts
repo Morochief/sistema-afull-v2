@@ -4,7 +4,7 @@ import { sql } from '../../db/client.js';
 import { requireSesion, requireCapacidad } from '../auth/middleware.js';
 import { auditar } from '../auditoria/service.js';
 import { ipDe } from '../../lib/ip.js';
-import { TAM_PAGINA, desplazamiento, armarPagina } from '../../lib/paginacion.js';
+import { TAM_PAGINA, desplazamiento, armarPagina, escaparLike } from '../../lib/paginacion.js';
 import { personaDeSesion, enTx } from '../campo/comun.js';
 
 /**
@@ -49,10 +49,11 @@ export const asistenciaRoutes = new Hono()
     const f = filtroAsistenciaSchema.parse(c.req.query());
     const donde = sql`WHERE ${true}
       ${f.personaId ? sql`AND m.persona_id = ${f.personaId}` : sql``}
+      ${f.q?.trim() ? sql`AND p.nombre ILIKE ${'%' + escaparLike(f.q.trim()) + '%'}` : sql``}
       ${f.soloFuera === 'true' ? sql`AND NOT m.dentro_geocerca` : sql``}
       ${f.desde ? sql`AND m.marcada_at >= (${f.desde}::date)::timestamp AT TIME ZONE 'America/Asuncion'` : sql``}
       ${f.hasta ? sql`AND m.marcada_at < ((${f.hasta}::date + 1)::timestamp AT TIME ZONE 'America/Asuncion')` : sql``}`;
-    const [{ total }] = await sql`SELECT count(*)::int AS total FROM marcacion_asistencia m ${donde}`;
+    const [{ total }] = await sql`SELECT count(*)::int AS total FROM marcacion_asistencia m JOIN persona p ON p.id = m.persona_id ${donde}`;
     const items = await sql`
       SELECT m.id, m.persona_id, p.nombre AS persona_nombre, m.tipo, m.marcada_at, m.dentro_geocerca,
              m.distancia_m::float8 AS distancia_m, m.precision_m::float8 AS precision_m, s.nombre AS sede_nombre, m.dispositivo_hash

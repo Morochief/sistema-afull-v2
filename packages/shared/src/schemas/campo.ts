@@ -77,6 +77,7 @@ export const marcarAsistenciaSchema = z.object({
 });
 
 export const filtroAsistenciaSchema = z.object({
+  q: z.string().trim().max(100).optional(),
   personaId: z.string().uuid().optional(),
   desde: fecha.optional(),
   hasta: fecha.optional(),

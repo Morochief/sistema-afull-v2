@@ -45,7 +45,7 @@ Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proye
 | Presupuestado vs. real por OT y por proyecto | 3 (presupuestado) + 6 (real) | Diseñado |
 | Hoja de ruta diaria con paradas y cuadrilla | 4 | ✅ Base, API y pantallas (sin commit las pantallas) |
 | Viajes: odómetro con foto, GPS, alerta de desvío informativa | 4 | ✅ Odómetro, GPS y alerta con pantallas; foto pendiente (Storage) |
-| Asistencia con geocerca de 100 m (disuasiva) | 4 | ✅ Base, API y marcación en "En la calle"; falta la pantalla de RR.HH. |
+| Asistencia con geocerca de 100 m (disuasiva) | 4 | ✅ Base, API, marcación en "En la calle" y pantalla de RR.HH. (Loop 8) |
 | Fotos de evidencia de montaje y **muestras de impresión antes del despacho** (REQ-03, McDonald's) | 4 | Planificado: la infraestructura de fotos (URLs firmadas, bucket privado) se hace una vez y sirve para odómetro, montaje y muestras de tarea |
 | Trabajo offline de cuadrillas | 4 | Planificado |
 | Insumos (catálogo con historial de precios) y consumo por OT — **sin stock** por decisión del usuario | 5 | ✅ Base, API e importador (sin commit); faltan pantallas |
@@ -54,7 +54,7 @@ Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proye
 | Costeo real (horas × tarifa + insumos + km) y prefactura con margen | 6 | Planificado (snapshot al cierre de la OT) |
 | Aprobación de diseños (REQ-06, **corregido por el usuario 2026-11-03**): el diseño puede venir del cliente o de Nachi; queda en Google Drive; **Juan o Sofi** (cualquiera de los dos) dan el OK; recién ahí Edu ve el enlace (hoy Edu pregunta en el grupo "¿la ruleta ya tienen?": eso lo resuelve la cola) | 7 | ✅ Implementado (sin commit): `docs/LOOP_7_DISENO.md` |
 | Botón "Abrir original en Drive" para Edu | 7 | ✅ Implementado (sin commit) |
-| Permisos y justificaciones con comprobante (RR.HH.) | 8 | Planificado |
+| Permisos y justificaciones con comprobante (RR.HH.) | 8 | ✅ Implementado (sin commit): `docs/LOOP_8_DISENO.md`; comprobante por enlace hasta tener almacenamiento |
 | Portal del cliente por enlace, pedidos por local con foto | 9 | Planificado (aquí nace `pedido`) |
 | Pantalla propia de impresión y corte para Edu (REQ-02) | — | **A revisar con Edu después de usar "Mi trabajo"** del Loop 2. Si hace falta, entra como entrega extra del Loop 5 (cola por máquina) |
 | Importar planillas de papel por foto con IA (REQ-07) | — | **Descartado por ahora:** costo y fiabilidad; el operario carga en el celular en el momento |

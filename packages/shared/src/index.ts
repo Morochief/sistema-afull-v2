@@ -17,3 +17,5 @@ export * from './formulas/material.js';
 export * from './schemas/insumos.js';
 export * from './permisos.js';
 export * from './schemas/costeo.js';
+export * from './machines/permiso.js';
+export * from './schemas/permisos.js';
