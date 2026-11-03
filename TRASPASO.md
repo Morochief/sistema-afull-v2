@@ -1,6 +1,6 @@
 # Traspaso del proyecto aFull
 
-Última actualización: 2 de noviembre de 2026 — 18:35 (America/Asuncion).
+Última actualización: 2 de noviembre de 2026 — 22:00 (America/Asuncion).
 Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada tarea o commit.
 
 ---
@@ -37,7 +37,7 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 | Tests Loop 0 (Vitest) | **22/22 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, funciones y default privileges cerrados en `funciones.test.ts`, auth, seed idempotente, inmutabilidad, concurrencia por pooler + `sinPipelining`, CSRF en `csrf.test.ts`). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
 | Tests Loop 1B (Vitest frontend + contrato) | **45/45 tests web en verde** (9 suites) y **6 tests de contrato/API adicionales**, más **15/15 pasos Playwright UI en verde contra Vercel**. **Loop 1B cerrado (CA-1.11 a CA-1.16)**. |
-| Tests Loop 2 (Vitest backend + web) | **17/17 tests backend Loop 2 en verde contra Supabase `dev`** (6 de L2.E1 + 6 de L2.E2 + 3 de L2.E3 + 2 de auditoría reintentos; CA-0.3, CA-2.1 a CA-2.6). Total backend: **61/61 en verde** (59/59 en CI sin `anon.test.ts`). Web: **47/47 en verde** (10 suites). |
+| Tests Loop 2 (Vitest backend + web) | **22 suites backend en verde contra Supabase `dev`** (64/64 tests en local; 62 en CI sin `anon.test.ts`), **16 suites web en verde** (76/76 tests). **Recorrido Playwright CA-2.9 en Vercel (9/9 pasos OK)**. Loop 2 implementado completo (L2.E1 a L2.E4). |
 | Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2, #5 y #6 con D5-1 y migración 0006 con btree_gist comprobados**). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 3** (hoy no se usa Storage). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
@@ -229,7 +229,7 @@ Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "C
 
 ## 8. Backlog por loop (anotado para no olvidarlo)
 
-- **Loop 2 (L2.E1, L2.E2 y L2.E3 completados):** CA-0.3 (concurrencia de inicios simultáneos con serialización `FOR UPDATE` en persona, rechazo Postgres 23505 y sincronización con `clock_timestamp()` contra `23514`). Exclusion constraint de tarifas con `btree_gist` (migración `0006`). CA-2.1 a CA-2.6 verificados (módulo `live` portable, broadcast REST aceptado con 202 por clave anon, y endpoint `/api/live/estado`). Pendiente L2.E4: vistas frontend (Mi trabajo, tareas en OT, En vivo, Personas), CA-2.7 (reloj con desfase simulado) y CA-2.9 (recorrido Playwright de interfaz en local y Vercel).
+- **Loop 2 (L2.E1 a L2.E4 completados):** CA-0.3 (concurrencia de inicios simultáneos con serialización `FOR UPDATE` en persona, rechazo Postgres 23505 y sincronización con `clock_timestamp()` contra `23514`). Exclusion constraint de tarifas con `btree_gist` (migración `0006`). CA-2.1 a CA-2.6 verificados (módulo `live` portable, broadcast REST aceptado con 202 por clave anon, y endpoint `/api/live/estado`). L2.E4 completado: vistas frontend (Mi trabajo, tareas en OT, En vivo, Personas), CA-2.7 (reloj con desfase simulado, 4 tests en verde), variables de entorno en Vercel y CA-2.9 (recorrido Playwright de 9/9 pasos OK contra Vercel con cleanup garantizado).
 - **Loop 3:** la cola Dexie guarda también los **blobs de las fotos**, e **idempotencia** en `marcacion_asistencia`, viajes e intervalos. **Un `401` no descarta eventos**: se conservan, se pide login y se reintenta. Definir la regla de reparto de km entre varias OT de un mismo viaje (por paradas o por km de tramo) en `shared/formulas`. `sucursal.gps_lat/lng` ya existe.
 - **Loop 4:** cada `consumo_insumo` genera su `movimiento_stock` (`SALIDA_PRODUCCION`) **en la misma transacción**, con FK entre ambos y costo unitario congelado al momento del consumo. Definir cómo se deriva el costo promedio (promedio móvil). Quitar `costo_promedio_gs` y `km_actual` como contadores mutables del diseño original.
 - **Loop 5:** snapshot de costeo al cierre de la OT (no vista materializada): horas × tarifa vigente + insumos + km × costo por km. Cálculo en alta precisión y redondeo único al final.
@@ -285,9 +285,9 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al principio 7 (2026-11-02, decisión del usuario):** se inició y cerró Loop 1B con el Loop 0 abierto en dos puntos: (a) CA-0.9, el simulacro manual de restore en `afull-restore-drill`; (b) los secrets `DEV_*` restantes y la corrida de `tests-dev.yml`. **Bloqueo:** no se crea `afull-prod` con datos reales ni se carga ningún dato real hasta cerrar (a) y (b). Nota: los artefactos de backup duran 30 días; si el simulacro se hace después del 2026-12-02, volver a correr `backup-db.yml`.
 
-1. **Auditoría final de Entrega E3 / Cierre Loop 1B** por Claude Code.
-2. **Apertura de Loop 2 (Tareas, Cronómetro y Control en Vivo):**
-   - Definir diseño de Loop 2: asignación de tareas a colaboradores, estados de tarea, inicio y fin de cronómetro concurrente con detección de 409 (CA-0.3), módulo live tras interfaz portable de Supabase Broadcast.
+1. **Auditoría de Entrega L2.E4 por Claude Code** en `MESA_CLAUDE.md` y dictamen/cierre de Loop 2.
+2. **Apertura de Loop 3 (App Offline de Móviles y Flota de Vehículos):**
+   - Cola Dexie en cliente, subida de fotos de odómetro/evidencia, reparto de km de viaje entre OTs, y sincronización resiliente.
    - Mantener el bloqueo activo sobre producción y datos reales hasta el cierre de (a) y (b).
 
 ---
@@ -330,3 +330,5 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `d38e9b7` | **Loop 2 — Entrega L2.E3:** Módulo live (servidor y cliente), broadcast REST y endpoint `/api/live/estado` (CA-2.6). | 59/59 tests backend en dev, 47/47 web, CI Run `#45` green |
 | 2026-11-02 | `0d5ed28` | docs: reportar entrega L2.E3 y actualizar bitacora de traspaso. | CI Run `#46` green |
 | 2026-11-02 | `3ffd125` | fix(api,web): live sin claves fijas, día de Asunción, idempotencia de pausar/finalizar y bloqueo de reasignación en curso (auditoría L2.E2/E3). | 61/61 tests backend en dev, 47/47 web, CI Run `#47` green |
+| 2026-11-02 | `cf2cf95` | docs: registrar resolucion de auditoria L2.E2/E3 en mesa y bitacora. | CI Run `#47` green |
+| 2026-11-02 | `bcbdc07` | **Loop 2 — Entrega L2.E4:** Frontend completo de Loop 2 (Mi trabajo, tareas en OT, En vivo, Personas), reloj simulado (CA-2.7), usuarios vinculables y recorrido Playwright CA-2.9 (9/9 pasos OK en Vercel). | 64/64 tests backend en dev, 76/76 web, CI Run `#48` (`#41555637358`) green, Playwright Vercel 9/9 OK |

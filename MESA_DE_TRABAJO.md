@@ -684,3 +684,85 @@ Se implementó el ciclo de vida operativo de tareas, cronómetro de operarios y 
 
 
 
+
+
+---
+
+## Entrega L2.E4: Frontend Completo de Loop 2, Reloj Simulado, Vercel y Prueba Playwright (CA-2.9)
+
+**Fecha:** 2026-11-02 21:55  
+**Commit:** `bcbdc07` (`feat(web): entrega L2.E4 - Mi trabajo, tareas en OT, En vivo, Personas, reloj simulado y prueba CA-2.9`)  
+**GitHub Actions CI Run:** [#41555637358](https://github.com/Morochief/sistema-afull-v2/actions/runs/41555637358) (Run #48) — **Success** (Lint 0, Tipos 0, 62 tests backend en CI / 64 en local, 76 tests web, Build Vite 8).
+
+### 1. Variables de Entorno en Vercel
+Verificadas en el proyecto Vercel `sistema-afull-v2` (`prj_knFrBt13xyXVfSxTiMzXcCOOhBJa`) para los tres entornos (`Production`, `Preview`, `Development`):
+- `SUPABASE_URL` = `https://oxthxdnyxabupeebzwmn.supabase.co`
+- `SUPABASE_ANON_KEY` = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+- `VITE_SUPABASE_URL` = `https://oxthxdnyxabupeebzwmn.supabase.co`
+- `VITE_SUPABASE_ANON_KEY` = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+
+### 2. Implementación de los 7 Puntos de Claude Code
+1. **Endpoint `GET /api/usuarios/vinculables`:**
+   - Creado en `apps/api/src/modules/auth/usuarios.routes.ts`, montado bajo `/api/usuarios`.
+   - Protegido con `requireSesion` y `requireCapacidad('admin')`.
+   - Proyecta únicamente `id`, `username`, `activo` y `capacidades` (mediante `coalesce((SELECT json_agg(...) ...), '[]'::json)`).
+   - **Excluye de forma absoluta `password_hash`**.
+   - Suite `tests/loop2/usuarios-vinculables.test.ts` (3/3 tests pasando: 401 sin sesión, 403 no admin, 200 con admin verificando la ausencia de hashes).
+2. **Redirección condicional según capacidades:**
+   - Implementado en `apps/web/src/lib/rutas.ts` (`rutaInicialSegunCapacidades`) y testeado en `rutas.test.ts` (6 tests).
+   - Operario con `taller` o `montaje` sin `comercial` ni `rrhh` -> `/mi-trabajo`.
+   - Usuario con `rrhh` sin `comercial` -> `/personas`.
+   - Usuario con `comercial` o admin -> `/clientes`.
+   - Conectado en `/` (`router.tsx`), post-login (`login.tsx`) y navegación de barra (`app-layout.tsx`).
+3. **Sincronización resiliente (Polling 30 s + Realtime):**
+   - Hooks `useMiTrabajo` y `useLive` configurados con TanStack Query `refetchInterval: 30_000` permanente.
+   - Suscripción en cliente a `suscribirseLive(cb)` invalidando reactivamente las queries ante broadcasts.
+4. **Mensaje amigable en `/mi-trabajo` sin vinculación:**
+   - Si un usuario con capacidad `taller` o `montaje` ingresa sin ficha de persona vinculada (403 `sinPersonaVinculada`), la vista renderiza una pantalla explicativa clara: *"Tu usuario no está vinculado a una ficha de personal. Solicitá al administrador o a RR.HH. que vincule tu cuenta en la sección Personas."*
+5. **Idempotencia de botones en Mi Trabajo:**
+   - Cada interacción de inicio genera un UUID fresco (`crypto.randomUUID()`) y solo se reutiliza si esa misma llamada sufre reintentos por falla de red.
+6. **Despliegue y build en Vercel:**
+   - Variables inyectadas en Vercel y despliegue actualizado de `bcbdc07` respondiendo HTTP 200 en cliente y API.
+7. **Prueba automatizada Playwright CA-2.9:**
+   - `scripts/prueba-loop2.cjs` ejecutado en local y directamente contra Vercel (`https://sistema-afull-v2-api.vercel.app`).
+   - Higiene estricta: crea usuarios y persona con prefijo `zz_test_`, y en el `finally` cierra intervalos y desactiva entidades.
+
+### 3. Evidencia Literal del Recorrido Playwright en Vercel (CA-2.9)
+```text
+================================================================
+RECORRIDO PLAYWRIGHT LOOP 2 (CA-2.9)
+Destino: https://sistema-afull-v2-api.vercel.app
+================================================================
+
+OK   0. setup fixtures (usuarios y persona vinculada)
+OK   1. login comercial
+OK   2. comercial crea OT con 2 tareas asignadas
+OK   3. logout comercial
+OK   4. login operario -> redirección a /mi-trabajo
+OK   5. operario inicia Tarea A
+OK   6. operario inicia Tarea B (auto-pausa de Tarea A)
+OK   7. operario finaliza Tarea B
+OK   8. logout operario
+OK   9. comercial verifica en Control en Vivo
+
+================================================================
+>>> RECORRIDO COMPLETO LOOP 2 (CA-2.9) EN VERDE: 9/9 PASOS OK <<<
+================================================================
+
+[CLEANUP] Limpiando fixtures de prueba...
+[CLEANUP OK] Conexiones cerradas y datos desactivados.
+```
+
+### 4. CA-2.7: Reloj en Cliente con Desfase Simulado
+- Módulo `apps/web/src/lib/reloj.ts` calcula el desfase `desfaseMs = servidorAhora.getTime() - clienteAhora.getTime()`.
+- Suite `apps/web/src/lib/reloj.test.ts` (4/4 tests en verde):
+  - Desfase positivo (+15 min): celular atrasado corrige la hora sumando el desfase exacto.
+  - Desfase negativo (-2 h): celular adelantado descuenta el desfase correctamente sin arrojar tiempos falsos.
+  - Sincronización en tiempo real: cálculo idéntico al del servidor con tolerancia < 5 ms.
+  - Formateador `formatearMmSs` / `formatearHhMmSs` verificado con padding de ceros.
+
+### 5. Estado de la Suite Completa
+- **Backend Tests:** **22 suites pasadas, 64/64 tests en verde** en local (62/62 en CI de GitHub Actions por exclusión de `anon.test.ts`).
+- **Web Tests:** **16 suites pasadas, 76/76 tests en verde** (Vitest + jsdom).
+- **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Regla de Tamaño:** Todos los archivos de `apps/` y `packages/` cumplen estrictamente con `max-lines: 250`.
