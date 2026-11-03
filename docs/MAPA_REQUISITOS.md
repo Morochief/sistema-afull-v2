@@ -17,6 +17,12 @@ Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proye
 3. **El diseño previo para vender no se registra** por ahora (pasa poco).
 4. **No hay tabla `pedido` para el trabajo interno:** Comercial abre directamente un presupuesto en borrador. `pedido` llega con el portal (Loop 9), donde el cliente carga por local.
 
+## Personas y roles (usuario, 2026-11-03)
+- **Juan:** dueño de aFull (capacidad `admin`). Aprueba diseños.
+- **Sofi:** administración y comercial (`comercial`, `rrhh`). Aprueba diseños.
+- **Edu:** taller, impresión y corte (`taller`). Abre el diseño aprobado en Drive.
+- **Nachi:** diseñadora **externa** (no es empleada): solo sube diseños a Drive cuando el cliente no trae uno. Tendrá un usuario con capacidad `diseno` y acceso mínimo; **no usa cronómetro ni entra en Control en Vivo**. Su costo va como ítem `TERCERIZADO` (a confirmar).
+
 ## Matriz
 
 | Requisito (origen) | Loop | Estado |
@@ -25,19 +31,19 @@ Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proye
 | Permisos por capacidad, sin cédulas fijas en el código (P2-02) | 0 | ✅ Hecho |
 | OT sin presupuesto obligatorio (REQ-05) | 1 | ✅ Hecho |
 | Control en vivo de quién trabaja en qué | 2 | ✅ Hecho |
-| Presupuesto con ítems, margen e impresión/PDF | 3 | Diseñado (`LOOP_3_DISENO.md`) |
-| Proyecto como contenedor de varias OTs (campañas multi-local) | 3 | Diseñado |
+| Presupuesto con ítems, margen e impresión/PDF | 3 | ✅ Implementado (sin commit) |
+| Proyecto como contenedor de varias OTs (campañas multi-local) | 3 | ✅ Implementado (sin commit) |
 | Presupuestado vs. real por OT y por proyecto | 3 (presupuestado) + 6 (real) | Diseñado |
-| Hoja de ruta diaria con paradas y cuadrilla | 4 | Planificado |
-| Viajes: odómetro con foto, GPS, alerta de desvío informativa | 4 | Planificado |
-| Asistencia con geocerca de 100 m (disuasiva) | 4 | Planificado |
+| Hoja de ruta diaria con paradas y cuadrilla | 4 | Base y API hechas (sin pantallas) |
+| Viajes: odómetro con foto, GPS, alerta de desvío informativa | 4 | Base y API hechas; foto pendiente (Storage) |
+| Asistencia con geocerca de 100 m (disuasiva) | 4 | Base y API hechas (sin pantalla) |
 | Fotos de evidencia de montaje y **muestras de impresión antes del despacho** (REQ-03, McDonald's) | 4 | Planificado: la infraestructura de fotos (URLs firmadas, bucket privado) se hace una vez y sirve para odómetro, montaje y muestras de tarea |
 | Trabajo offline de cuadrillas | 4 | Planificado |
 | Insumos y stock en unidades o metros, entradas con factura | 5 | Planificado |
 | Cálculo automático de aprovechamiento y merma por medidas (REQ-04) | 5 | Planificado (fórmula pura en `shared/formulas`, se calcula al registrar consumo) |
 | Prorrateo de planchas o bobinas compartidas entre varios clientes/OTs | 5 | Planificado (un consumo repartido en N OTs por m², en la misma transacción) |
 | Costeo real (horas × tarifa + insumos + km) y prefactura con margen | 6 | Planificado (snapshot al cierre de la OT) |
-| Aprobación de diseños Nachi → Sofi → Juan (REQ-06) | 7 | Planificado (máquina de estados + historial) |
+| Aprobación de diseños (REQ-06, **corregido por el usuario 2026-11-03**): el diseño puede venir del cliente o de Nachi; queda en Google Drive; **Juan o Sofi** (cualquiera de los dos) dan el OK; recién ahí Edu ve el enlace | 7 | Planificado (estado del diseño por OT + historial de quién aprobó; el archivo sigue en Drive) |
 | Botón "Abrir original en Drive" para Edu | 7 | Planificado |
 | Permisos y justificaciones con comprobante (RR.HH.) | 8 | Planificado |
 | Portal del cliente por enlace, pedidos por local con foto | 9 | Planificado (aquí nace `pedido`) |

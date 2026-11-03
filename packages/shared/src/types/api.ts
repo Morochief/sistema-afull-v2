@@ -94,6 +94,10 @@ export type OTEvento = {
 
 export type OTDetalle = OTFila & {
   creado_por: string;
+  creado_por_nombre: string;
+  presupuesto_id: string | null; presupuesto_numero: string | null; presupuesto_version: number | null;
+  proyecto_id: string | null; proyecto_codigo: string | null;
+  monto_presupuestado_gs: number | null;
   eventos: OTEvento[];
 };
 
@@ -122,7 +126,8 @@ export const CLAVES_OT_FILA = [
 ] as const;
 
 export const CLAVES_OT_DETALLE = [
-  ...CLAVES_OT_FILA, 'creado_por', 'eventos'
+  ...CLAVES_OT_FILA, 'creado_por', 'creado_por_nombre', 'presupuesto_id', 'presupuesto_numero',
+  'presupuesto_version', 'proyecto_id', 'proyecto_codigo', 'monto_presupuestado_gs', 'eventos'
 ] as const;
 
 export const CLAVES_OT_EVENTO = [

@@ -35,6 +35,89 @@
 
 ---
 
+## Loop 4 (parte 1) implementado por Claude Code — L4.E1 y L4.E2 (2026-11-03 04:30)
+
+**Qué hay en el disco (sin commit), además de todo el Loop 3 de la sección siguiente:**
+- `docs/LOOP_4_DISENO.md` (diseño, supuestos a confirmar, CA-4.1 a CA-4.8).
+- `migrations/0009_campo_flota.sql` + entrada en `_journal.json`.
+- `packages/shared/src/formulas/geo.ts` (Haversine, ruta × 1,35, alerta de desvío, geocerca) y `schemas/campo.ts`; exportados en `index.ts`.
+- API: `modules/flota/` (vehículos y sedes), `modules/hojas-ruta/`, `modules/campo/` (hoy, iniciar/cerrar viaje, completar/omitir parada), `modules/asistencia/` (marcar, listado para RR.HH.); rutas en `index.ts`.
+- Pruebas: `tests/loop4/geo.test.ts`, `tests/loop4/campo-api.test.ts` (CA-4.1 a 4.6). `tests/loop3/helpers-comercial.ts`: `sesion()` ahora expone `usuarioId`.
+
+**Verificado:** base nueva `0001`–`0009`; backend **117/117**, web 84/84, lint y tipos en 0.
+
+**Para Antigravity (reemplaza los pasos de la sección del Loop 3; un solo commit por loop):**
+1. En `afull-dev`: `SELECT count(*) FROM presupuesto WHERE total_gs < 0;` (debe dar 0) y `pnpm db:migrate` (aplica `0008` y `0009`). Pegá las salidas.
+2. `pnpm lint && pnpm typecheck && pnpm build`.
+3. Commit 1 con los archivos del Loop 3 (`feat(loop3): …`, ver sección siguiente) y commit 2 con los del Loop 4: `feat(loop4): base y API de campo y flota — viajes, hojas de ruta y asistencia (Claude Code)`. Si separarlos es complicado, un solo commit `feat: loops 3 y 4 (parte 1) (Claude Code)`. Push.
+4. Pegá en tu mesa hash, run del CI, línea de Vitest y el resultado de `node scripts/prueba-loop3.cjs` contra Vercel.
+
+---
+
+## Loop 3 completo implementado por Claude Code — L3.E3 y L3.E4 (2026-11-03 03:30)
+
+> El usuario pidió (01:53) que Claude Code haga todo el proyecto de corrido mientras duerme. **Antigravity: solo commit y push; no modificar código ni documentos.** Esta sección reemplaza las instrucciones de commit de las secciones L3.E2 y L3.E1.
+
+**L3.E3 (API):** `aprobacion.service.ts` (aprobar con evidencia: 1 OT, o proyecto + 1 OT por sucursal con `monto_presupuestado_gs` repartido exacto; todo en una transacción; doble aprobación → 409), módulo `proyectos/` (listado, detalle con OTs y total presupuestado, cerrar/cancelar solo con OTs finales → si no, 409 con la lista), `POST /api/comercial/ot/:id/proyecto` (asociar una OT **directa** a un proyecto abierto del mismo cliente), detalle de OT con presupuesto, proyecto, monto y **"Creada por" con nombre** (pendiente menor resuelto). Pruebas `tests/loop3/aprobacion-api.test.ts` (CA-3.4, 3.5, 3.7 + vínculo) y helpers `tests/loop3/helpers-comercial.ts`.
+
+**L3.E4 (web):** `/presupuestos` (lista), `/presupuestos/$id` (ítems agrupados, total en vivo con la misma fórmula exacta del servidor, acciones según estado, versiones, historial), `/presupuestos/$id/imprimir` (hoja limpia para imprimir o guardar PDF, fuera del menú), `/proyectos` y `/proyectos/$id`, menú y guarda de rutas, `lib/api-presupuestos.ts` (+ test de métodos y rutas), `lib/numero.ts` (montos en formato paraguayo "150.000" / "2,5", + test), `hooks/useListadoUrl.ts`, `lib/fechas.ts` → `formatearDia` (día en hora de Asunción). Recorrido **`scripts/prueba-loop3.cjs` (CA-3.10): 9/9 OK en local**.
+
+**Verificado:** base PostgreSQL 16 nueva con `0001`–`0008` desde cero; backend **107/107**, web **84/84**, lint y tipos en 0; ningún archivo de `apps/` o `packages/` supera 250 líneas.
+
+**Para Antigravity (solo esto):**
+1. En `afull-dev`: `SELECT count(*) FROM presupuesto WHERE total_gs < 0;` (debe dar 0) y `pnpm db:migrate`. Pegá las salidas.
+2. `pnpm lint && pnpm typecheck && pnpm build`. **Un** commit con todo lo del disco: `feat(loop3): circuito comercial completo — presupuestos, aprobación, proyectos y pantallas (Claude Code)`. Push.
+3. Después del deploy: `node scripts/prueba-loop3.cjs` con `BASE_URL` de Vercel. Pegá hash, run del CI, línea de Vitest y salida del recorrido en tu mesa; fila en la bitácora §13 de `TRASPASO.md` en un commit `docs:`.
+
+---
+
+## L3.E2 implementada por Claude Code — API de presupuestos (2026-11-03 02:30)
+
+**Protocolo nuevo (decisión del usuario, 2026-11-03):** Claude Code implementa, prueba y documenta. **Antigravity solo hace commit y push** de lo que está en el disco, con el mensaje indicado, y pega el resultado del CI en `MESA_DE_TRABAJO.md`. No modifica código ni documentos.
+
+**Qué hay en el disco (sin commit) — incluye también las correcciones de L3.E1 de la sección siguiente:**
+- `apps/api/src/modules/presupuestos/` (nuevo): `routes.ts`, `consultas.service.ts` (listado paginado con búsqueda por número, título o **nombre de cliente**; detalle con ítems, eventos con autor y versiones), `borrador.service.ts` (crear con `siguiente_valor('PRE-AAAA')` en la misma transacción, editar cabecera con `updatedAt` → 409, agregar y editar ítems; todo con la cabecera `FOR UPDATE` y solo en `BORRADOR` → si no, 409 "creá una nueva versión"), `transiciones.service.ts` (enviar, rechazar, anular, nueva versión).
+- **Enviar** calcula y congela `total_gs` **en el servidor**, con los valores leídos como texto de la base y la fórmula exacta de `shared`. Exige ≥ 1 ítem activo y "todos con sucursal o ninguno".
+- **Nueva versión** bloquea **todas** las versiones del número (`FOR UPDATE`): desde `ENVIADO` el original pasa a `REEMPLAZADO`; desde `RECHAZADO` queda como está; copia cabecera e ítems activos. Si ya existe una versión posterior → 409.
+- Rechazar y anular exigen comentario (400). Auditoría y evento siempre en la misma transacción.
+- `apps/api/src/index.ts`: ruta `/api/presupuestos`. `tests/loop1/ot-api.test.ts`: CA-1.10 exige 403 sin `comercial` también en `/api/presupuestos`.
+- `packages/shared/src/schemas/presupuestos.ts`: cantidad y precio con **máximo 4 decimales**, margen con 2 (la base redondearía en silencio), topes de largo y de valor.
+- `migrations/0008_comercial_blindaje.sql`, punto 5 (agregado): el `CHECK` de `0007` (`estado = 'BORRADOR' OR total_gs IS NOT NULL`) **impedía anular un borrador**. Ahora el total es obligatorio salvo en `BORRADOR` y `ANULADO`.
+- `tests/loop3/presupuestos-api.test.ts` (8 casos): número y evento inicial; sucursal de otro cliente y 5 decimales → 400; total exacto 196 con ítem inactivo excluido; sin ítems y sucursales mezcladas → 400; **CA-3.6** (cabecera e ítems 409 después de enviar) y doble envío simultáneo → un solo 200; versiones; doble "nueva versión" simultánea → una sola; anular exige motivo, búsqueda por nombre de cliente, taller → 403.
+- `TRASPASO.md`: forma de trabajo, `0008` en §5, §12 "Siguiente paso", backup-storage al Loop 4.
+
+**Verificado en base PostgreSQL 16 nueva, migraciones `0001`–`0008` desde cero:** backend **102/102** (sin `anon.test`), web 76/76, lint y tipos en 0, todos los archivos ≤ 250 líneas.
+
+**Para Antigravity (solo esto):**
+1. En `afull-dev`: `SELECT count(*) FROM presupuesto WHERE total_gs < 0;` debe dar 0. Después `pnpm db:migrate` (aplica `0008`). Pegá ambas salidas.
+2. `pnpm lint && pnpm typecheck && pnpm build`, y un commit con **todo** lo que hay en el disco: `feat(loop3): API de presupuestos (L3.E2) y blindaje del motor comercial (Claude Code)`. Push.
+3. Pegá en `MESA_DE_TRABAJO.md` el hash, el run del CI y la línea `Test Files … / Tests …`. Agregá la fila del commit en la bitácora §13 de `TRASPASO.md` en un segundo commit `docs:`.
+
+---
+
+## Correcciones aplicadas por Claude Code — L3.E1 (commits auditados `780fe04`, `285ea5e`) — 2026-11-03 01:30
+
+**Verificado en clon limpio + PostgreSQL 16:** la migración `0007` aplica desde cero; suite backend 85/85 (sin `anon.test`); conteo de Loop 2 aclarado (65). La estructura de `0007` está bien: FK compuestas, índice parcial de versión viva, evento inmutable, sin `DELETE`. Encontré **un error de cálculo** y **cinco agujeros del motor**. Los corregí en el disco, **sin commit**:
+
+| # | Problema (reproducido) | Corrección |
+|---|---|---|
+| 1 | **Las fórmulas usaban `float` de JS**, contra el diseño (§4). Caso real: ítem de Gs 170 con margen 15 % → 195,5 debe dar **196** y daba **195** (en float es 195,4999…). Igual con 870 → 1001 vs 1000. Además, el test de "reparto inexacto" no ejercitaba el ajuste del resto (la diferencia daba 0). | `packages/shared/src/formulas/presupuesto.ts` reescrito con **BigInt en escala fija** (4 decimales para cantidad y precio, 2 para el margen, un solo redondeo mitad hacia arriba). Acepta `number` o `string` (postgres-js devuelve NUMERIC como string) y rechaza más de 4 decimales. **Cambio de firma:** `calcularTotalPresupuesto(items, margenPct)` (antes recibía una base `number`, que ya perdía exactitud). `calcularSubtotalItem` y `calcularBaseImponible` quedan solo para mostrar. |
+| 2 | `fn_ot_presupuesto_inmutable` comparaba con `<>`: **`SET presupuesto_id = NULL` pasaba** (NULL no es distinto con `<>`). Lo mismo con el monto. | `IS DISTINCT FROM`. |
+| 3 | El trigger de ítems solo miraba el presupuesto **de destino**: un ítem de un presupuesto `ENVIADO` se podía mover a un borrador y editarse. | Prohibido cambiar `presupuesto_id` o `cliente_id` de un ítem. |
+| 4 | **Carrera:** un ítem insertado mientras otra transacción envía el presupuesto quedaba fuera del total congelado (el trigger leía el estado sin lock). | El trigger lee la cabecera `FOR SHARE`: espera al envío y ve `ENVIADO`. |
+| 5 | La cabecera de un presupuesto `ENVIADO` se podía cambiar (margen, total, título): CA-3.6 solo se cumplía en código. Y uno `APROBADO` podía volver a `ENVIADO`. | Trigger `fn_presupuesto_congelado`: fuera de `BORRADOR` solo cambia `estado`; en estado final, nada. |
+| 6 | `total_gs` admitía negativos. | `CHECK (total_gs IS NULL OR total_gs >= 0)`. |
+
+**Archivos:** `migrations/0008_comercial_blindaje.sql` (nueva: 0007 ya está aplicada en dev, no se edita) + entrada en `migrations/meta/_journal.json`; `packages/shared/src/formulas/presupuesto.ts`; `tests/loop3/presupuesto-formulas.test.ts` (adaptado a la firma nueva + 3 casos); `tests/loop3/presupuesto-auditoria.test.ts` (nuevo, 6 casos). **Los 6 casos del motor fallan con `0007` sola** y pasan con `0008`. Suite completa: **94/94** backend, 76/76 web, lint y tipos en 0.
+
+**Para Antigravity:** ⚠️ *Reemplazado por las instrucciones de L3.E2 (arriba): un solo commit con todo.*
+1. Antes de aplicar `0008` en `afull-dev`: `SELECT count(*) FROM presupuesto WHERE total_gs < 0` debe dar 0 (si no, el `CHECK` falla). Probar con `BEGIN … ROLLBACK` y pegar la salida; después `pnpm db:migrate`.
+2. Lint, tipos, suites, y **un** commit: `fix(loop3): fórmulas exactas en BigInt y blindaje del motor de presupuestos (auditoría Claude Code)`. CI en tu mesa.
+3. **Para L3.E2 y L3.E3:** el total y el reparto se calculan **siempre en el servidor** con estas funciones, a partir de los valores leídos de la base (strings de NUMERIC), nunca con números que vengan del navegador. Enviar = `FOR UPDATE` de la cabecera → leer ítems activos → calcular → `UPDATE` estado + `total_gs` + `enviado_at` en la misma transacción.
+4. Seguir con L3.E2.
+
+---
+
 ## Orden de trabajo — Loop 3 Comercial (2026-11-02 23:15)
 
 **Cambio de plan decidido por el usuario.** El circuito comercial (presupuesto → proyecto → OT) no tenía loop asignado. Nuevo orden: `3 Comercial → 4 Campo y flota → 5 Stock → 6 Costeo → 7 Pre-prensa → 8 RR.HH. → 9 Portal`. Decisiones de negocio y matriz completa de requisitos (incluidos los del sistema viejo y la reunión del 19/10) en **`docs/MAPA_REQUISITOS.md`**. Diseño en **`docs/LOOP_3_DISENO.md`**.

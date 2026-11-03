@@ -5,6 +5,7 @@ import { esEstadoFinal, type EstadoOT } from '@afull/shared';
 import { useOT } from '../../hooks/ots/useOT.js';
 import { mensajeDeError } from '../../lib/api.js';
 import { formatearFechaDate, formatearFechaHora } from '../../lib/fechas.js';
+import { formatearGs } from '../../lib/formato.js';
 import { Button } from '../../components/ui/button.js';
 import { Badge, type BadgeVariant } from '../../components/ui/badge.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
@@ -120,8 +121,30 @@ export function OTsDetallePage() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-neutral-400 flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> Creada por:</span>
-              <span className="font-mono text-[11px] text-neutral-300 truncate max-w-[120px]">{ot.creado_por}</span>
+              <span className="text-neutral-300 truncate max-w-[140px]">{ot.creado_por_nombre}</span>
             </div>
+            {ot.presupuesto_id && (
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-400">Presupuesto:</span>
+                <Link to="/presupuestos/$id" params={{ id: ot.presupuesto_id }} className="font-mono text-[#ea580c] hover:underline">
+                  {ot.presupuesto_numero} v{ot.presupuesto_version}
+                </Link>
+              </div>
+            )}
+            {ot.monto_presupuestado_gs !== null && (
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-400">Monto presupuestado:</span>
+                <span className="font-mono text-neutral-200">{formatearGs(ot.monto_presupuestado_gs)}</span>
+              </div>
+            )}
+            {ot.proyecto_id && (
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-400">Proyecto:</span>
+                <Link to="/proyectos/$id" params={{ id: ot.proyecto_id }} className="font-mono text-[#ea580c] hover:underline">
+                  {ot.proyecto_codigo}
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>

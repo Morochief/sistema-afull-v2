@@ -1,6 +1,6 @@
 # Loop 3 — Comercial: presupuestos y proyectos (diseño de Claude Code)
 
-> **Estado:** PROPUESTA, 2026-11-02. La implementa Antigravity por entregas; Claude Code audita cada una y corrige directo (protocolo de `MESA_CLAUDE.md`).
+> **Estado:** IMPLEMENTADO por Claude Code (2026-11-03), pendiente de commit y de confirmación de cierre del usuario. Diseño original 2026-11-02. La implementa Antigravity por entregas; Claude Code audita cada una y corrige directo (protocolo de `MESA_CLAUDE.md`).
 > **Fuentes:** `docs/MAPA_REQUISITOS.md` (decisiones del usuario), `ARQUITECTURA_V3.md` §5 (`presupuesto`, `presupuesto_item`), migraciones `0001`–`0006`.
 > **Requisito previo:** Loop 2 cerrado (commit de las correcciones de la auditoría L2.E4 + confirmación del usuario).
 
@@ -56,7 +56,7 @@ Reintento de aprobación → `409` por `desde`: imposible crear OTs duplicadas.
 - El detalle muestra sus OTs, con estado y monto presupuestado, y la suma. El costo real llega en el Loop 6.
 
 ## 7. API (capacidad `comercial`; todas las rutas entran al recorrido de CA-1.10)
-`GET/POST /api/presupuestos` · `GET/PATCH /api/presupuestos/:id` (solo borrador, `updatedAt` → 409) · `POST /api/presupuestos/:id/items` · `PATCH /api/presupuestos/:id/items/:itemId` · `POST /api/presupuestos/:id/{enviar|aprobar|rechazar|anular|nueva-version}` · `GET /api/proyectos` · `GET /api/proyectos/:id` · `POST /api/proyectos/:id/{cerrar|cancelar}` · `PATCH /api/comercial/ot/:id` admite `proyectoId`.
+`GET/POST /api/presupuestos` · `GET/PATCH /api/presupuestos/:id` (solo borrador, `updatedAt` → 409) · `POST /api/presupuestos/:id/items` · `PATCH /api/presupuestos/:id/items/:itemId` · `POST /api/presupuestos/:id/{enviar|aprobar|rechazar|anular|nueva-version}` · `GET /api/proyectos` · `GET /api/proyectos/:id` · `POST /api/proyectos/:id/{cerrar|cancelar}` · `POST /api/comercial/ot/:id/proyecto` `{ proyectoId | null, updatedAt }` (endpoint propio en vez de sumar `proyectoId` al PATCH: `ot.service.ts` estaba al límite de 250 líneas y así el control de 409 queda en una sola transacción).
 Listados: 25 filas por servidor, búsqueda por número/título/**nombre de cliente** (trigram, como OTs), filtro de estado y rango de fechas.
 
 ## 8. Frontend
@@ -83,3 +83,10 @@ Listados: 25 filas por servidor, búsqueda por número/título/**nombre de clien
 - **L3.E2:** API de presupuestos (borrador, ítems, enviar, versiones, rechazar, anular) + CA-3.6.
 - **L3.E3:** aprobación → OTs/proyecto, API de proyectos, `proyectoId` en OT + CA-3.4, 3.5, 3.7.
 - **L3.E4:** frontend completo + impresión + CA-3.10.
+
+## 11. Implementación (Claude Code, 2026-11-03)
+- Migraciones `0007` (Antigravity) + `0008_comercial_blindaje` (Claude Code: cabecera congelada, ítems con lock `FOR SHARE`, `IS DISTINCT FROM`, total ≥ 0, total obligatorio salvo `BORRADOR`/`ANULADO`).
+- API: `apps/api/src/modules/presupuestos/` (`consultas`, `borrador`, `transiciones`, `aprobacion`) y `apps/api/src/modules/proyectos/`.
+- Web: `/presupuestos`, `/presupuestos/$id`, `/presupuestos/$id/imprimir` (fuera del layout), `/proyectos`, `/proyectos/$id`; enlaces y monto en el detalle de OT; "Creada por" con el nombre de usuario.
+- Pruebas: `tests/loop3/*` (CA-3.1 a 3.9) y `scripts/prueba-loop3.cjs` (CA-3.10, 9/9 en local).
+- Supuesto pendiente de confirmar: **precios con IVA incluido** (§0.4).

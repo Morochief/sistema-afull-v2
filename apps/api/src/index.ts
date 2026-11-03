@@ -8,6 +8,12 @@ import { tareasRoutes } from './modules/comercial/tareas.routes.js';
 import { personasRoutes, tarifasRoutes } from './modules/personas/routes.js';
 import { cronometroRoutes } from './modules/cronometro/routes.js';
 import { liveRoutes } from './modules/live/routes.js';
+import { presupuestosRoutes } from './modules/presupuestos/routes.js';
+import { proyectosRoutes } from './modules/proyectos/routes.js';
+import { flotaRoutes } from './modules/flota/routes.js';
+import { hojasRutaRoutes } from './modules/hojas-ruta/routes.js';
+import { campoRoutes } from './modules/campo/routes.js';
+import { asistenciaRoutes } from './modules/asistencia/routes.js';
 import { verificarOrigen } from './modules/auth/middleware.js';
 import { ErrorApp } from './lib/errores.js';
 
@@ -23,6 +29,12 @@ app.route('/api/personas', personasRoutes);
 app.route('/api/tarifas', tarifasRoutes);
 app.route('/api/mi-trabajo', cronometroRoutes);
 app.route('/api/live', liveRoutes);
+app.route('/api/presupuestos', presupuestosRoutes);
+app.route('/api/proyectos', proyectosRoutes);
+app.route('/api/flota', flotaRoutes);
+app.route('/api/hojas-ruta', hojasRutaRoutes);
+app.route('/api/campo', campoRoutes);
+app.route('/api/asistencia', asistenciaRoutes);
 
 app.onError((e, c) => {
   if (e instanceof ErrorApp) return c.json({ error: e.message }, e.status);

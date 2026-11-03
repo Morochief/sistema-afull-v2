@@ -8,6 +8,8 @@
     { "idx": 3, "version": "7", "when": 1793000003000, "tag": "0004_clientes_ot", "breakpoints": true },
     { "idx": 4, "version": "7", "when": 1793000004000, "tag": "0005_default_privileges_funciones", "breakpoints": true },
     { "idx": 5, "version": "7", "when": 1793000005000, "tag": "0006_tareas_cronometro", "breakpoints": true },
-    { "idx": 6, "version": "7", "when": 1793000006000, "tag": "0007_comercial", "breakpoints": true }
+    { "idx": 6, "version": "7", "when": 1793000006000, "tag": "0007_comercial", "breakpoints": true },
+    { "idx": 7, "version": "7", "when": 1793000007000, "tag": "0008_comercial_blindaje", "breakpoints": true },
+    { "idx": 8, "version": "7", "when": 1793000008000, "tag": "0009_campo_flota", "breakpoints": true }
   ]
 }

@@ -40,3 +40,11 @@ export function formatearFechaHora(timestampStr: string | null | undefined): str
     return timestampStr;
   }
 }
+
+/** Día (dd/mm/aaaa) de un TIMESTAMPTZ en hora de Asunción: un instante de las 23:30 no salta al día siguiente UTC. */
+export function formatearDia(timestampStr: string | null | undefined): string {
+  if (!timestampStr) return '-';
+  const d = new Date(timestampStr);
+  if (isNaN(d.getTime())) return timestampStr;
+  return new Intl.DateTimeFormat('es-PY', { timeZone: 'America/Asuncion', day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+}

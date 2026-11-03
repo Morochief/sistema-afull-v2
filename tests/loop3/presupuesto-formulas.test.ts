@@ -55,8 +55,29 @@ describe('L3.E1 — Fórmulas de Presupuesto y Reparto por Sucursal', () => {
   });
 
   it('calcula total con margen aplicando un único redondeo', () => {
-    expect(calcularTotalPresupuesto(100000, 35)).toBe(135000);
-    expect(calcularTotalPresupuesto(100001, 35)).toBe(135001);
+    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 100000 }], 35)).toBe(135000);
+    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 100001 }], 35)).toBe(135001);
+  });
+
+  it('(auditoría) aritmética exacta: 170 × 1,15 = 195,5 redondea a 196 (en float daba 195)', () => {
+    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 170 }], 15)).toBe(196);
+    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 870 }], 15)).toBe(1001);
+    // 3 × 33333,3333 = 99999,9999 exacto; con margen 0 redondea a 100000
+    expect(calcularTotalPresupuesto([{ cantidad: 3, precio_unitario_gs: '33333.3333' }], '0.00')).toBe(100000);
+  });
+
+  it('(auditoría) acepta NUMERIC como string (postgres-js) y rechaza más de 4 decimales', () => {
+    expect(calcularTotalPresupuesto([{ cantidad: '2.5000', precio_unitario_gs: '15000.0000' }], '35.00')).toBe(50625);
+    expect(() => calcularTotalPresupuesto([{ cantidad: '1.00001', precio_unitario_gs: 1 }], 0)).toThrow();
+  });
+
+  it('(auditoría) el resto del redondeo se ajusta de verdad: 3 sucursales de 1 Gs con 50 %', () => {
+    const items = ['a', 'b', 'c'].map((s) => ({ sucursal_id: s, cantidad: 1, precio_unitario_gs: 1 }));
+    const total = calcularTotalPresupuesto(items, 50); // 4,5 → 5
+    expect(total).toBe(5);
+    const reparto = repartirMontoPorSucursal(items, 50, total); // cada una 1,5 → 2; suma 6 → ajuste −1
+    expect(reparto.reduce((a, r) => a + r.montoOtGs, 0)).toBe(5);
+    expect(reparto.map((r) => r.montoOtGs).sort()).toEqual([1, 2, 2]);
   });
 
   it('reparto por sucursal con división inexacta: la suma de montos da exactamente total_gs', () => {
@@ -65,9 +86,8 @@ describe('L3.E1 — Fórmulas de Presupuesto y Reparto por Sucursal', () => {
       { sucursal_id: 'suc-2', cantidad: 1, precio_unitario_gs: 100000 },
       { sucursal_id: 'suc-3', cantidad: 1, precio_unitario_gs: 100001 },
     ];
-    const base = calcularBaseImponible(items);
     const margenPct = 35;
-    const totalGs = calcularTotalPresupuesto(base, margenPct);
+    const totalGs = calcularTotalPresupuesto(items, margenPct);
 
     const reparto = repartirMontoPorSucursal(items, margenPct, totalGs);
     expect(reparto).toHaveLength(3);

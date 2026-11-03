@@ -14,6 +14,11 @@ import { OTsDetallePage } from './routes/ots/detalle.js';
 import { MiTrabajoPage } from './routes/mi-trabajo.js';
 import { EnVivoPage } from './routes/en-vivo.js';
 import { PersonasPage } from './routes/personas.js';
+import { PresupuestosListaPage } from './routes/presupuestos/lista.js';
+import { PresupuestoDetallePage } from './routes/presupuestos/detalle.js';
+import { PresupuestoImprimirPage } from './routes/presupuestos/imprimir.js';
+import { ProyectosListaPage } from './routes/proyectos/lista.js';
+import { ProyectoDetallePage } from './routes/proyectos/detalle.js';
 import { useSesion } from './hooks/useSesion.js';
 import { rutaInicialSegunCapacidades } from './lib/rutas.js';
 
@@ -109,8 +114,50 @@ const personasRoute = createRoute({
   component: PersonasPage,
 });
 
+const listadoSearchSchema = z.object({
+  q: z.string().optional(),
+  estado: z.string().optional(),
+  desde: z.string().optional(),
+  hasta: z.string().optional(),
+  pagina: z.coerce.number().int().min(1).optional(),
+});
+
+const presupuestosRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/presupuestos',
+  validateSearch: (search) => listadoSearchSchema.parse(search),
+  component: PresupuestosListaPage,
+});
+
+const presupuestoDetalleRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/presupuestos/$id',
+  component: PresupuestoDetallePage,
+});
+
+// Fuera del AppLayout: hoja limpia para imprimir, sin menú.
+const presupuestoImprimirRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/presupuestos/$id/imprimir',
+  component: PresupuestoImprimirPage,
+});
+
+const proyectosRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/proyectos',
+  validateSearch: (search) => listadoSearchSchema.parse(search),
+  component: ProyectosListaPage,
+});
+
+const proyectoDetalleRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/proyectos/$id',
+  component: ProyectoDetallePage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  presupuestoImprimirRoute,
   appLayoutRoute.addChildren([
     indexRoute,
     clientesRoute,
@@ -120,6 +167,10 @@ const routeTree = rootRoute.addChildren([
     miTrabajoRoute,
     enVivoRoute,
     personasRoute,
+    presupuestosRoute,
+    presupuestoDetalleRoute,
+    proyectosRoute,
+    proyectoDetalleRoute,
   ]),
 ]);
 

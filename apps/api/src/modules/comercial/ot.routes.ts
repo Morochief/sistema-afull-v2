@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireSesion, requireCapacidad } from '../auth/middleware.js';
 import { listarOTs, obtenerDetalleOT, crearOT, editarOT, transicionar } from './ot.service.js';
 import { listarTareasOT, agregarTareaOT } from './tareas.service.js';
+import { asociarProyectoOT } from '../proyectos/service.js';
 import { nuevaOTSchema, patchOTSchema, transicionSchema, filtroOTSchema, nuevaTareaSchema } from '@afull/shared';
 import { paginaSchema } from '../../lib/paginacion.js';
 import { ipDe } from '../../lib/ip.js';
@@ -34,6 +35,13 @@ export const otRoutes = new Hono()
     const id = z.string().uuid().parse(c.req.param('id'));
     const body = transicionSchema.parse(await c.req.json().catch(() => null));
     return c.json(await transicionar(ctxDe(c), id, body));
+  })
+  .post('/:id/proyecto', async (c) => {
+    const id = z.string().uuid().parse(c.req.param('id'));
+    const b = z
+      .object({ proyectoId: z.string().uuid().nullable(), updatedAt: z.string() })
+      .parse(await c.req.json().catch(() => null));
+    return c.json(await asociarProyectoOT(ctxDe(c), id, b.proyectoId, b.updatedAt));
   })
   .get('/:id/tareas', async (c) => {
     const id = z.string().uuid().parse(c.req.param('id'));

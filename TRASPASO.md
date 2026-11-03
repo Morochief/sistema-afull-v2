@@ -1,6 +1,8 @@
 # Traspaso del proyecto aFull
 
-Última actualización: 2 de noviembre de 2026 — 23:25 (America/Asuncion).
+Última actualización: 3 de noviembre de 2026 — 02:30 (America/Asuncion).
+
+> **Forma de trabajo desde 2026-11-03 (decisión del usuario):** Claude Code implementa, prueba y documenta; deja los archivos en `D:\sistema-afull` y Antigravity solo hace commit y push. Las instrucciones para el commit están en `MESA_CLAUDE.md`.
 Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada tarea o commit.
 
 ---
@@ -26,7 +28,7 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
   - **Higiene en `afull-dev`:** Todos los usuarios de prueba usan el prefijo `zz_test_` y son auto-desactivados tras cada suite; base dev en 0 usuarios activos y 0 sesiones abiertas (`limpiar-usuarios-prueba.ts --aplicar`).
 - **Qué queda para cerrar Loop 0 al 100%:**
   1. Cargar los secrets restantes de dev en GitHub Actions y correr `tests-dev.yml`.
-  2. Realizar el **restore manual completo hecho por una persona** en el proyecto temporal Supabase `afull-restore-drill` y documentarlo en `RESTAURAR.md` (**CA-0.9**). *(Nota: `backup-storage` se pospone al Loop 3, cuando la app empiece a subir fotos a Storage).*
+  2. Realizar el **restore manual completo hecho por una persona** en el proyecto temporal Supabase `afull-restore-drill` y documentarlo en `RESTAURAR.md` (**CA-0.9**). *(Nota: `backup-storage` se pospone al Loop 4, cuando la app empiece a subir fotos a Storage).*
 
 | Pieza | Estado |
 | :--- | :--- |
@@ -39,7 +41,7 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 | Tests Loop 1B (Vitest frontend + contrato) | **45/45 tests web en verde** (9 suites) y **6 tests de contrato/API adicionales**, más **15/15 pasos Playwright UI en verde contra Vercel**. **Loop 1B cerrado (CA-1.11 a CA-1.16)**. |
 | Tests Loop 2 (Vitest backend + web) | **Loop 2 CERRADO** (L2.E1 a L2.E4 + auditoría final): 65/65 tests backend en dev (63 en CI sin anon.test.ts), 76/76 tests web, Playwright CA-2.9 9/9 pasos OK contra Vercel. CA-0.3 y CA-2.1 a CA-2.9 cumplidos. |
 | Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2, #5 y #6 con D5-1 y migración 0006 con btree_gist comprobados**). |
-| `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 3** (hoy no se usa Storage). |
+| `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 4** (hoy no se usa Storage). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
 | Proyecto Vercel | **Desplegado en `gru1` (Node 22)**: API Hono + React 19 SPA (rewrite `/(.*) -> /index.html` funcional con HTTP 200 en rutas profundas `/ots/:id`), prueba de humo de 9 puntos en verde. |
 
@@ -165,6 +167,8 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 | `0005_default_privileges_funciones` | `ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;` (global, sin `IN SCHEMA`) y barrido idempotente en `public`. Cierra la herencia implícita de `EXECUTE` en funciones nuevas para `anon`/`authenticated`/`afull_api`. |
 | `0006_tareas_cronometro` | `btree_gist` (en extensions), `tarea`, `tarea_evento` (inmutable), `tarea_intervalo` (inmutable, EXCLUDE sin solapamiento), `persona_tarifa_horaria` (EXCLUDE sin solapamiento). |
 | `0007_comercial` | `proyecto`, `presupuesto`, `presupuesto_item` (con sucursal opcional y FK compuesta multitenant), `presupuesto_evento` (inmutable para afull_api), ALTER `orden_trabajo` (`presupuesto_id`, `proyecto_id`, `monto_presupuestado_gs` inmutables tras asignación). |
+| `0008_comercial_blindaje` | (auditoría Claude Code) `IS DISTINCT FROM` en el trigger de OT↔presupuesto; ítems no cambian de presupuesto y bloquean la cabecera `FOR SHARE`; cabecera congelada fuera de `BORRADOR` (`fn_presupuesto_congelado`); `total_gs >= 0`; total obligatorio salvo en `BORRADOR`/`ANULADO` (el `CHECK` de 0007 impedía anular un borrador). **Pendiente de aplicar en `afull-dev`.** |
+| `0009_campo_flota` | (Claude Code, Loop 4) `sede` (geocerca), `vehiculo`, `hoja_ruta` + `hoja_ruta_persona` + `hoja_ruta_parada` (motivo obligatorio en EXTRA/OMITIDA), `viaje` (un abierto por vehículo y por conductor, un solo cierre, km_fin ≥ km_inicio), `marcacion_asistencia` (inmutable). **Pendiente de aplicar en `afull-dev`.** |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
@@ -194,6 +198,14 @@ Criterios de aceptación:
 
 Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,seed}.test.ts`. El test de la `anon key` no corre en CI (necesita la API REST de Supabase); correrá a diario contra `dev` en `tests-dev.yml` (pendiente). Los tests tienen un guard `TEST_ENV=dev` y **nunca se corren contra `prod`**.
 
+### Loop 4: Campo y flota — BASE Y API IMPLEMENTADAS (Claude Code, 2026-11-03), sin commit
+
+L4.E1 (`0009` + fórmulas geo) y L4.E2 (API de flota, hojas de ruta, campo y asistencia) con pruebas `tests/loop4/` (CA-4.1 a CA-4.6). **Faltan** L4.E3 (fotos de odómetro y evidencias en Supabase Storage con URLs firmadas: requiere crear el bucket privado en el proyecto real) y L4.E4 (pantallas móviles de coordinación, "Hoy en la calle", marcación, y cola offline Dexie). Supuestos a confirmar en `docs/LOOP_4_DISENO.md` §0.
+
+### Loop 3: Comercial — IMPLEMENTADO (Claude Code, 2026-11-03), pendiente de commit y confirmación
+
+Presupuestos (borrador, ítems con sucursal opcional, enviar con total exacto calculado en el servidor, versiones, rechazar, anular, aprobar todo o nada), aprobación → 1 OT o proyecto + 1 OT por sucursal con monto presupuestado (Σ = total exacto), proyectos (cerrar/cancelar solo con OTs finales), OT directa asociable a un proyecto, hoja de impresión/PDF desde el navegador. Criterios CA-3.1 a CA-3.10 con pruebas en `tests/loop3/` y `scripts/prueba-loop3.cjs`. Detalle: `docs/LOOP_3_DISENO.md` §11.
+
 ### Loop 1: Clientes y OT (Loop 1A y Loop 1B CERRADOS)
 
 Partido en dos. **1A** (base y API, **CERRADO**): migración `0004`, esquemas y máquina de estados en `shared` (`puedeTransicionar`, `esEstadoFinal`), infraestructura común (`ErrorApp`, `traducirErrorPg`, paginación), módulos `clientes` y `comercial`, tests (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **1B** (frontend, **CERRADO**): shell (React 19, Vite 8, TanStack Router y Query v5, login, layout accesible), componente genérico `TablaAdmin<T>` con 4 estados, hooks `useClientes`/`useOTs`/`useOT`, modales de alta, edición y transición con control 409 y confirmación atómica, formato de fechas sin desfase (D7), deploy a Vercel `gru1` y prueba de humo automatizada de 9 puntos en verde.
@@ -220,7 +232,7 @@ Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "C
 - [x] Que Supabase permita `CREATE ROLE afull_api` y cómo se escribe el usuario en el pooler: **VERIFICADO**. Supabase permite `CREATE ROLE` sin error y el usuario en el transaction pooler 6543 es `afull_api.<ref-proyecto>`.
 - [x] Que el rol funcione con RLS como se espera (políticas por rol): **VERIFICADO**. 16 tests de Loop 0 en verde contra Supabase `dev`.
 - [x] Si `pg_dump` conecta desde runners de GitHub (IPv4): **VERIFICADO en corrida #2 de GitHub Actions (`cbd4a7c`)**. Conecta al Session Pooler puerto 5432 sin errores.
-- [ ] Rutas y respuestas de la API de Storage en `backup-storage.mjs` (**pospuesto al Loop 3**, cuando la app suba archivos a Storage).
+- [ ] Rutas y respuestas de la API de Storage en `backup-storage.mjs` (**pospuesto al Loop 4**, cuando la app suba archivos a Storage).
 - [ ] Cuota de almacenamiento de artifacts de GitHub en cuenta gratuita.
 - [ ] Que el proyecto Supabase no se pause en un feriado largo (el backup diario debería bastar; confirmar o agregar un `SELECT 1` programado).
 - [ ] Limitar el esquema expuesto de la API de datos de Supabase (la app no usa PostgREST): tercera barrera, ver dónde está la opción en el panel.
@@ -288,8 +300,9 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al principio 7 (2026-11-02, decisión del usuario):** se inició y cerró Loop 1B con el Loop 0 abierto en dos puntos: (a) CA-0.9, el simulacro manual de restore en `afull-restore-drill`; (b) los secrets `DEV_*` restantes y la corrida de `tests-dev.yml`. **Bloqueo:** no se crea `afull-prod` con datos reales ni se carga ningún dato real hasta cerrar (a) y (b). Nota: los artefactos de backup duran 30 días; si el simulacro se hace después del 2026-12-02, volver a correr `backup-db.yml`.
 
-1. **Auditoría de Claude Code sobre Entrega L3.E1:** migración `0007_comercial.sql`, máquina de estados, fórmulas puras y pruebas de motor CA-3.1, CA-3.2, CA-3.3, CA-3.8, CA-3.9.
-2. **Inicio de Entrega L3.E2:** API de presupuestos (borrador, ítems, enviar, versiones, rechazar, anular) + CA-3.6 (total_gs congelado). Mantener bloqueo sobre producción y datos reales hasta el cierre de (a) y (b).
+1. **Commit del Loop 3 completo** (L3.E1-fix, L3.E2, L3.E3, L3.E4; archivos de Claude Code en el disco, ver `MESA_CLAUDE.md`) y aplicar `0008` en `afull-dev` con `pnpm db:migrate`. Correr `node scripts/prueba-loop3.cjs` contra Vercel.
+2. **Confirmación del usuario** del cierre del Loop 3 (CA-3.1 a CA-3.10) y del supuesto de **IVA incluido**.
+3. **Loop 4:** confirmar los supuestos de `docs/LOOP_4_DISENO.md` §0 (geocerca disuasiva por sede, odómetro con 1 decimal, alerta de desvío al 30 %, permisos). Cargar la sede real (fábrica) y los vehículos. Después: L4.E3 (Storage; crear bucket privado `campo-evidencias` en `afull-dev`) y L4.E4 (pantallas móviles + offline). Mantener bloqueo sobre producción y datos reales hasta el cierre de (a) y (b).
 
 ---
 

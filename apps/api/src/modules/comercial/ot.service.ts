@@ -78,12 +78,17 @@ export async function obtenerDetalleOT(id: string): Promise<OTDetalle> {
         o.descripcion,
         o.estado,
         o.fecha_prometida,
-        o.creado_por,
+        o.creado_por, u.username AS creado_por_nombre,
+        o.presupuesto_id, pr.numero AS presupuesto_numero, pr.version AS presupuesto_version,
+        o.proyecto_id, py.codigo AS proyecto_codigo, o.monto_presupuestado_gs::float8 AS monto_presupuestado_gs,
         o.created_at,
         o.updated_at
       FROM orden_trabajo o
       JOIN cliente c ON c.id = o.cliente_id
+      JOIN usuario u ON u.id = o.creado_por
       LEFT JOIN sucursal s ON s.id = o.sucursal_id
+      LEFT JOIN presupuesto pr ON pr.id = o.presupuesto_id
+      LEFT JOIN proyecto py ON py.id = o.proyecto_id
       WHERE o.id = ${id}
     `;
     if (!ot) throw new ErrorApp(404, 'OT no encontrada');

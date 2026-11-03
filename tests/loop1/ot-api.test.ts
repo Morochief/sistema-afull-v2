@@ -187,7 +187,7 @@ describe('CA-1.10 reforzado y CA-0.10 HTTP: Protección global de app.routes y 2
       const sinSesion = await req(r.method, pathReal, undefined, body);
       expect(sinSesion.status, `${clave} sin sesión debe responder 401`).toBe(401);
 
-      if (r.path.startsWith('/api/comercial/ot')) {
+      if (/^\/api\/(comercial\/ot|presupuestos|proyectos)/.test(r.path)) {
         const sinCap = await req(r.method, pathReal, cookieTaller, body);
         expect(sinCap.status, `${clave} con rol taller debe responder 403`).toBe(403);
       }
