@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import {
-  nuevoInsumoSchema, patchInsumoSchema, nuevoPrecioSchema, consumoSchema, mermaSchema, compartidoSchema, anularConsumoSchema,
+  puedeVerCostos, nuevoInsumoSchema, patchInsumoSchema, nuevoPrecioSchema, consumoSchema, mermaSchema, compartidoSchema, anularConsumoSchema,
 } from '@afull/shared';
 import { requireSesion, requireCapacidad, requireAlgunaCapacidad } from '../auth/middleware.js';
 import { ipDe } from '../../lib/ip.js';
@@ -16,9 +16,11 @@ const QUIEN_USA = ['taller', 'montaje', 'diseno', 'comercial'] as const;
 /** Catálogo de insumos: lo consultan quienes cargan material; lo administra admin (precios con historial). */
 export const insumosRoutes = new Hono()
   .use('*', requireSesion)
-  .get('/', requireAlgunaCapacidad(...QUIEN_USA), async (c) =>
-    c.json(await buscarInsumos(c.req.query('q'), c.req.query('sector'), c.req.query('todos') === 'true'))
-  )
+  .get('/', requireAlgunaCapacidad(...QUIEN_USA), async (c) => {
+    const lista = await buscarInsumos(c.req.query('q'), c.req.query('sector'), c.req.query('todos') === 'true');
+    // Los operarios eligen el material sin ver precios (solo admin y comercial).
+    return c.json(puedeVerCostos(ctxDe(c).capacidades) ? lista : lista.map((i) => ({ ...i, costo_unitario_gs: null, vigente_desde: null })));
+  })
   .post('/', requireCapacidad('admin'), async (c) => c.json(await crearInsumo(ctxDe(c), nuevoInsumoSchema.parse(await cuerpo(c))), 201))
   .patch('/:id', requireCapacidad('admin'), async (c) => c.json(await editarInsumo(ctxDe(c), idDe(c), patchInsumoSchema.parse(await cuerpo(c)))))
   .post('/:id/precios', requireCapacidad('admin'), async (c) =>
@@ -28,7 +30,8 @@ export const insumosRoutes = new Hono()
 /** Consumos: cada operario carga lo que usó; no hay stock. Inmutables: se corrigen con un negativo. */
 export const consumosRoutes = new Hono()
   .use('*', requireSesion, requireAlgunaCapacidad(...QUIEN_USA))
-  .get('/ot/:otId', async (c) => c.json(await consumosDeOT(idDe(c, 'otId'))))
+  // El listado lleva costos: solo admin y comercial (las respuestas de carga no llevan dinero).
+  .get('/ot/:otId', requireCapacidad('comercial'), async (c) => c.json(await consumosDeOT(idDe(c, 'otId'))))
   .post('/', async (c) => {
     const r = await registrarConsumo(ctxDe(c), consumoSchema.parse(await cuerpo(c)));
     return c.json(r, r.repetido ? 200 : 201);

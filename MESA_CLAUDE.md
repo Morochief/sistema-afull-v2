@@ -35,6 +35,45 @@
 
 ---
 
+## Loop 5 (parte 3): precios solo para admin y comercial + catálogo real — Claude Code, 2026-11-03 15:40
+
+**Decisiones del usuario (2026-11-03 14:59):** "importa todos los insumos" y "los operarios nunca deben ver precios de nada, solo el admin y comercial".
+
+**En el disco, sin commit (se suma a la parte 2, que tampoco tiene commit todavía):**
+- Shared: `packages/shared/src/permisos.ts` (`puedeVerCostos`) y su export en `index.ts`.
+- API: `insumos/routes.ts` (catálogo sin costo para operarios; `GET /api/consumos/ot/:otId` solo comercial), `flota/routes.ts` (vehículos sin `costo_km_gs` para la cuadrilla).
+- Web: `BuscadorInsumo.tsx` (sin precio si viene null), `lib/api-campo.ts`.
+- Pruebas: `tests/loop5/costos-visibles.test.ts` (nuevo); `tests/loop5/consumos-api.test.ts` (las consultas con costos ahora las hace admin); `scripts/prueba-loop5.cjs` (Edu no ve "Gs.").
+- Importador: `scripts/importar-insumos.ts` (ignora repetidas idénticas; importa sin precio las filas sin costo).
+- **Fuera del repo:** `D:\sistema-afull\Documentos\insumos_corregido.csv` (las 15 filas resueltas; ver `docs/LOOP_5_DISENO.md` §7).
+- Docs: `LOOP_5_DISENO.md` §6–8, `TRASPASO.md` §3 (regla de precios), §5 y §12 (excepción solo para el catálogo en dev).
+
+**Verificado:** base nueva `0001`–`0013`; backend **138/138**, web **110/110**, lint y tipos en 0; recorridos Loop 5 **7/7**, Loop 3 **9/9**, Loop 4 **7/7**, Loop 7 **5/5**. Importación en base local: 255 insumos (1 sin precio); la segunda corrida importa 0.
+
+**Para Antigravity (solo esto):**
+1. `git status`: `Documentos/` (y `insumos_corregido.csv`) NO deben aparecer.
+2. `pnpm lint && pnpm typecheck && pnpm build`. Dos commits: (a) la parte 2 con su mensaje; (b) `feat(loop5): precios solo para admin y comercial; importador acepta filas sin costo (Claude Code)`. Push.
+3. **Autorizado por el usuario, solo en `afull-dev`:** `pnpm tsx scripts/importar-insumos.ts Documentos/insumos_corregido.csv` (prueba: tiene que decir `para importar: 255 (sin precio: 1) · repetidas idénticas: 5 · a revisar: 0`) y después lo mismo con `--aplicar` (tiene que decir `Importados: 255`). Verificá que `DATABASE_URL_ADMIN` apunte a **afull-dev**, no a prod. Pegá las dos salidas en tu mesa.
+4. Hash, CI y línea de Vitest en tu mesa; filas en la bitácora §13.
+
+---
+
+## Loop 5 (parte 2): pantallas de material — Claude Code, 2026-11-03 15:00
+
+**En el disco, sin commit:**
+- Web nuevos: `lib/api-insumos.ts` (+ `.test.ts`), `components/insumos/` (`BuscadorInsumo`, `ModalCargarMaterial`, `ModalMerma` (+ `.test.tsx`), `ModalCompartido`, `AccionesMaterial`, `SeccionMaterialOT`), `routes/insumos.tsx`.
+- Web cambiados: `TarjetasTrabajo.tsx` (botones Material/Merma/Compartido), `campo/ParadasHoja.tsx` (Material por parada), `lib/api-campo.ts`, `routes/ots/detalle.tsx` (sección Material usado), `router.tsx` (`/insumos`), `routes/app-layout.tsx` (menú Insumos, solo admin).
+- API: `campo/paradas.service.ts` (la parada de "hoy" trae `orden_trabajo_id`); prueba en `tests/loop4/campo-api.test.ts`.
+- `scripts/prueba-loop5.cjs` (nuevo); `.gitignore` (capturas `prueba-loop*-falla-*.png`); docs `LOOP_5_DISENO.md` §5–6, `TRASPASO.md`.
+
+**Verificado:** base nueva `0001`–`0013`; backend **134/134**, web **110/110**, lint y tipos en 0; recorridos locales Loop 5 **7/7**, Loop 3 **9/9**, Loop 4 **7/7**, Loop 7 **5/5**. Sin migraciones nuevas.
+
+**Para Antigravity (solo esto):**
+1. `git status`: `Documentos/` NO debe aparecer. **No correr el importador con `--aplicar`.**
+2. `pnpm lint && pnpm typecheck && pnpm build`; commit `feat(loop5): pantallas de material — cargar, merma, compartido, material por OT y catálogo (Claude Code)`; push. Correr `node scripts/prueba-loop5.cjs` contra Vercel si se puede. Hash, CI y línea de Vitest en tu mesa; fila en la bitácora §13.
+
+---
+
 ## Loop 5 (parte 1): insumos y consumos, sin stock — Claude Code, 2026-11-03 13:45
 
 **Decisiones del usuario:** el Excel de insumos es el catálogo; **no hay stock**; cada operario carga lo que usó.

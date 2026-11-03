@@ -2,7 +2,7 @@ import { apiFetch } from './api.js';
 
 const json = (body: unknown) => ({ body: JSON.stringify(body) });
 
-export type Vehiculo = { id: string; chapa: string; marca_modelo: string; costo_km_gs: number; activo: boolean };
+export type Vehiculo = { id: string; chapa: string; marca_modelo: string; costo_km_gs?: number; activo: boolean };
 export type Sede = { id: string; nombre: string; gps_lat: number; gps_lng: number; radio_m: number; activo: boolean };
 export type HojaRutaFila = {
   id: string; fecha: string; descripcion: string | null; estado: string; vehiculo_id: string | null; chapa: string | null;
@@ -18,7 +18,7 @@ export type HojaRutaDetalle = Omit<HojaRutaFila, 'paradas' | 'personas'> & {
   paradas: ParadaHoja[];
 };
 export type ParadaHoy = {
-  id: string; orden: number; tipo: string; estado: string; hora_estimada: string | null; codigo_ot: string; titulo: string;
+  id: string; orden: number; tipo: string; estado: string; hora_estimada: string | null; orden_trabajo_id: string; codigo_ot: string; titulo: string;
   cliente: string; sucursal: string | null; direccion: string | null; gps_lat: number | null; gps_lng: number | null;
 };
 export type MiDiaCampo = {

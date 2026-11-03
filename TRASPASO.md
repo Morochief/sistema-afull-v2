@@ -125,6 +125,7 @@ El proyecto anterior se rompió por acumulación de parches. Por eso se rediseñ
 - `ot_evento` es el historial inmutable; `orden_trabajo.estado` es solo el último valor.
 - Auditoría de flota: se compara el odómetro contra la **distancia de ruta de las paradas planificadas** (`hoja_ruta_parada`), no contra Haversine entre inicio y fin. La línea recta subestima las calles (factor ~1,2–1,5), así que **la alerta es informativa, nunca bloqueante**, y se permiten paradas extra con motivo. Mejor aún: calcular la distancia por ruta con OSRM o similar al armar la hoja de ruta (a evaluar).
 - La geocerca de asistencia (100 m) es **disuasiva**, no seguridad dura: el GPS del navegador es falsificable.
+- **Precios solo para admin y comercial** (decisión del usuario, 2026-11-03): taller, montaje y diseño nunca reciben dinero (costos de insumos, costo por km, totales de material). Lo filtra **la API** con `puedeVerCostos()` de `@afull/shared`, no solo la pantalla. Toda ruta nueva que devuelva montos debe respetarlo.
 
 ---
 
@@ -202,9 +203,9 @@ Criterios de aceptación:
 
 Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,seed}.test.ts`. El test de la `anon key` no corre en CI (necesita la API REST de Supabase); correrá a diario contra `dev` en `tests-dev.yml` (pendiente). Los tests tienen un guard `TEST_ENV=dev` y **nunca se corren contra `prod`**.
 
-### Loop 5: Insumos y consumos — BASE, API E IMPORTADOR (Claude Code, 2026-11-03), sin commit; pantallas pendientes
+### Loop 5: Insumos y consumos — BASE, API, IMPORTADOR (en main, `2613f63`) Y PANTALLAS (Claude Code, 2026-11-03, sin commit)
 
-Sin stock (decisión del usuario): cada operario carga lo que usó, con costo congelado; merma de bobina y plancha compartida para Edu; importador del Excel de insumos (246 listos, 15 a revisar; **no aplicado** por el bloqueo de datos reales). Detalle: `docs/LOOP_5_DISENO.md`.
+Sin stock (decisión del usuario): cada operario carga lo que usó, con costo congelado; merma de bobina y plancha compartida para Edu; importador del Excel de insumos (246 listos, 15 a revisar; **no aplicado** por el bloqueo de datos reales). Pantallas: Material en "Mi trabajo" y "En la calle", Merma y Compartido para impresión/ploteo/corte, sección "Material usado" en la OT con corrección por negativo, catálogo `/insumos` (admin). Recorrido `scripts/prueba-loop5.cjs` 7/7. **Precios solo para admin y comercial** (filtrado en la API). **Catálogo real:** el usuario autorizó importarlo en `afull-dev` (2026-11-03): 255 insumos (1 sin precio). Detalle: `docs/LOOP_5_DISENO.md`.
 
 ### Loop 7: Diseño y verificación — IMPLEMENTADO (Claude Code, 2026-11-03), sin commit
 
@@ -311,6 +312,9 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 ## 12. Siguiente paso
 
 > **Excepción al principio 7 (2026-11-02, decisión del usuario):** se inició y cerró Loop 1B con el Loop 0 abierto en dos puntos: (a) CA-0.9, el simulacro manual de restore en `afull-restore-drill`; (b) los secrets `DEV_*` restantes y la corrida de `tests-dev.yml`. **Bloqueo:** no se crea `afull-prod` con datos reales ni se carga ningún dato real hasta cerrar (a) y (b). Nota: los artefactos de backup duran 30 días; si el simulacro se hace después del 2026-12-02, volver a correr `backup-db.yml`.
+
+
+> **Excepción al bloqueo (2026-11-03, decisión del usuario):** se importa el catálogo real de insumos en `afull-dev` (solo dev). `afull-prod` y el resto de los datos reales siguen bloqueados.
 
 1. **Commit del Loop 3 completo** (L3.E1-fix, L3.E2, L3.E3, L3.E4; archivos de Claude Code en el disco, ver `MESA_CLAUDE.md`) y aplicar `0008` en `afull-dev` con `pnpm db:migrate`. Correr `node scripts/prueba-loop3.cjs` contra Vercel.
 2. **Confirmación del usuario** del cierre del Loop 3 (CA-3.1 a CA-3.10) y del supuesto de **IVA incluido**.

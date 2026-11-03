@@ -6,8 +6,9 @@
  *   2. Prueba sin escribir nada:   pnpm tsx scripts/importar-insumos.ts ruta/insumos.csv
  *   3. Cargar de verdad:           pnpm tsx scripts/importar-insumos.ts ruta/insumos.csv --aplicar
  *
- * Normaliza las unidades ("el m2", "M2", "rollo 25 m", "Min"…), descarta filas sin unidad reconocible o sin costo
- * (las lista para corregir a mano) y no duplica: si ya existe un insumo con el mismo nombre y unidad, lo saltea.
+ * Normaliza las unidades ("el m2", "M2", "rollo 25 m", "Min"…). Descarta y lista las filas sin unidad reconocible
+ * y las repetidas con otro costo; ignora las repetidas idénticas; importa sin precio las que no tienen costo.
+ * No duplica: si ya existe un insumo con el mismo nombre y unidad, lo saltea (se puede correr dos veces).
  * ⚠️ El archivo de la empresa NO va al repo. Con datos reales, respetar el bloqueo de TRASPASO §12 (CA-0.9).
  */
 import { readFileSync } from 'node:fs';
@@ -60,25 +61,34 @@ if (!ruta) {
 }
 const filas = parsearCsv(readFileSync(ruta, 'utf8')).slice(1);
 const vistos = new Set<string>();
-const ok: { nombre: string; unidad: string; sector: string | null; costo: number }[] = [];
+const ok: { nombre: string; unidad: string; sector: string | null; costo: number | null }[] = [];
 const descartes: string[] = [];
+const sinPrecio: string[] = [];
+let identicos = 0;
 for (const f of filas) {
   const [nombre = '', c = '', um = '', sec = ''] = f;
   if (!nombre) continue;
   const unidad = normalizarUnidad(um);
   const precio = costo(c);
   if (!unidad) { descartes.push(`sin unidad reconocible ("${um}"): ${nombre}`); continue; }
-  if (precio === null) { descartes.push(`sin costo: ${nombre}`); continue; }
   const k = `${nombre.toLowerCase()}|${unidad}`;
-  if (vistos.has(k)) { descartes.push(`repetido (se usa el primero): ${nombre} [${unidad}]`); continue; }
+  if (vistos.has(k)) {
+    // Fila repetida idéntica (mismo nombre, unidad y costo): se ignora sin avisar. Con otro costo: a revisar.
+    if (ok.find((x) => `${x.nombre.toLowerCase()}|${x.unidad}` === k)?.costo === precio) identicos++;
+    else descartes.push(`repetido con otro costo (se usa el primero): ${nombre} [${unidad}]`);
+    continue;
+  }
   vistos.add(k);
+  // Sin costo: se importa igual, sin precio; el admin lo carga en "Insumos" (hasta entonces no se puede usar).
+  if (precio === null) sinPrecio.push(nombre);
   ok.push({ nombre: nombre.slice(0, 150), unidad, sector: sector(sec), costo: precio });
 }
 
 const porUnidad = ok.reduce<Record<string, number>>((a, x) => ({ ...a, [x.unidad]: (a[x.unidad] ?? 0) + 1 }), {});
-console.log(`Filas leídas: ${filas.length} · para importar: ${ok.length} · descartadas: ${descartes.length}`);
+console.log(`Filas leídas: ${filas.length} · para importar: ${ok.length} (sin precio: ${sinPrecio.length}) · repetidas idénticas: ${identicos} · a revisar: ${descartes.length}`);
 console.log('Por unidad:', porUnidad);
 for (const d of descartes) console.log('  - ' + d);
+for (const n of sinPrecio) console.log('  · sin precio (cargarlo en Insumos): ' + n);
 
 if (bandera !== '--aplicar') {
   console.log('\nPrueba sin escribir (agregá --aplicar para cargar).');
@@ -93,7 +103,7 @@ await sql.begin(async (tx) => {
       ON CONFLICT (lower(nombre), unidad) DO NOTHING RETURNING id
     `;
     if (!i) continue;
-    await tx`INSERT INTO insumo_precio (insumo_id, costo_unitario_gs) VALUES (${i.id}, ${x.costo})`;
+    if (x.costo !== null) await tx`INSERT INTO insumo_precio (insumo_id, costo_unitario_gs) VALUES (${i.id}, ${x.costo})`;
     nuevos++;
   }
 });

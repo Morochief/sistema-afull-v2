@@ -26,7 +26,7 @@ describe('Loop 5 — insumos y consumos (sin stock)', () => {
     expect(a.status).toBe(201);
     expect((await e.op('POST', '/api/consumos', { otId: e.ot1, insumoId: e.lona, cantidad: 2.5, claveIdempotencia: clave })).status).toBe(200);
     expect((await e.juan('POST', `/api/insumos/${e.lona}/precios`, { costoUnitarioGs: 70000 })).status).toBe(201);
-    const r = (await e.op('GET', `/api/consumos/ot/${e.ot1}`)).j as { items: { costo_unitario_gs: number }[]; total_gs: number };
+    const r = (await e.juan('GET', `/api/consumos/ot/${e.ot1}`)).j as { items: { costo_unitario_gs: number }[]; total_gs: number };
     expect(r.items).toHaveLength(1);
     expect(r.items[0].costo_unitario_gs).toBe(63000);
     expect(r.total_gs).toBe(157500);
@@ -40,7 +40,7 @@ describe('Loop 5 — insumos y consumos (sin stock)', () => {
     });
     expect(m.status).toBe(201);
     expect(m.j.aprovechamientoPct).toBe(61.7);
-    const r = (await e.edu('GET', `/api/consumos/ot/${e.ot1}`)).j as { total_gs: number; desperdicio_gs: number };
+    const r = (await e.juan('GET', `/api/consumos/ot/${e.ot1}`)).j as { total_gs: number; desperdicio_gs: number };
     expect(r.total_gs).toBe(Math.round(1.5 * 63000) + Math.round(0.932 * 15500));
     expect(r.desperdicio_gs).toBe(Math.round(0.932 * 15500));
   });
@@ -61,7 +61,7 @@ describe('Loop 5 — insumos y consumos (sin stock)', () => {
     expect((await e.edu('POST', `/api/consumos/${id}/anular`, { motivo: 'no fue mío', claveIdempotencia: uuid() })).status).toBe(403);
     expect((await e.op('POST', `/api/consumos/${id}/anular`, { motivo: 'cargué de más', claveIdempotencia: uuid() })).status).toBe(201);
     expect((await e.op('POST', `/api/consumos/${id}/anular`, { motivo: 'otra vez', claveIdempotencia: uuid() })).status).toBe(409);
-    const r = (await e.op('GET', `/api/consumos/ot/${e.ot1}`)).j as { total_gs: number };
+    const r = (await e.juan('GET', `/api/consumos/ot/${e.ot1}`)).j as { total_gs: number };
     expect(r.total_gs).toBe(0);
     await expect(apiDb`UPDATE consumo_insumo SET cantidad = 5 WHERE id = ${id}`).rejects.toBeTruthy();
     await expect(apiDb`DELETE FROM consumo_insumo WHERE id = ${id}`).rejects.toBeTruthy();
@@ -74,7 +74,7 @@ describe('Loop 5 — insumos y consumos (sin stock)', () => {
     await admin`UPDATE orden_trabajo SET estado = 'CANCELADO' WHERE id = ${e.ot2}`;
     expect((await e.op('POST', '/api/consumos', { otId: e.ot2, insumoId: e.lona, cantidad: 1, claveIdempotencia: uuid() })).status).toBe(409);
     expect((await e.op('POST', '/api/insumos', { nombre: 'zz x', unidad: 'M2', costoUnitarioGs: 1 })).status).toBe(403);
-    const lista = (await e.op('GET', `/api/insumos?q=${encodeURIComponent('zz_test Lona front ' + e.tag)}`)).j as unknown as { costo_unitario_gs: number }[];
+    const lista = (await e.juan('GET', `/api/insumos?q=${encodeURIComponent('zz_test Lona front ' + e.tag)}`)).j as unknown as { costo_unitario_gs: number }[];
     expect(lista[0].costo_unitario_gs).toBe(63000);
   });
 });

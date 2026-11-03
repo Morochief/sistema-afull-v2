@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { nuevaSedeSchema, patchSedeSchema, nuevoVehiculoSchema, patchVehiculoSchema } from '@afull/shared';
 import type { TransactionSql } from 'postgres';
 import { sql } from '../../db/client.js';
+import { puedeVerCostos } from '@afull/shared';
 import { requireSesion, requireCapacidad, requireAlgunaCapacidad } from '../auth/middleware.js';
 import { auditar } from '../auditoria/service.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
@@ -30,9 +31,11 @@ const COL_SEDE = sql`id, nombre, gps_lat::float8 AS gps_lat, gps_lng::float8 AS 
 /** Vehículos y sedes: catálogos chicos (sin paginación). Lectura para coordinación y cuadrilla; alta y edición solo admin. */
 export const flotaRoutes = new Hono()
   .use('*', requireSesion)
-  .get('/vehiculos', requireAlgunaCapacidad('comercial', 'montaje', 'taller'), async (c) =>
-    c.json([...(await sql`SELECT ${COL_VEHICULO} FROM vehiculo ORDER BY activo DESC, chapa`)])
-  )
+  .get('/vehiculos', requireAlgunaCapacidad('comercial', 'montaje', 'taller'), async (c) => {
+    const lista = [...(await sql`SELECT ${COL_VEHICULO} FROM vehiculo ORDER BY activo DESC, chapa`)];
+    // La cuadrilla elige el vehículo sin ver el costo por km (solo admin y comercial).
+    return c.json(puedeVerCostos(c.get('usuario').capacidades as string[]) ? lista : lista.map(({ costo_km_gs: _c, ...v }) => v));
+  })
   .post('/vehiculos', requireCapacidad('admin'), async (c) => {
     const d = nuevoVehiculoSchema.parse(await cuerpo(c));
     const r = await conAuditoria(c, 'vehiculo.crear', 'vehiculo', async (tx) => {
