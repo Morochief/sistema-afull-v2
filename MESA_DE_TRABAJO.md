@@ -1381,3 +1381,54 @@ OK   6 Sofi ve la asistencia y filtra "fuera de la sede"
   ```
 - **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
 - **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
+
+
+---
+
+## Entrega: Loop 9 — Portal del Cliente por Enlace y Bandeja de Pedidos
+
+**Fecha:** 2026-11-03 18:15  
+**Commit:** `ae180f8` — `feat(loop9): portal del cliente por enlace y bandeja de pedidos (Claude Code)`  
+**GitHub Actions CI Run:** [#41719591518](https://github.com/Morochief/sistema-afull-v2/actions/runs/41719591518) — **Success** (Lint 0, Tipos 0, 150 tests backend en CI, 135 tests web, Build Vite 8).
+
+### 1. Migración 0016 aplicada en `afull-dev`
+- **Comando:** `pnpm db:migrate`
+- **Salida:**
+  ```text
+  [✓] 0016_portal.sql applied successfully!
+  [✓] migrations applied successfully!
+  ```
+- **Esquema:** Tablas `portal_acceso` (hash de token seguro, expiración a 180 días, revocación) y `pedido` (estado PENDIENTE, CONVERTIDO_OT, CONVERTIDO_PRESUPUESTO, DESCARTADO; triggers inmutables y control de rate-limiting a 30 pedidos/día).
+
+### 2. Recorrido Playwright en Vercel (`scripts/prueba-loop9.cjs`)
+Ejecutado con `$env:BASE_URL="https://sistema-afull-v2-api.vercel.app"`:
+```text
+OK   1 fixtures: Sofi (comercial) y un cliente con dos locales
+OK   2 Sofi genera el enlace del portal desde el detalle del cliente
+OK   3 El cliente abre el enlace en otro navegador (sin sesión): ve su nombre y el token sale de la barra
+OK   4 El cliente pide un cambio de lona para "Local Luque"
+OK   5 Sofi ve el pedido en "Pedidos" y lo convierte en OT
+OK   6 El cliente ve el pedido convertido y el trabajo "Recibido" en la pestaña Trabajos
+OK   7 Sofi revoca el enlace y el cliente ya no entra
+
+>>> RECORRIDO LOOP 9 EN VERDE: 7/7 PASOS OK <<<
+```
+
+### 3. Verificación de Carga Directa de `/portal` (Sin Login)
+- Se verificó en contexto limpio/incógnito que la ruta `/portal` carga directamente sin pasar por `/login`. El token se limpia de la barra de direcciones y se mantiene activo en la sesión del portal del cliente.
+
+### 4. Estado de la Suite Completa
+- **Vitest Backend:**
+  ```text
+   Test Files  39 passed (39)
+        Tests  152 passed (152)
+  ```
+  *(En GitHub Actions CI sin `anon.test.ts`: 38 suites, 150 tests pasando en verde)*
+- **Vitest Web:**
+  ```text
+   Test Files  25 passed (25)
+        Tests  135 passed (135)
+     Duration  7.86s
+  ```
+- **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
