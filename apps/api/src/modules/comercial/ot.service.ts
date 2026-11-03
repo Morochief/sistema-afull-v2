@@ -1,3 +1,4 @@
+import type { TransactionSql } from 'postgres';
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
 import { puedeTransicionar, esEstadoFinal, type EstadoOT, type OTDetalle, type OTFila, type Pagina } from '@afull/shared';
@@ -117,40 +118,43 @@ export type NuevaOT = {
 
 export async function crearOT(ctx: Ctx, d: NuevaOT) {
   try {
-    return await sql.begin(async (tx) => {
-      const [c] = await tx`SELECT activo FROM cliente WHERE id = ${d.clienteId}`;
-      if (!c?.activo) throw new ErrorApp(400, 'Cliente inexistente o inactivo');
-      if (d.sucursalId) {
-        const [s] = await tx`SELECT activo FROM sucursal WHERE id = ${d.sucursalId} AND cliente_id = ${d.clienteId}`;
-        if (!s?.activo) throw new ErrorApp(400, 'Sucursal inexistente, inactiva o de otro cliente');
-      }
-
-      const anio = anioAsuncion();
-      const [{ v }] = await tx`SELECT siguiente_valor(${'OT-' + anio}) AS v`;
-      const codigo = `OT-${anio}-${String(v).padStart(4, '0')}`;
-
-      const [ot] = await tx`
-        INSERT INTO orden_trabajo (codigo_ot, cliente_id, sucursal_id, titulo, descripcion, fecha_prometida, creado_por)
-        VALUES (${codigo}, ${d.clienteId}, ${d.sucursalId ?? null}, ${d.titulo}, ${d.descripcion ?? null}, ${d.fechaPrometida ?? null}, ${ctx.usuarioId})
-        RETURNING *
-      `;
-      await tx`
-        INSERT INTO ot_evento (orden_trabajo_id, estado_anterior, estado_nuevo, autor_id)
-        VALUES (${ot.id}, NULL, 'PENDIENTE', ${ctx.usuarioId})
-      `;
-      if (d.tareas && d.tareas.length > 0) {
-        await insertarTareasIniciales(tx, ctx, ot.id as string, d.tareas);
-      }
-      await auditar(
-        { usuarioId: ctx.usuarioId, accion: 'ot.crear', recurso: 'orden_trabajo', recursoId: ot.id, ip: ctx.ip, metadata: { codigo } },
-        tx,
-      );
-      return ot;
-    });
+    return await sql.begin((tx) => crearOTEnTx(tx, ctx, d));
   } catch (e) {
     if (e instanceof ErrorApp) throw e;
     traducirErrorPg(e);
   }
+}
+
+/** Alta de OT dentro de una transacción ajena (p. ej. al convertir un pedido del portal). */
+export async function crearOTEnTx(tx: TransactionSql, ctx: Ctx, d: NuevaOT) {
+  const [c] = await tx`SELECT activo FROM cliente WHERE id = ${d.clienteId}`;
+  if (!c?.activo) throw new ErrorApp(400, 'Cliente inexistente o inactivo');
+  if (d.sucursalId) {
+    const [s] = await tx`SELECT activo FROM sucursal WHERE id = ${d.sucursalId} AND cliente_id = ${d.clienteId}`;
+    if (!s?.activo) throw new ErrorApp(400, 'Sucursal inexistente, inactiva o de otro cliente');
+  }
+
+  const anio = anioAsuncion();
+  const [{ v }] = await tx`SELECT siguiente_valor(${'OT-' + anio}) AS v`;
+  const codigo = `OT-${anio}-${String(v).padStart(4, '0')}`;
+
+  const [ot] = await tx`
+    INSERT INTO orden_trabajo (codigo_ot, cliente_id, sucursal_id, titulo, descripcion, fecha_prometida, creado_por)
+    VALUES (${codigo}, ${d.clienteId}, ${d.sucursalId ?? null}, ${d.titulo}, ${d.descripcion ?? null}, ${d.fechaPrometida ?? null}, ${ctx.usuarioId})
+    RETURNING *
+  `;
+  await tx`
+    INSERT INTO ot_evento (orden_trabajo_id, estado_anterior, estado_nuevo, autor_id)
+    VALUES (${ot.id}, NULL, 'PENDIENTE', ${ctx.usuarioId})
+  `;
+  if (d.tareas && d.tareas.length > 0) {
+    await insertarTareasIniciales(tx, ctx, ot.id as string, d.tareas);
+  }
+  await auditar(
+    { usuarioId: ctx.usuarioId, accion: 'ot.crear', recurso: 'orden_trabajo', recursoId: ot.id, ip: ctx.ip, metadata: { codigo } },
+    tx,
+  );
+  return ot;
 }
 
 export type PatchOT = {

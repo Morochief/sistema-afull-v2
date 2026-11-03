@@ -32,31 +32,34 @@ async function validarSucursal(tx: TransactionSql, sucursalId: string, clienteId
 
 export async function crearPresupuesto(ctx: Ctx, d: NuevoPresupuestoInput) {
   try {
-    return await sql.begin(async (tx) => {
-      const [c] = await tx`SELECT activo FROM cliente WHERE id = ${d.clienteId}`;
-      if (!c?.activo) throw new ErrorApp(400, 'Cliente inexistente o inactivo');
-      const anio = anioAsuncion();
-      const [{ v }] = await tx`SELECT siguiente_valor(${'PRE-' + anio}) AS v`;
-      const numero = `PRE-${anio}-${String(v).padStart(4, '0')}`;
-      const [p] = await tx`
-        INSERT INTO presupuesto (numero, cliente_id, titulo, notas, margen_pct, validez_dias, creado_por)
-        VALUES (${numero}, ${d.clienteId}, ${d.titulo}, ${d.notas ?? null}, ${d.margenPct}, ${d.validezDias}, ${ctx.usuarioId})
-        RETURNING id, numero, version, estado, updated_at
-      `;
-      await tx`
-        INSERT INTO presupuesto_evento (presupuesto_id, estado_anterior, estado_nuevo, autor_id)
-        VALUES (${p.id}, NULL, 'BORRADOR', ${ctx.usuarioId})
-      `;
-      await auditar(
-        { usuarioId: ctx.usuarioId, accion: 'presupuesto.crear', recurso: 'presupuesto', recursoId: p.id, ip: ctx.ip, metadata: { numero } },
-        tx
-      );
-      return p;
-    });
+    return await sql.begin((tx) => crearPresupuestoEnTx(tx, ctx, d));
   } catch (e) {
     if (e instanceof ErrorApp) throw e;
     traducirErrorPg(e);
   }
+}
+
+/** Alta del borrador dentro de una transacción ajena (p. ej. al convertir un pedido del portal). */
+export async function crearPresupuestoEnTx(tx: TransactionSql, ctx: Ctx, d: NuevoPresupuestoInput) {
+  const [c] = await tx`SELECT activo FROM cliente WHERE id = ${d.clienteId}`;
+  if (!c?.activo) throw new ErrorApp(400, 'Cliente inexistente o inactivo');
+  const anio = anioAsuncion();
+  const [{ v }] = await tx`SELECT siguiente_valor(${'PRE-' + anio}) AS v`;
+  const numero = `PRE-${anio}-${String(v).padStart(4, '0')}`;
+  const [p] = await tx`
+    INSERT INTO presupuesto (numero, cliente_id, titulo, notas, margen_pct, validez_dias, creado_por)
+    VALUES (${numero}, ${d.clienteId}, ${d.titulo}, ${d.notas ?? null}, ${d.margenPct}, ${d.validezDias}, ${ctx.usuarioId})
+    RETURNING id, numero, version, estado, updated_at
+  `;
+  await tx`
+    INSERT INTO presupuesto_evento (presupuesto_id, estado_anterior, estado_nuevo, autor_id)
+    VALUES (${p.id}, NULL, 'BORRADOR', ${ctx.usuarioId})
+  `;
+  await auditar(
+    { usuarioId: ctx.usuarioId, accion: 'presupuesto.crear', recurso: 'presupuesto', recursoId: p.id, ip: ctx.ip, metadata: { numero } },
+    tx
+  );
+  return p;
 }
 
 export async function editarPresupuesto(ctx: Ctx, id: string, d: PatchPresupuestoInput) {

@@ -19,6 +19,8 @@ import { procesosRoutes } from './modules/procesos/routes.js';
 import { insumosRoutes, consumosRoutes } from './modules/insumos/routes.js';
 import { costeoRoutes } from './modules/costeo/routes.js';
 import { permisosRoutes } from './modules/permisos/routes.js';
+import { portalClienteRoutes } from './modules/portal/cliente.routes.js';
+import { portalAccesosRoutes, pedidosRoutes } from './modules/portal/comercial.routes.js';
 import { verificarOrigen } from './modules/auth/middleware.js';
 import { ErrorApp } from './lib/errores.js';
 
@@ -46,6 +48,9 @@ app.route('/api/insumos', insumosRoutes);
 app.route('/api/consumos', consumosRoutes);
 app.route('/api/costeo', costeoRoutes);
 app.route('/api/permisos', permisosRoutes);
+app.route('/api/portal', portalClienteRoutes);
+app.route('/api/portal-accesos', portalAccesosRoutes);
+app.route('/api/pedidos', pedidosRoutes);
 
 app.onError((e, c) => {
   if (e instanceof ErrorApp) return c.json({ error: e.message }, e.status);

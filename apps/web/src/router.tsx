@@ -30,6 +30,8 @@ import { RentabilidadPage } from './routes/rentabilidad.js';
 import { PermisosListaPage } from './routes/permisos/lista.js';
 import { PermisoDetallePage } from './routes/permisos/detalle.js';
 import { AsistenciaPage } from './routes/asistencia.js';
+import { PedidosListaPage } from './routes/pedidos/lista.js';
+import { PortalPage } from './routes/portal.js';
 import { useSesion } from './hooks/useSesion.js';
 import { rutaInicialSegunCapacidades } from './lib/rutas.js';
 
@@ -58,12 +60,7 @@ function RedireccionRaiz() {
   return <Navigate to={destino} replace />;
 }
 
-const indexRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/',
-  component: RedireccionRaiz,
-});
-
+const indexRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/', component: RedireccionRaiz });
 const clientesSearchSchema = z.object({
   q: z.string().optional(),
   estado: z.string().optional(),
@@ -79,12 +76,7 @@ const clientesRoute = createRoute({
   component: ClientesListaPage,
 });
 
-const clientesDetalleRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/clientes/$id',
-  component: ClientesDetallePage,
-});
-
+const clientesDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/clientes/$id', component: ClientesDetallePage });
 const otsSearchSchema = z.object({
   q: z.string().optional(),
   estado: z.string().optional(),
@@ -101,30 +93,10 @@ const otsRoute = createRoute({
   component: OTsListaPage,
 });
 
-const otsDetalleRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/ots/$id',
-  component: OTsDetallePage,
-});
-
-const miTrabajoRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/mi-trabajo',
-  component: MiTrabajoPage,
-});
-
-const enVivoRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/en-vivo',
-  component: EnVivoPage,
-});
-
-const personasRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/personas',
-  component: PersonasPage,
-});
-
+const otsDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/ots/$id', component: OTsDetallePage });
+const miTrabajoRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/mi-trabajo', component: MiTrabajoPage });
+const enVivoRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/en-vivo', component: EnVivoPage });
+const personasRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/personas', component: PersonasPage });
 const listadoSearchSchema = z.object({
   q: z.string().optional(),
   estado: z.string().optional(),
@@ -140,12 +112,7 @@ const presupuestosRoute = createRoute({
   component: PresupuestosListaPage,
 });
 
-const presupuestoDetalleRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/presupuestos/$id',
-  component: PresupuestoDetallePage,
-});
-
+const presupuestoDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/presupuestos/$id', component: PresupuestoDetallePage });
 // Fuera del AppLayout: hoja limpia para imprimir, sin menú.
 const presupuestoImprimirRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -160,18 +127,8 @@ const proyectosRoute = createRoute({
   component: ProyectosListaPage,
 });
 
-const proyectoDetalleRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/proyectos/$id',
-  component: ProyectoDetallePage,
-});
-
-const disenosRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/disenos',
-  component: DisenosPage,
-});
-
+const proyectoDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/proyectos/$id', component: ProyectoDetallePage });
+const disenosRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/disenos', component: DisenosPage });
 const calleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/calle', component: CallePage });
 const hojasRutaRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/hojas-ruta', component: HojasRutaListaPage });
 const hojaRutaDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/hojas-ruta/$id', component: HojaRutaDetallePage });
@@ -184,9 +141,13 @@ const rentabilidadRoute = createRoute({ ...listado(), path: '/rentabilidad', com
 const permisosRoute = createRoute({ ...listado(), path: '/permisos', component: PermisosListaPage });
 const permisoDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/permisos/$id', component: PermisoDetallePage });
 const asistenciaRoute = createRoute({ ...listado(), path: '/asistencia', component: AsistenciaPage });
+const pedidosRoute = createRoute({ ...listado(), path: '/pedidos', component: PedidosListaPage });
+// Público (fuera del AppLayout): el cliente entra con su enlace, sin usuario.
+const portalRoute = createRoute({ getParentRoute: () => rootRoute, path: '/portal', component: PortalPage });
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  portalRoute,
   presupuestoImprimirRoute,
   appLayoutRoute.addChildren([
     indexRoute,
@@ -212,6 +173,7 @@ const routeTree = rootRoute.addChildren([
     permisosRoute,
     permisoDetalleRoute,
     asistenciaRoute,
+    pedidosRoute,
   ]),
 ]);
 

@@ -11,7 +11,7 @@ import type { FiltrosListado } from '../lib/api-presupuestos.js';
  * 25 filas por servidor, búsqueda, estado y rango de fechas; volver atrás conserva el filtro.
  */
 export function useListadoUrl<T, P extends Pagina<T> = Pagina<T>>(
-  ruta: '/presupuestos' | '/proyectos' | '/rentabilidad' | '/permisos' | '/asistencia',
+  ruta: '/presupuestos' | '/proyectos' | '/rentabilidad' | '/permisos' | '/asistencia' | '/pedidos',
   clave: string,
   fetcher: (f: FiltrosListado) => Promise<P>
 ) {

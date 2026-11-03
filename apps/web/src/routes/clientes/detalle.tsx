@@ -12,6 +12,7 @@ import { Skeleton } from '../../components/ui/skeleton.js';
 import { ModalEditarCliente } from '../../components/modals/ModalEditarCliente.js';
 import { ModalSucursal } from '../../components/modals/ModalSucursal.js';
 import { ModalContacto } from '../../components/modals/ModalContacto.js';
+import { SeccionPortalCliente } from '../../components/portal/SeccionPortalCliente.js';
 import { ModalMarca } from '../../components/modals/ModalMarca.js';
 
 export function ClientesDetallePage() {
@@ -202,6 +203,8 @@ export function ClientesDetallePage() {
           {cliente.marcas.length === 0 && <p className="text-xs text-neutral-500 italic">Sin marcas registradas.</p>}
         </div>
       </div>
+
+      <SeccionPortalCliente clienteId={id} />
 
       <ModalEditarCliente cliente={cliente} abierto={modalEditarCli} onCerrar={() => { setModalEditarCli(false); void refetch(); }} />
       <ModalSucursal clienteId={id} sucursal={sucursalModal.datos} abierto={sucursalModal.abierto} onCerrar={() => setSucursalModal({ abierto: false, datos: null })} />

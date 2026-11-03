@@ -55,7 +55,7 @@ Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proye
 | Aprobación de diseños (REQ-06, **corregido por el usuario 2026-11-03**): el diseño puede venir del cliente o de Nachi; queda en Google Drive; **Juan o Sofi** (cualquiera de los dos) dan el OK; recién ahí Edu ve el enlace (hoy Edu pregunta en el grupo "¿la ruleta ya tienen?": eso lo resuelve la cola) | 7 | ✅ Implementado (sin commit): `docs/LOOP_7_DISENO.md` |
 | Botón "Abrir original en Drive" para Edu | 7 | ✅ Implementado (sin commit) |
 | Permisos y justificaciones con comprobante (RR.HH.) | 8 | ✅ Implementado (sin commit): `docs/LOOP_8_DISENO.md`; comprobante por enlace hasta tener almacenamiento |
-| Portal del cliente por enlace, pedidos por local con foto | 9 | Planificado (aquí nace `pedido`) |
+| Portal del cliente por enlace, pedidos por local con foto | 9 | ✅ Implementado (sin commit): `docs/LOOP_9_DISENO.md`; foto por enlace hasta tener almacenamiento |
 | Pantalla propia de impresión y corte para Edu (REQ-02) | — | **A revisar con Edu después de usar "Mi trabajo"** del Loop 2. Si hace falta, entra como entrega extra del Loop 5 (cola por máquina) |
 | Importar planillas de papel por foto con IA (REQ-07) | — | **Descartado por ahora:** costo y fiabilidad; el operario carga en el celular en el momento |
 | Importar Excel de partes diarios (sistema viejo) | — | **Descartado como función:** solo el script único de migración de datos (`--dry-run`) antes de salir a producción |

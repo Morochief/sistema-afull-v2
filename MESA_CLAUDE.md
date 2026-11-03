@@ -35,6 +35,28 @@
 
 ---
 
+## Loop 9: portal del cliente y pedidos — Claude Code, 2026-11-03 20:00
+
+**Diseño, seguridad y supuestos:** `docs/LOOP_9_DISENO.md`.
+
+**En el disco, sin commit:**
+- `migrations/0016_portal.sql` + `meta/_journal.json`.
+- Shared: `schemas/portal.ts` (+ export).
+- API: `modules/portal/` (`cliente.routes.ts` público con `Authorization: Portal`, `comercial.service.ts`, `comercial.routes.ts`), rutas `/api/portal`, `/api/portal-accesos`, `/api/pedidos` en `index.ts`; `comercial/ot.service.ts` (`crearOTEnTx`) y `presupuestos/borrador.service.ts` (`crearPresupuestoEnTx`) para convertir el pedido en la misma transacción.
+- Web: `lib/api-portal.ts` (+ `.test.ts`), `components/portal/` (`FormPedido`, `ListasPortal`, `ModalPedido`, `SeccionPortalCliente`), `routes/portal.tsx` (pública, fuera del AppLayout), `routes/pedidos/lista.tsx`; `routes/clientes/detalle.tsx` (sección Portal), `router.tsx` (rutas simples en una línea: quedó en 208), `routes/app-layout.tsx` (menú Pedidos), `hooks/useListadoUrl.ts`.
+- Pruebas: `tests/loop9/portal-api.test.ts`; `scripts/prueba-loop9.cjs`.
+- Docs: `docs/LOOP_9_DISENO.md`, `MAPA_REQUISITOS.md`, `TRASPASO.md` §5 y §6.
+
+**Verificado:** base nueva `0001`–`0016`; backend **150/150**, web **135/135**, lint y tipos en 0; recorridos locales Loop 3 **9/9**, 4 **7/7**, 5 **7/7**, 6 **5/5**, 7 **5/5**, 8 **6/6**, 9 **7/7**.
+
+**Para Antigravity (solo esto):**
+1. `git status`: `Documentos/` NO debe aparecer.
+2. `pnpm db:migrate` en `afull-dev` (aplica `0016`). Pegá la salida.
+3. `pnpm lint && pnpm typecheck && pnpm build`; commit `feat(loop9): portal del cliente por enlace y bandeja de pedidos (Claude Code)`; push. Correr `node scripts/prueba-loop9.cjs` contra Vercel. Hash, CI y línea de Vitest en tu mesa; fila en la bitácora §13.
+4. **Verificar en Vercel** que `/portal` carga directo (sin pasar por el login) al abrir el enlace en una ventana de incógnito.
+
+---
+
 ## Loop 8: RR.HH. (permisos y asistencia) — Claude Code, 2026-11-03 18:30
 
 **Diseño y supuestos:** `docs/LOOP_8_DISENO.md` (basado en el formulario de permiso de la empresa; jefe = admin).
