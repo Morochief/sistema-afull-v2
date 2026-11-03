@@ -14,6 +14,7 @@ import { ModalTransicionOT } from '../../components/modals/ModalTransicionOT.js'
 import { SeccionTareasOT } from '../../components/ots/SeccionTareasOT.js';
 import { SeccionDisenoOT } from '../../components/disenos/SeccionDisenoOT.js';
 import { SeccionMaterialOT } from '../../components/insumos/SeccionMaterialOT.js';
+import { SeccionCosteoOT } from '../../components/costeo/SeccionCosteoOT.js';
 
 function badgeEstado(estado: EstadoOT): { variant: BadgeVariant; texto: string } {
   switch (estado) {
@@ -156,6 +157,8 @@ export function OTsDetallePage() {
       <SeccionTareasOT otId={ot.id} otFinalizada={final} />
 
       <SeccionMaterialOT otId={ot.id} otFinalizada={final} />
+
+      <SeccionCosteoOT otId={ot.id} estado={ot.estado} />
 
       <div className="rounded-md border border-[#1f2937] bg-[#111318] p-4 space-y-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Línea de Tiempo de Estados</h2>

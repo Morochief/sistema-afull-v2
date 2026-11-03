@@ -1,6 +1,7 @@
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
 import { puedeTransicionar, esEstadoFinal, type EstadoOT, type OTDetalle, type OTFila, type Pagina } from '@afull/shared';
+import { guardarSnapshot } from '../costeo/calculo.service.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import { TAM_PAGINA, desplazamiento, escaparLike, armarPagina } from '../../lib/paginacion.js';
 import { type Ctx, esperarAvanceReloj, verificarUpdatedAt } from '../clientes/service.js';
@@ -228,6 +229,8 @@ export async function transicionar(ctx: Ctx, id: string, t: Transicion) {
         { usuarioId: ctx.usuarioId, accion: 'ot.cambio_estado', recurso: 'orden_trabajo', recursoId: id, ip: ctx.ip, metadata: { de: actual, a: t.a } },
         tx,
       );
+      // Loop 6: al cerrar la OT se congela su costo real (único redondeo), en la misma transacción.
+      if (t.a === 'TERMINADO' || t.a === 'CANCELADO') await guardarSnapshot(tx, id, t.a, ctx.usuarioId);
       return { id, estado: t.a };
     });
   } catch (e) {

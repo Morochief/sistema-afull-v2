@@ -13,6 +13,7 @@ import { Label } from '../../components/ui/label.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog.js';
 import { ESTADO_PROYECTO } from '../../components/presupuestos/etiquetas.js';
+import { SeccionCosteoProyecto } from '../../components/costeo/SeccionCosteoProyecto.js';
 
 export function ProyectoDetallePage() {
   const { id } = useParams({ strict: false }) as { id: string };
@@ -96,8 +97,9 @@ export function ProyectoDetallePage() {
           <span>Total presupuestado</span>
           <span className="font-mono text-[#ea580c]">{formatearGs(py.total_presupuestado_gs)}</span>
         </div>
-        <p className="mt-1 text-right text-[11px] text-neutral-500">El costo real se compara en el Loop 6 (costeo).</p>
       </section>
+
+      <SeccionCosteoProyecto proyectoId={py.id} />
 
       <Dialog abierto={Boolean(accion)} onCerrar={() => setAccion(null)}>
         <DialogHeader>

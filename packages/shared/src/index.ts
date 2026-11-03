@@ -16,3 +16,4 @@ export * from './schemas/disenos.js';
 export * from './formulas/material.js';
 export * from './schemas/insumos.js';
 export * from './permisos.js';
+export * from './schemas/costeo.js';

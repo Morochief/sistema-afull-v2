@@ -10,10 +10,10 @@ import type { FiltrosListado } from '../lib/api-presupuestos.js';
  * Listado administrativo con los filtros en la URL (misma convención que useOTs):
  * 25 filas por servidor, búsqueda, estado y rango de fechas; volver atrás conserva el filtro.
  */
-export function useListadoUrl<T>(
-  ruta: '/presupuestos' | '/proyectos',
+export function useListadoUrl<T, P extends Pagina<T> = Pagina<T>>(
+  ruta: '/presupuestos' | '/proyectos' | '/rentabilidad',
   clave: string,
-  fetcher: (f: FiltrosListado) => Promise<Pagina<T>>
+  fetcher: (f: FiltrosListado) => Promise<P>
 ) {
   const search = useSearch({ strict: false }) as Record<string, unknown>;
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ export function useListadoUrl<T>(
     pagina: typeof search?.pagina === 'number' && search.pagina > 0 ? search.pagina : 1,
   };
 
-  const { data, isLoading, isFetching, error, refetch } = useQuery<Pagina<T>, ErrorApi>({
+  const { data, isLoading, isFetching, error, refetch } = useQuery<P, ErrorApi>({
     queryKey: [clave, filtros],
     queryFn: () => fetcher({ ...filtros, pagina: filtros.pagina ?? 1 }),
     placeholderData: keepPreviousData,

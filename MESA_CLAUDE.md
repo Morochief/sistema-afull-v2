@@ -35,6 +35,27 @@
 
 ---
 
+## Loop 6: costeo real por OT — Claude Code, 2026-11-03 17:00
+
+**Diseño y supuestos:** `docs/LOOP_6_DISENO.md` (reparto de km en partes iguales, umbral 20 %, tiempo de viaje no imputado).
+
+**En el disco, sin commit:**
+- `migrations/0014_costeo.sql` + `meta/_journal.json`.
+- Shared: `schemas/costeo.ts` (+ export en `index.ts`).
+- API: `modules/costeo/` (`calculo.service.ts`, `consultas.service.ts`, `routes.ts`), ruta `/api/costeo` en `index.ts`; `comercial/ot.service.ts` (snapshot al pasar a TERMINADO o CANCELADO, misma transacción).
+- Web: `lib/api-costeo.ts` (+ `.test.ts`), `lib/margen.ts`, `components/costeo/SeccionCosteoOT.tsx` y `SeccionCosteoProyecto.tsx`, `routes/rentabilidad.tsx`; `routes/ots/detalle.tsx`, `routes/proyectos/detalle.tsx`, `router.tsx`, `routes/app-layout.tsx` (menú Rentabilidad), `hooks/useListadoUrl.ts` (genérico para el resumen).
+- Pruebas: `tests/loop6/costeo-api.test.ts`; `scripts/prueba-loop6.cjs`.
+- Docs: `docs/LOOP_6_DISENO.md`, `TRASPASO.md` §5 y §6.
+
+**Verificado:** base nueva `0001`–`0014`; backend **142/142**, web **115/115**, lint y tipos en 0; recorridos locales Loop 3 **9/9**, Loop 4 **7/7**, Loop 5 **7/7**, Loop 6 **5/5**, Loop 7 **5/5**.
+
+**Para Antigravity (solo esto):**
+1. `git status`: `Documentos/` NO debe aparecer.
+2. `pnpm db:migrate` en `afull-dev` (aplica `0014`). Pegá la salida.
+3. `pnpm lint && pnpm typecheck && pnpm build`; commit `feat(loop6): costeo real por OT — snapshot al cerrar, consolidado de proyecto y rentabilidad (Claude Code)`; push. Correr `node scripts/prueba-loop6.cjs` contra Vercel. Hash, CI y línea de Vitest en tu mesa; fila en la bitácora §13.
+
+---
+
 ## Loop 5 (parte 3): precios solo para admin y comercial + catálogo real — Claude Code, 2026-11-03 15:40
 
 **Decisiones del usuario (2026-11-03 14:59):** "importa todos los insumos" y "los operarios nunca deben ver precios de nada, solo el admin y comercial".

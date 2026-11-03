@@ -174,6 +174,7 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 | `0011_iva_disenos` | (A) `presupuesto.iva_gs` (IVA 10 % aparte, congelado al enviar). (B) `diseno_version` (enlace de Drive, origen cliente/diseñadora, una pendiente por OT, una sola revisión, inmutable). Aplicada en `afull-dev`. |
 | `0012_procesos_margen` | Catálogo `tipo_tarea` (procesos administrables, `tarea.tipo` pasa de `CHECK` a FK, 26 procesos iniciales de las planillas); margen **sobre la venta** (`CHECK margen_pct < 100`, default 30) y `precio_final_gs` (redondeo manual) congelado al enviar. Aplicada en `afull-dev`. |
 | `0013_insumos_consumos` | (Loop 5, sin stock) `insumo`, `insumo_precio` (historial inmutable), `consumo_insumo` (inmutable, costo congelado, corrección por negativo, tarea de la misma OT por FK compuesta). Aplicada en `afull-dev`. |
+| `0014_costeo` | (Loop 6) `ot_costeo`: snapshot **inmutable** del costo real (mano de obra, material, km, total, venta, margen) generado en la misma transacción que pasa la OT a TERMINADO o CANCELADO; único redondeo. Índices para viajes por hoja y paradas por OT. **Pendiente de aplicar en `afull-dev`.** |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
@@ -203,7 +204,11 @@ Criterios de aceptación:
 
 Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,seed}.test.ts`. El test de la `anon key` no corre en CI (necesita la API REST de Supabase); correrá a diario contra `dev` en `tests-dev.yml` (pendiente). Los tests tienen un guard `TEST_ENV=dev` y **nunca se corren contra `prod`**.
 
-### Loop 5: Insumos y consumos — BASE, API, IMPORTADOR (en main, `2613f63`) Y PANTALLAS (Claude Code, 2026-11-03, sin commit)
+### Loop 6: Costeo real — IMPLEMENTADO (Claude Code, 2026-11-03), sin commit
+
+Costo real por OT = horas cronometradas × tarifa vigente del día + material con costo congelado + km de viajes repartidos entre las OTs de la hoja. Se congela (único redondeo) al terminar o cancelar la OT. Sección en la OT y en el proyecto, y listado "Rentabilidad". Solo admin y comercial. Supuestos a confirmar en `docs/LOOP_6_DISENO.md` §6.
+
+### Loop 5: Insumos y consumos — COMPLETO (en main: `2613f63`, `074988d`, `4683c1c`); catálogo real importado en `afull-dev`
 
 Sin stock (decisión del usuario): cada operario carga lo que usó, con costo congelado; merma de bobina y plancha compartida para Edu; importador del Excel de insumos (246 listos, 15 a revisar; **no aplicado** por el bloqueo de datos reales). Pantallas: Material en "Mi trabajo" y "En la calle", Merma y Compartido para impresión/ploteo/corte, sección "Material usado" en la OT con corrección por negativo, catálogo `/insumos` (admin). Recorrido `scripts/prueba-loop5.cjs` 7/7. **Precios solo para admin y comercial** (filtrado en la API). **Catálogo real:** el usuario autorizó importarlo en `afull-dev` (2026-11-03): 255 insumos (1 sin precio). Detalle: `docs/LOOP_5_DISENO.md`.
 
