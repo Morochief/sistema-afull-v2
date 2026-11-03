@@ -1032,3 +1032,63 @@ OK   9 la hoja de impresión muestra el total
 - **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
 - **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
 
+---
+
+## Entrega: IVA Aparte, Markup en Borrador y Cola de Diseños — Loop 7
+
+**Fecha:** 2026-11-03 10:20  
+**Commit:** `ef7ad00` (`feat: IVA aparte, markup en borrador y cola de diseños — Loop 7 (Claude Code)`)  
+**GitHub Actions CI Run:** [#41643172308](https://github.com/Morochief/sistema-afull-v2/actions/runs/41643172308) — **Success** (Lint 0, Tipos 0, 123 tests backend en CI, 86 tests web, Build Vite 8).
+
+### 1. Migración Aplicada en `afull-dev`
+- **Migración `0011_iva_disenos.sql`:**
+  - `presupuesto.iva_gs`: IVA 10 % calculado y congelado junto con el total al enviar el presupuesto.
+  - `diseno_version`: enlaces de Drive inmutables por versión, origen (CLIENTE / DISENADORA), verificación única (APROBADO / OBSERVADO) con comentario obligatorio en observación, trigger de no borrado ni truncado.
+- Salida de `pnpm db:migrate`: `[✓] migrations applied successfully!`.
+
+### 2. Recorridos Playwright en Vercel (`https://sistema-afull-v2-api.vercel.app`)
+
+#### A. Recorrido Loop 7 (`scripts/prueba-loop7.cjs`)
+```text
+OK   1 fixtures: Sofi, Nachi (persona), Edu y OT con tarea de diseño para Nachi
+OK   2 Nachi entra, va a Mi trabajo y carga el enlace de Drive
+OK   3 Edu todavía no lo ve en "Para producir"
+OK   4 Sofi lo ve por verificar y lo aprueba desde la OT
+OK   5 Edu lo ve con el botón "Abrir en Drive" apuntando al original
+
+>>> RECORRIDO LOOP 7 EN VERDE: 5/5 PASOS OK <<<
+```
+
+#### B. Recorrido Loop 3 con IVA aparte (`scripts/prueba-loop3.cjs`)
+```text
+OK   1 fixtures: usuario comercial, cliente con 2 sucursales
+OK   2 login comercial
+OK   3 crear presupuesto desde el menú
+OK   4 agregar ítem para Luque
+OK   5 agregar ítem para Villa Elisa
+OK   6 enviar: total congelado 337.500 (250.000 + 35 %)
+OK   7 nueva versión y quitar Villa Elisa
+OK   8 enviar v2 y aprobar con evidencia → abre la OT
+OK   9 la hoja de impresión muestra el total
+
+>>> RECORRIDO LOOP 3 (CA-3.10) EN VERDE: 9/9 PASOS OK <<<
+```
+
+### 3. Estado de la Suite Completa
+- **Vitest Backend (local con `anon.test.ts`):**
+  ```text
+   Test Files  32 passed (32)
+        Tests  125 passed (125)
+     Duration  401.81s
+  ```
+  *(En GitHub Actions CI sin `anon.test.ts`: 31 suites, 123 tests pasando en verde)*
+- **Vitest Web:**
+  ```text
+   Test Files  19 passed (19)
+        Tests  86 passed (86)
+     Duration  4.66s
+  ```
+- **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
+
+
