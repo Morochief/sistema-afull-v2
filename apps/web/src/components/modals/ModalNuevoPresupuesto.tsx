@@ -16,7 +16,7 @@ export function ModalNuevoPresupuesto({ abierto, onCerrar, onCreado }: Props) {
   const qc = useQueryClient();
   const [cliente, setCliente] = useState<ClienteFila | null>(null);
   const [titulo, setTitulo] = useState('');
-  const [margen, setMargen] = useState('35');
+  const [margen, setMargen] = useState('30');
   const [validez, setValidez] = useState('15');
   const [notas, setNotas] = useState('');
   const [errores, setErrores] = useState<Record<string, string>>({});
@@ -25,7 +25,7 @@ export function ModalNuevoPresupuesto({ abierto, onCerrar, onCreado }: Props) {
   const cerrar = () => {
     setCliente(null);
     setTitulo('');
-    setMargen('35');
+    setMargen('30');
     setValidez('15');
     setNotas('');
     setErrores({});
@@ -38,7 +38,7 @@ export function ModalNuevoPresupuesto({ abierto, onCerrar, onCreado }: Props) {
     if (!cliente) err.cliente = 'Elegí un cliente';
     if (!titulo.trim()) err.titulo = 'El título es obligatorio';
     const m = Number(margen.replace(',', '.'));
-    if (!Number.isFinite(m) || m < 0 || m > 999.99) err.margen = 'Margen entre 0 y 999,99';
+    if (!Number.isFinite(m) || m < 0 || m >= 100) err.margen = 'Margen sobre la venta: de 0 a 99,99 %';
     const v = Number(validez);
     if (!Number.isInteger(v) || v < 1 || v > 365) err.validez = 'Entre 1 y 365 días';
     setErrores(err);
@@ -82,7 +82,7 @@ export function ModalNuevoPresupuesto({ abierto, onCerrar, onCreado }: Props) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="pMargen">Margen %</Label>
+            <Label htmlFor="pMargen">Margen sobre venta %</Label>
             <Input id="pMargen" inputMode="decimal" value={margen} onChange={(e) => setMargen(e.target.value)} error={errores.margen} />
           </div>
           <div>

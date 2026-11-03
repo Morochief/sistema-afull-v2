@@ -65,13 +65,14 @@ export async function editarPresupuesto(ctx: Ctx, id: string, d: PatchPresupuest
     return await sql.begin(async (tx) => {
       const actual = await cabeceraEnBorrador(tx, id);
       verificarUpdatedAt(actual.updated_at, d.updatedAt);
-      const [a] = await tx`SELECT titulo, notas, margen_pct, validez_dias FROM presupuesto WHERE id = ${id}`;
+      const [a] = await tx`SELECT titulo, notas, margen_pct, validez_dias, precio_final_gs FROM presupuesto WHERE id = ${id}`;
       const [p] = await tx`
         UPDATE presupuesto SET
           titulo = ${d.titulo ?? a.titulo},
           notas = ${d.notas === undefined ? a.notas : d.notas},
           margen_pct = ${d.margenPct ?? a.margen_pct},
-          validez_dias = ${d.validezDias ?? a.validez_dias}
+          validez_dias = ${d.validezDias ?? a.validez_dias},
+          precio_final_gs = ${d.precioFinalGs === undefined ? a.precio_final_gs : d.precioFinalGs}
         WHERE id = ${id}
         RETURNING id, numero, version, estado, updated_at
       `;

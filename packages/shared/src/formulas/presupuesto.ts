@@ -41,10 +41,14 @@ function activos(items: readonly ItemCalculoPresupuesto[]) {
   return items.filter((i) => i.activo !== false);
 }
 
-/** Aplica el margen a una base escala 8 y devuelve guaraníes enteros (único redondeo). */
+/**
+ * Margen SOBRE LA VENTA (como en las planillas de la empresa: costo ÷ 0,70 con 30 %):
+ * precio = costo ÷ (1 − margen). Base en escala 8 → guaraníes enteros, un solo redondeo.
+ */
 function conMargen(base8: bigint, margenPct: Decimal): bigint {
-  const factor4 = 10_000n + aEscalado(margenPct, 2) * 1n; // (1 + m/100) en escala 4
-  return dividirRedondeando(base8 * factor4, E8 * 10_000n);
+  const m2 = aEscalado(margenPct, 2); // 30 % → 3000 (= 0,30 en escala 4)
+  if (m2 < 0n || m2 >= 10_000n) throw new Error('El margen debe estar entre 0 y 99,99 %');
+  return dividirRedondeando(base8 * 10_000n, E8 * (10_000n - m2));
 }
 
 /** Subtotal de un ítem, solo para mostrar (no se usa para sumar). */
@@ -58,7 +62,7 @@ export function calcularBaseImponible(items: readonly ItemCalculoPresupuesto[]):
   return Number(base8) / Number(E8);
 }
 
-/** Total en guaraníes enteros: Σ subtotales exactos × (1 + margen), redondeado una sola vez. */
+/** Precio sin IVA en guaraníes enteros: Σ subtotales exactos ÷ (1 − margen), redondeado una sola vez. */
 export function calcularTotalPresupuesto(items: readonly ItemCalculoPresupuesto[], margenPct: Decimal): number {
   const base8 = activos(items).reduce((acc, i) => acc + subtotal8(i), 0n);
   return Number(conMargen(base8, margenPct));
@@ -77,12 +81,12 @@ export interface RepartoSucursal {
 }
 
 /**
- * Reparte `totalGs` entre las sucursales. Cada una recibe su parte redondeada y el resto
- * se ajusta en la de mayor base: Σ montoOtGs === totalGs, exacto.
+ * Reparte `totalGs` (calculado o redondeado a mano) entre las sucursales en proporción al costo de cada una.
+ * El resto del redondeo se ajusta en la de mayor costo: Σ montoOtGs === totalGs, exacto.
  */
 export function repartirMontoPorSucursal(
   items: readonly ItemCalculoPresupuesto[],
-  margenPct: Decimal,
+  _margenPct: Decimal,
   totalGs: number
 ): RepartoSucursal[] {
   const grupos = new Map<string | null, bigint>();
@@ -90,14 +94,16 @@ export function repartirMontoPorSucursal(
     const suc = item.sucursal_id ?? null;
     grupos.set(suc, (grupos.get(suc) ?? 0n) + subtotal8(item));
   }
+  const total = BigInt(totalGs);
+  const baseTotal = [...grupos.values()].reduce((a, b) => a + b, 0n);
   const filas = [...grupos.entries()].map(([sucursalId, base8]) => ({
     sucursalId,
     base8,
-    monto: grupos.size === 1 ? BigInt(totalGs) : conMargen(base8, margenPct),
+    monto: grupos.size === 1 ? total : baseTotal === 0n ? 0n : dividirRedondeando(total * base8, baseTotal),
   }));
   if (filas.length === 0) return [];
 
-  const diferencia = BigInt(totalGs) - filas.reduce((acc, f) => acc + f.monto, 0n);
+  const diferencia = total - filas.reduce((acc, f) => acc + f.monto, 0n);
   if (diferencia !== 0n) {
     const mayor = filas.reduce((a, f) => (f.base8 > a.base8 ? f : a), filas[0]);
     mayor.monto += diferencia;

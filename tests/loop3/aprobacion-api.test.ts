@@ -15,7 +15,7 @@ describe('L3.E3 — aprobación, proyectos y OTs', () => {
     expect(r.j.proyecto).toBeNull();
     const ots = r.j.ots as { id: string; monto_presupuestado_gs: number }[];
     expect(ots).toHaveLength(1);
-    expect(ots[0].monto_presupuestado_gs).toBe(135000);
+    expect(ots[0].monto_presupuestado_gs).toBe(153846); // 100.000 ÷ 0,65
     const d = (await api('GET', `/api/comercial/ot/${ots[0].id}`)).j;
     expect(d.presupuesto_id).toBe(p.id);
     expect(d.estado).toBe('PENDIENTE');
@@ -32,14 +32,14 @@ describe('L3.E3 — aprobación, proyectos y OTs', () => {
       [{ sucursalId: c.sucursal, precioUnitarioGs: 1 }, { sucursalId: s2, precioUnitarioGs: 1 }, { sucursalId: s3, precioUnitarioGs: 1 }],
       50
     );
-    expect(p.total).toBe(5); // 3 × 1,5 = 4,5 → 5
+    expect(p.total).toBe(6); // 3 ÷ 0,5
     const r = await api('POST', `/api/presupuestos/${p.id}/aprobar`, { desde: 'ENVIADO', comentario: 'WhatsApp' });
     const ots = r.j.ots as { monto_presupuestado_gs: number }[];
     expect(ots).toHaveLength(3);
-    expect(ots.reduce((a, o) => a + o.monto_presupuestado_gs, 0)).toBe(5);
+    expect(ots.reduce((a, o) => a + o.monto_presupuestado_gs, 0)).toBe(6);
     const py = (await api('GET', `/api/proyectos/${(r.j.proyecto as { id: string }).id}`)).j;
     expect((py.ordenes_trabajo as unknown[]).length).toBe(3);
-    expect(py.total_presupuestado_gs).toBe(5);
+    expect(py.total_presupuestado_gs).toBe(6);
   });
 
   it('CA-3.4: dos aprobaciones simultáneas → una sola, y un solo juego de OTs', async () => {

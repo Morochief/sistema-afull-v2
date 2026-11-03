@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, Link, Navigate, useNavigate, useRouterState } from '@tanstack/react-router';
 import { rutaInicialSegunCapacidades } from '../lib/rutas.js';
 import { useSesion } from '../hooks/useSesion.js';
-import { Users, FileText, LogOut, Clock, Radio, UserCheck, Calculator, FolderKanban, Palette } from 'lucide-react';
+import { Users, FileText, LogOut, Clock, Radio, UserCheck, Calculator, FolderKanban, Palette, Truck, Route, MapPinned, ListChecks } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
 import { Badge } from '../components/ui/badge.js';
 
@@ -62,7 +62,13 @@ export function AppLayout() {
       titulo: 'Mi Trabajo',
       ruta: '/mi-trabajo',
       icono: Clock,
-      visible: tieneCapacidad('taller') || tieneCapacidad('montaje') || tieneCapacidad('diseno'),
+      visible: tieneCapacidad('taller') || tieneCapacidad('montaje') || tieneCapacidad('diseno') || tieneCapacidad('comercial'),
+    },
+    {
+      titulo: 'En la calle',
+      ruta: '/calle',
+      icono: MapPinned,
+      visible: tieneCapacidad('montaje') || tieneCapacidad('taller'),
     },
     {
       titulo: 'Clientes',
@@ -93,6 +99,24 @@ export function AppLayout() {
       ruta: '/disenos',
       icono: Palette,
       visible: tieneCapacidad('comercial') || tieneCapacidad('taller'),
+    },
+    {
+      titulo: 'Hojas de ruta',
+      ruta: '/hojas-ruta',
+      icono: Route,
+      visible: tieneCapacidad('comercial'),
+    },
+    {
+      titulo: 'Flota y sedes',
+      ruta: '/flota',
+      icono: Truck,
+      visible: tieneCapacidad('admin'),
+    },
+    {
+      titulo: 'Procesos',
+      ruta: '/procesos',
+      icono: ListChecks,
+      visible: tieneCapacidad('admin'),
     },
     {
       titulo: 'Control en Vivo',

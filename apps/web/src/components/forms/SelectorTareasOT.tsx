@@ -3,7 +3,8 @@ import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { obtenerPersonasAsignables } from '../../lib/api-personas.js';
 import { Plus, Trash2 } from 'lucide-react';
-import { TIPOS_TAREA, type TipoTarea, type PersonaAsignable } from '@afull/shared';
+import { type TipoTarea, type PersonaAsignable } from '@afull/shared';
+import { OpcionesProceso } from '../procesos/OpcionesProceso.js';
 
 export type TareaFormItem = {
   tipo: TipoTarea;
@@ -16,15 +17,6 @@ type Props = {
   onChange: (tareas: TareaFormItem[]) => void;
 };
 
-const ETIQUETAS_TIPO: Record<TipoTarea, string> = {
-  DISENO: 'Diseño',
-  TALLER_IMPRESION: 'Impresión',
-  TALLER_CORTE: 'Corte',
-  TALLER_HERRERIA: 'Herrería',
-  TALLER_ARMADO: 'Armado',
-  MONTAJE_CALLE: 'Montaje en Calle',
-  OTRO: 'Otro',
-};
 
 export function SelectorTareasOT({ tareas, onChange }: Props) {
   const [asignables, setAsignables] = useState<PersonaAsignable[]>([]);
@@ -92,11 +84,7 @@ export function SelectorTareasOT({ tareas, onChange }: Props) {
                   onChange={(e) => actualizarTarea(idx, 'tipo', e.target.value as TipoTarea)}
                   className="flex-1 h-8 rounded border border-[#1f2937] bg-[#111318] px-2 text-xs text-white"
                 >
-                  {TIPOS_TAREA.map((tipo) => (
-                    <option key={tipo} value={tipo}>
-                      {ETIQUETAS_TIPO[tipo]}
-                    </option>
-                  ))}
+                  <OpcionesProceso actual={t.tipo} />
                 </select>
 
                 <select

@@ -48,7 +48,7 @@ export async function obtenerEstadoLive(): Promise<LiveEstadoRespuesta> {
         i.id IS NOT NULL
         OR EXISTS (
           SELECT 1 FROM usuario u
-          JOIN permiso_capacidad pc ON pc.usuario_id = u.id AND pc.capacidad IN ('taller', 'montaje', 'diseno')
+          JOIN permiso_capacidad pc ON pc.usuario_id = u.id AND pc.capacidad IN ('taller', 'montaje', 'diseno', 'comercial')
           WHERE u.persona_id = p.id AND u.activo = true
         )
       )

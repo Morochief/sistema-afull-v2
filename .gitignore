@@ -12,3 +12,8 @@ afull-*.tar.gz.gpg
 afull-*.pgdump.gpg
 .tmp-ui/
 .tmp-loop2/
+
+# Documentos reales de la empresa: NUNCA al repo (es público)
+Documentos/
+*.xlsx
+*.docx

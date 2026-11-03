@@ -89,4 +89,6 @@ Listados: 25 filas por servidor, búsqueda por número/título/**nombre de clien
 - API: `apps/api/src/modules/presupuestos/` (`consultas`, `borrador`, `transiciones`, `aprobacion`) y `apps/api/src/modules/proyectos/`.
 - Web: `/presupuestos`, `/presupuestos/$id`, `/presupuestos/$id/imprimir` (fuera del layout), `/proyectos`, `/proyectos/$id`; enlaces y monto en el detalle de OT; "Creada por" con el nombre de usuario.
 - Pruebas: `tests/loop3/*` (CA-3.1 a 3.9) y `scripts/prueba-loop3.cjs` (CA-3.10, 9/9 en local).
-- **IVA aparte** (usuario, 2026-11-03): `total_gs` = precio sin IVA (costo × (1 + markup)), que se reparte a las OTs; `iva_gs` = 10 % congelado al enviar (`0011`). El markup se cambia en el borrador con botones 25/30/35/40 % o un valor libre.
+- **IVA aparte** (usuario, 2026-11-03): `total_gs` = precio sin IVA, que se reparte a las OTs; `iva_gs` = 10 % congelado al enviar (`0011`).
+- **Margen SOBRE LA VENTA** (`0012`, confirmado por el usuario tras ver las planillas: en ~1.500 proyectos el precio es costo ÷ 0,70): precio = costo ÷ (1 − margen), 30 % por defecto, menor a 100 %. Botones 25/30/35/40 % o valor libre en el borrador.
+- **Precio final redondeado** (`precio_final_gs`, opcional, como la "Vta redondeo" de las planillas): si está, manda sobre el calculado. El reparto a las OTs es **proporcional al costo** de cada sucursal, con ajuste de resto (Σ = total exacto).

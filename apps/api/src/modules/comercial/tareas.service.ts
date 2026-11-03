@@ -16,6 +16,12 @@ export type ItemTareaInput = {
   personaAsignadaId?: string;
 };
 
+/** El proceso tiene que existir en el catálogo y estar activo (el FK solo garantiza que exista). */
+export async function exigirProcesoActivo(tx: TransactionSql | Sql, tipo: string) {
+  const [t] = await tx<{ activo: boolean }[]>`SELECT activo FROM tipo_tarea WHERE codigo = ${tipo}`;
+  if (!t?.activo) throw new ErrorApp(400, `Proceso inexistente o desactivado: ${tipo}`);
+}
+
 export async function insertarTareasIniciales(
   tx: TransactionSql | Sql,
   ctx: Ctx,
@@ -24,6 +30,7 @@ export async function insertarTareasIniciales(
 ) {
   for (let i = 0; i < tareas.length; i++) {
     const t = tareas[i];
+    await exigirProcesoActivo(tx, t.tipo);
     if (t.personaAsignadaId) {
       const [p] = await tx<{ activo: boolean }[]>`SELECT activo FROM persona WHERE id = ${t.personaAsignadaId}`;
       if (!p?.activo) throw new ErrorApp(400, 'Persona asignada inexistente o inactiva');
@@ -106,6 +113,7 @@ export async function agregarTareaOT(ctx: Ctx, otId: string, d: ItemTareaInput) 
         SELECT coalesce(max(orden_secuencia), 0) + 1 AS sig FROM tarea WHERE orden_trabajo_id = ${otId}
       `;
 
+      await exigirProcesoActivo(tx, d.tipo);
       const [tarea] = await tx<TareaFila[]>`
         INSERT INTO tarea (orden_trabajo_id, persona_asignada_id, tipo, descripcion, orden_secuencia, estado, creado_por)
         VALUES (${otId}, ${d.personaAsignadaId ?? null}, ${d.tipo}, ${d.descripcion}, ${sig}, 'PENDIENTE', ${ctx.usuarioId})

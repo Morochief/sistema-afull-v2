@@ -7,37 +7,43 @@ import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 
 const RAPIDOS = [25, 30, 35, 40];
+const fmt = (n: number) => n.toLocaleString('es-PY');
 
-type Props = { presupuestoId: string; margenPct: number; updatedAt: string; onCambio: () => void };
+type Props = { presupuestoId: string; margenPct: number; precioFinalGs: number | null; updatedAt: string; onCambio: () => void };
 
 /**
- * Markup del borrador: recargo sobre el costo (precio sin IVA = costo × (1 + markup)).
- * Botones rápidos y un campo libre; se guarda con control de concurrencia (updatedAt → 409).
+ * Margen SOBRE LA VENTA del borrador (precio sin IVA = costo ÷ (1 − margen), como en las planillas: costo ÷ 0,70)
+ * y precio final redondeado a mano (opcional). Se guarda con control de concurrencia (updatedAt → 409).
  */
-export function SelectorMarkup({ presupuestoId, margenPct, updatedAt, onCambio }: Props) {
+export function SelectorMarkup({ presupuestoId, margenPct, precioFinalGs, updatedAt, onCambio }: Props) {
   const [libre, setLibre] = useState('');
   const [guardando, setGuardando] = useState(false);
 
-  const guardar = async (valor: number) => {
-    if (!(valor >= 0 && valor <= 999.99) || Math.round(valor * 100) !== valor * 100) {
-      toast.error('Markup entre 0 y 999,99, con hasta 2 decimales');
-      return;
-    }
+  const [redondeo, setRedondeo] = useState('');
+  const patch = async (d: { margenPct?: number; precioFinalGs?: number | null }) => {
     setGuardando(true);
     try {
-      await editarPresupuesto(presupuestoId, { margenPct: valor, updatedAt });
+      await editarPresupuesto(presupuestoId, { ...d, updatedAt });
+      setRedondeo('');
       setLibre('');
       onCambio();
     } catch (e) {
-      toast.error(mensajeDeError(e, 'No se pudo cambiar el markup'));
+      toast.error(mensajeDeError(e, 'No se pudo guardar'));
     } finally {
       setGuardando(false);
     }
   };
+  const guardar = (valor: number) => {
+    if (!(valor >= 0 && valor < 100) || Math.round(valor * 100) !== valor * 100) {
+      toast.error('Margen sobre la venta: de 0 a 99,99 %, con hasta 2 decimales');
+      return;
+    }
+    void patch({ margenPct: valor });
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs">
-      <span className="text-neutral-400">Markup:</span>
+      <span className="text-neutral-400">Margen sobre venta:</span>
       {RAPIDOS.map((m) => (
         <Button
           key={m}
@@ -45,7 +51,7 @@ export function SelectorMarkup({ presupuestoId, margenPct, updatedAt, onCambio }
           variant={m === margenPct ? undefined : 'outline'}
           className="h-7 px-2.5 text-xs"
           disabled={guardando}
-          onClick={() => void guardar(m)}
+          onClick={() => guardar(m)}
         >
           {m} %
         </Button>
@@ -54,11 +60,11 @@ export function SelectorMarkup({ presupuestoId, margenPct, updatedAt, onCambio }
         className="flex items-center gap-1"
         onSubmit={(e) => {
           e.preventDefault();
-          void guardar(numero(libre));
+          guardar(numero(libre));
         }}
       >
         <Input
-          aria-label="Markup personalizado"
+          aria-label="Margen personalizado"
           placeholder={RAPIDOS.includes(margenPct) ? 'Otro %' : `${String(margenPct).replace('.', ',')} %`}
           value={libre}
           onChange={(e) => setLibre(e.target.value)}
@@ -68,6 +74,23 @@ export function SelectorMarkup({ presupuestoId, margenPct, updatedAt, onCambio }
         <Button type="submit" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={guardando || !libre.trim()}>
           Aplicar
         </Button>
+      </form>
+      <form
+        className="flex items-center gap-1 sm:ml-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const v = numero(redondeo);
+          if (!(v > 0) || !Number.isInteger(v)) toast.error('Precio en guaraníes enteros');
+          else void patch({ precioFinalGs: v });
+        }}
+      >
+        <span className="text-neutral-400">Precio final:</span>
+        <Input aria-label="Precio final redondeado" placeholder={precioFinalGs ? fmt(precioFinalGs) : 'Redondear a…'} value={redondeo}
+          onChange={(e) => setRedondeo(e.target.value)} className="h-7 w-28 text-xs" inputMode="numeric" />
+        <Button type="submit" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={guardando || !redondeo.trim()}>Fijar</Button>
+        {precioFinalGs !== null && (
+          <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={guardando} onClick={() => void patch({ precioFinalGs: null })}>Quitar</Button>
+        )}
       </form>
     </div>
   );

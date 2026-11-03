@@ -24,6 +24,14 @@ Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proye
 - **Nachi:** diseñadora externa que trabaja con ellos; diseña solo cuando el cliente no trae diseño. **Registra su tiempo como todos** (hoy: "Acción: … / Cliente: …" y "fin" en su planilla, confirmado por Sofi 2026-11-03): usuario con capacidad `diseno`, persona con tarifa, cronómetro en "Mi trabajo" sobre tareas tipo `DISENO` (migración `0010`). Sube el original a Drive y hoy avisa a Edu por el grupo de WhatsApp "Impresiones / Cortes".
 - **Verificación obligatoria (Sofi):** todo diseño, **también el que trae el cliente**, lo verifica Juan o Sofi ("sí o sí, medidas y demás") antes de que Edu lo produzca.
 
+## Hallazgos de las planillas reales (2026-11-03; los archivos NO van al repo)
+- **Precio:** costo ÷ 0,70 (margen 30 % sobre la venta) en la gran mayoría de los proyectos; a veces ×1,30; luego redondeo manual → implementado en `0012`.
+- **Mano de obra por minuto** con tarifa por persona (casi todos igual) → encaja con `tarifa_persona`.
+- **Juan y Sofi cargan tiempo** de presupuesto y relevamiento a los proyectos → `comercial` usa "Mi trabajo" (`0012`).
+- **Procesos más usados:** ploteo, retiro, montaje, entrega, corte, carga/descarga, diseño, presupuesto, preparación, fabricación, relevamiento, colocación, limpieza, armado, lijado, compra, refilado, control, enfilado, pintura, tensado, reparación → catálogo `tipo_tarea` (`0012`), administrable por Juan.
+- **Insumos:** ~260 ítems con costo y unidad (unidad, metro, m², plancha, litro, rollo, lata, kg…) por sector (carpintería, herrería, impresiones, láser, pinturería, electricidad, ploteo). Ya anotan el **desperdicio** como línea aparte. Combustible se carga por litro. → base para el Loop 5 (normalizar unidades al importar).
+- **Solicitud de permiso:** formulario con tipos de licencia legales (nacimiento, matrimonio, salud, estudio, etc.) y firma del jefe → Loop 8.
+
 ## Matriz
 
 | Requisito (origen) | Loop | Estado |
@@ -35,9 +43,9 @@ Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proye
 | Presupuesto con ítems, margen e impresión/PDF | 3 | ✅ Implementado (sin commit) |
 | Proyecto como contenedor de varias OTs (campañas multi-local) | 3 | ✅ Implementado (sin commit) |
 | Presupuestado vs. real por OT y por proyecto | 3 (presupuestado) + 6 (real) | Diseñado |
-| Hoja de ruta diaria con paradas y cuadrilla | 4 | Base y API hechas (sin pantallas) |
-| Viajes: odómetro con foto, GPS, alerta de desvío informativa | 4 | Base y API hechas; foto pendiente (Storage) |
-| Asistencia con geocerca de 100 m (disuasiva) | 4 | Base y API hechas (sin pantalla) |
+| Hoja de ruta diaria con paradas y cuadrilla | 4 | ✅ Base, API y pantallas (sin commit las pantallas) |
+| Viajes: odómetro con foto, GPS, alerta de desvío informativa | 4 | ✅ Odómetro, GPS y alerta con pantallas; foto pendiente (Storage) |
+| Asistencia con geocerca de 100 m (disuasiva) | 4 | ✅ Base, API y marcación en "En la calle"; falta la pantalla de RR.HH. |
 | Fotos de evidencia de montaje y **muestras de impresión antes del despacho** (REQ-03, McDonald's) | 4 | Planificado: la infraestructura de fotos (URLs firmadas, bucket privado) se hace una vez y sirve para odómetro, montaje y muestras de tarea |
 | Trabajo offline de cuadrillas | 4 | Planificado |
 | Insumos y stock en unidades o metros, entradas con factura | 5 | Planificado |

@@ -10,7 +10,7 @@ const decimal = (escala: number, mensaje: string) =>
   z.number().refine((n) => Number.isFinite(n) && Math.abs(n * 10 ** escala - Math.round(n * 10 ** escala)) < 1e-6, mensaje);
 
 const margen = decimal(2, 'El margen admite hasta 2 decimales').pipe(
-  z.number().min(0, 'El margen no puede ser negativo').max(999.99, 'Margen demasiado alto')
+  z.number().min(0, 'El margen no puede ser negativo').max(99.99, 'El margen sobre la venta tiene que ser menor a 100 %')
 );
 const cantidad = decimal(4, 'La cantidad admite hasta 4 decimales').pipe(
   z.number().positive('La cantidad debe ser mayor a cero').max(99_999_999, 'Cantidad demasiado alta')
@@ -23,7 +23,7 @@ export const nuevoPresupuestoSchema = z.object({
   clienteId: z.string().uuid('Cliente inválido'),
   titulo: z.string().trim().min(1, 'El título es obligatorio').max(255, 'Título demasiado largo'),
   notas: z.string().trim().optional().nullable(),
-  margenPct: margen.default(35.0),
+  margenPct: margen.default(30.0),
   validezDias: z.number().int().min(1, 'La validez mínima es de 1 día').max(365).default(15),
 });
 
@@ -33,6 +33,8 @@ export const patchPresupuestoSchema = z.object({
   titulo: z.string().trim().min(1).max(255).optional(),
   notas: z.string().trim().optional().nullable(),
   margenPct: margen.optional(),
+  /** Precio final sin IVA redondeado a mano (null = usar el calculado). */
+  precioFinalGs: z.number().int().positive().max(99_999_999_999).nullable().optional(),
   validezDias: z.number().int().min(1).max(365).optional(),
   updatedAt: z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'updatedAt inválido'),
 });

@@ -54,7 +54,7 @@ export async function listarPersonasAsignables(q?: string): Promise<PersonaAsign
       SELECT DISTINCT p.id, p.nombre
       FROM persona p
       JOIN usuario u ON u.persona_id = p.id AND u.activo = true
-      JOIN permiso_capacidad pc ON pc.usuario_id = u.id AND pc.capacidad IN ('taller', 'montaje', 'diseno')
+      JOIN permiso_capacidad pc ON pc.usuario_id = u.id AND pc.capacidad IN ('taller', 'montaje', 'diseno', 'comercial')
       WHERE p.activo = true
         ${patron ? sql`AND p.nombre ILIKE ${patron}` : sql``}
       ORDER BY p.nombre ASC

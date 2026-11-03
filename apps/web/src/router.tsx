@@ -20,6 +20,11 @@ import { PresupuestoImprimirPage } from './routes/presupuestos/imprimir.js';
 import { ProyectosListaPage } from './routes/proyectos/lista.js';
 import { ProyectoDetallePage } from './routes/proyectos/detalle.js';
 import { DisenosPage } from './routes/disenos.js';
+import { CallePage } from './routes/calle.js';
+import { HojasRutaListaPage } from './routes/hojas-ruta/lista.js';
+import { HojaRutaDetallePage } from './routes/hojas-ruta/detalle.js';
+import { FlotaPage } from './routes/flota.js';
+import { ProcesosPage } from './routes/procesos.js';
 import { useSesion } from './hooks/useSesion.js';
 import { rutaInicialSegunCapacidades } from './lib/rutas.js';
 
@@ -162,6 +167,12 @@ const disenosRoute = createRoute({
   component: DisenosPage,
 });
 
+const calleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/calle', component: CallePage });
+const hojasRutaRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/hojas-ruta', component: HojasRutaListaPage });
+const hojaRutaDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/hojas-ruta/$id', component: HojaRutaDetallePage });
+const flotaRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/flota', component: FlotaPage });
+const procesosRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/procesos', component: ProcesosPage });
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   presupuestoImprimirRoute,
@@ -179,6 +190,11 @@ const routeTree = rootRoute.addChildren([
     proyectosRoute,
     proyectoDetalleRoute,
     disenosRoute,
+    calleRoute,
+    hojasRutaRoute,
+    hojaRutaDetalleRoute,
+    flotaRoute,
+    procesosRoute,
   ]),
 ]);
 

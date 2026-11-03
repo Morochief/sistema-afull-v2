@@ -5,12 +5,12 @@ import { auditar } from '../auditoria/service.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
 
-export type Cabecera = { id: string; numero: string; version: number; cliente_id: string; estado: EstadoPresupuesto; margen: string };
+export type Cabecera = { id: string; numero: string; version: number; cliente_id: string; estado: EstadoPresupuesto; margen: string; precio_final: string | null };
 
 /** `FOR UPDATE` + control de `desde` (409 si otro usuario cambió el estado). */
 export async function bloquear(tx: TransactionSql, id: string, desde: EstadoPresupuesto, a: EstadoPresupuesto | null) {
   const [p] = await tx<Cabecera[]>`
-    SELECT id, numero, version, cliente_id, estado, margen_pct::text AS margen FROM presupuesto WHERE id = ${id} FOR UPDATE
+    SELECT id, numero, version, cliente_id, estado, margen_pct::text AS margen, precio_final_gs::text AS precio_final FROM presupuesto WHERE id = ${id} FOR UPDATE
   `;
   if (!p) throw new ErrorApp(404, 'Presupuesto no encontrado');
   if (p.estado !== desde) throw new ErrorApp(409, `El presupuesto ya está ${p.estado}; recargue los datos`);
@@ -57,7 +57,8 @@ export function enviarPresupuesto(ctx: Ctx, id: string, desde: EstadoPresupuesto
     if (conSucursal !== 0 && conSucursal !== items.length) {
       throw new ErrorApp(400, 'O todos los ítems tienen sucursal o ninguno: completá la sucursal de los que faltan');
     }
-    const total = calcularTotalPresupuesto(items, p.margen);
+    // Precio final redondeado a mano, si lo cargaron; si no, el calculado con el margen sobre la venta.
+    const total = p.precio_final !== null ? Number(p.precio_final) : calcularTotalPresupuesto(items, p.margen);
     const iva = calcularIvaGs(total);
     await tx`UPDATE presupuesto SET estado = 'ENVIADO', total_gs = ${total}, iva_gs = ${iva}, enviado_at = now() WHERE id = ${id}`;
     await registrar(tx, ctx, p, 'ENVIADO', null);
@@ -108,8 +109,8 @@ export function nuevaVersion(ctx: Ctx, id: string, desde: EstadoPresupuesto) {
       await registrar(tx, ctx, p, 'REEMPLAZADO', `Reemplazado por la versión ${p.version + 1}`);
     }
     const [nuevo] = await tx`
-      INSERT INTO presupuesto (numero, version, cliente_id, titulo, notas, margen_pct, validez_dias, creado_por)
-      SELECT numero, version + 1, cliente_id, titulo, notas, margen_pct, validez_dias, ${ctx.usuarioId}
+      INSERT INTO presupuesto (numero, version, cliente_id, titulo, notas, margen_pct, validez_dias, precio_final_gs, creado_por)
+      SELECT numero, version + 1, cliente_id, titulo, notas, margen_pct, validez_dias, NULL, ${ctx.usuarioId}
       FROM presupuesto WHERE id = ${id}
       RETURNING id, numero, version, estado, updated_at
     `;

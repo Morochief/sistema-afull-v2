@@ -35,6 +35,48 @@
 
 ---
 
+## Precio como en las planillas, procesos administrables y cronómetro para Comercial — Claude Code, 2026-11-03 13:00
+
+**Origen:** el usuario dejó planillas reales en `D:\sistema-afull\Documentos`. ⚠️ **Esa carpeta NO se commitea** (el repo es público): ya está en `.gitignore` (`Documentos/`, `*.xlsx`, `*.docx`). Antigravity: verificá con `git status` que no aparezca antes de commitear.
+
+**Decisiones del usuario:** margen **sobre la venta** (precio = costo ÷ (1 − margen), 30 % por defecto) con **precio final redondeado** opcional; cronómetro también para `comercial` (Juan y Sofi cargan presupuesto y relevamiento); catálogo de procesos administrable por Juan.
+
+**En el disco, sin commit (además de L4.E4 de la sección siguiente):**
+- `.gitignore`; `migrations/0012_procesos_margen.sql` + `_journal.json`.
+- Shared: `formulas/presupuesto.ts` (margen sobre venta; reparto proporcional al costo), `machines/tarea.ts` (tipo = código de proceso), `schemas/tareas.ts` (+ esquemas de proceso), `schemas/presupuestos.ts` (margen < 100, `precioFinalGs`), `types/presupuestos.ts`.
+- API: `modules/procesos/routes.ts` (nuevo) y ruta en `index.ts`; `comercial/tareas.service.ts` (proceso activo); `presupuestos/borrador|transiciones|consultas`; `comercial` en `cronometro/routes.ts`, `live/service.ts`, `personas/vinculos.service.ts`.
+- Web: `lib/api-procesos.ts`, `components/procesos/` (opciones agrupadas por área), `routes/procesos.tsx` (admin), `SelectorTareasOT.tsx`, `ModalNuevaTareaOT.tsx`, `SelectorMarkup.tsx` (margen + precio final), `TablaItems.tsx`, `presupuestos/detalle.tsx`, `ModalNuevoPresupuesto.tsx`, `router.tsx`, `app-layout.tsx`.
+- Pruebas: `tests/loop3/procesos-api.test.ts` (nuevo) y ajustes en `presupuesto-formulas`, `presupuestos-api`, `aprobacion-api`; `scripts/prueba-loop3.cjs` (montos con margen sobre venta).
+- Docs: `LOOP_3_DISENO.md` §11, `MAPA_REQUISITOS.md` (hallazgos sin datos sensibles), `TRASPASO.md` §5.
+
+**Verificado:** base nueva `0001`–`0012`; backend **125/125**, web **99/99**, lint y tipos en 0; recorridos locales Loop 3 **9/9**, Loop 4 **7/7**, Loop 7 **5/5**.
+
+**Para Antigravity (solo esto):**
+1. `git status`: confirmar que `Documentos/` NO aparece. `pnpm db:migrate` en `afull-dev` (aplica `0012`). Pegá la salida.
+2. `pnpm lint && pnpm typecheck && pnpm build`. Dos commits: (a) los archivos de L4.E4 (sección siguiente) con su mensaje; (b) el resto: `feat: margen sobre venta, precio redondeado, catálogo de procesos y cronómetro para Comercial (Claude Code)`. Push.
+3. Después del deploy: `prueba-loop3.cjs`, `prueba-loop4.cjs` y `prueba-loop7.cjs` con `BASE_URL` de Vercel. Pegá hash, CI, Vitest y las tres salidas; filas en la bitácora §13.
+
+---
+
+## Loop 4 — pantallas de campo (L4.E4, sin offline) — Claude Code, 2026-11-03 11:45
+
+**En el disco, sin commit (solo web + script; sin migraciones):**
+- `apps/web/src/lib/api-campo.ts` (+ test de métodos y rutas, 13 casos), `lib/dispositivo.ts` (huella de dispositivo, GPS, enlace a Google Maps).
+- `routes/calle.tsx` + `components/campo/` (`MarcacionCard`, `ViajeCard`, `ParadasHoja`): pantalla "En la calle" para montaje/taller.
+- `routes/hojas-ruta/lista.tsx` y `detalle.tsx`: coordinación (comercial).
+- `routes/flota.tsx`: vehículos y sedes (admin).
+- `router.tsx`, menú en `app-layout.tsx` ("En la calle", "Hojas de ruta", "Flota y sedes").
+- `scripts/prueba-loop4.cjs`: recorrido coordinación → montador (GPS simulado) **7/7 en local**.
+- Docs: `LOOP_4_DISENO.md` (estado), `MAPA_REQUISITOS.md`, `TRASPASO.md` §6.
+
+**Verificado:** web **99/99**, lint y tipos en 0, archivos ≤ 250 líneas. Backend sin cambios (123/123).
+
+**Para Antigravity (solo esto):**
+1. `pnpm lint && pnpm typecheck && pnpm build`; commit `feat(loop4): pantallas de campo — En la calle, hojas de ruta y flota (Claude Code)`; push.
+2. Después del deploy: `node scripts/prueba-loop4.cjs` con `BASE_URL` de Vercel. Pegá hash, CI y la salida en tu mesa; fila en la bitácora §13.
+
+---
+
 ## IVA aparte, markup en borrador y Loop 7 (diseños) — Claude Code, 2026-11-03 11:00
 
 **Decisiones del usuario:** IVA **aparte** (10 % sobre el precio); markup elegible en el borrador (25/30/35/40 % o libre); geocerca que registra y avisa (ya era así); hacer ya la cola de diseños. Sofi: todo diseño, también el del cliente, se verifica "sí o sí".

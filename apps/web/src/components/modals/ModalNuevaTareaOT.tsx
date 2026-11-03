@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { resolverSinVacios } from '../../lib/formulario.js';
 import { toast } from 'sonner';
-import { nuevaTareaSchema, TIPOS_TAREA, type TipoTarea, type PersonaAsignable } from '@afull/shared';
+import { nuevaTareaSchema, type PersonaAsignable } from '@afull/shared';
 import { crearTareaOT, type NuevaTarea } from '../../lib/api-tareas.js';
 import { obtenerPersonasAsignables } from '../../lib/api-personas.js';
 import { mensajeDeError } from '../../lib/api.js';
@@ -16,6 +16,7 @@ import {
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Label } from '../ui/label.js';
+import { OpcionesProceso } from '../procesos/OpcionesProceso.js';
 
 type Props = {
   abierto: boolean;
@@ -24,15 +25,6 @@ type Props = {
   onCreada: () => void;
 };
 
-const ETIQUETAS_TIPO: Record<TipoTarea, string> = {
-  DISENO: 'Diseño',
-  TALLER_IMPRESION: 'Impresión',
-  TALLER_CORTE: 'Corte',
-  TALLER_HERRERIA: 'Herrería',
-  TALLER_ARMADO: 'Armado',
-  MONTAJE_CALLE: 'Montaje en Calle',
-  OTRO: 'Otro',
-};
 
 export function ModalNuevaTareaOT({ abierto, onCerrar, otId, onCreada }: Props) {
   const [asignables, setAsignables] = useState<PersonaAsignable[]>([]);
@@ -95,11 +87,7 @@ export function ModalNuevaTareaOT({ abierto, onCerrar, otId, onCreada }: Props) 
             {...register('tipo')}
             className="flex h-9 w-full rounded-md border border-[#1f2937] bg-[#161922] px-3 py-1 text-xs text-neutral-200 shadow-sm focus:border-[#ea580c]"
           >
-            {TIPOS_TAREA.map((tipo) => (
-              <option key={tipo} value={tipo}>
-                {ETIQUETAS_TIPO[tipo]}
-              </option>
-            ))}
+            <OpcionesProceso />
           </select>
         </div>
 

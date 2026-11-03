@@ -171,6 +171,7 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 | `0009_campo_flota` | (Claude Code, Loop 4) `sede` (geocerca), `vehiculo`, `hoja_ruta` + `hoja_ruta_persona` + `hoja_ruta_parada` (motivo obligatorio en EXTRA/OMITIDA), `viaje` (un abierto por vehículo y por conductor, un solo cierre, km_fin ≥ km_inicio), `marcacion_asistencia` (inmutable). Aplicada en `afull-dev`. |
 | `0010_tarea_diseno` | Tipo de tarea `DISENO` (Nachi registra su tiempo como todos). `diseno` entra a "Mi trabajo", Control en Vivo y personas asignables. Aplicada en `afull-dev`. |
 | `0011_iva_disenos` | (A) `presupuesto.iva_gs` (IVA 10 % aparte, congelado al enviar). (B) `diseno_version` (enlace de Drive, origen cliente/diseñadora, una pendiente por OT, una sola revisión, inmutable). Aplicada en `afull-dev`. |
+| `0012_procesos_margen` | Catálogo `tipo_tarea` (procesos administrables, `tarea.tipo` pasa de `CHECK` a FK, 26 procesos iniciales de las planillas); margen **sobre la venta** (`CHECK margen_pct < 100`, default 30) y `precio_final_gs` (redondeo manual) congelado al enviar. Aplicada en `afull-dev`. |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
@@ -204,7 +205,7 @@ Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,se
 
 Se adelantó por decisión del usuario. Enlace de Drive por versión, verificación obligatoria de Juan o Sofi (también para el diseño del cliente), cola "Para producir" de Edu, carga desde "Mi trabajo" para Nachi. Detalle: `docs/LOOP_7_DISENO.md`. Además: **IVA aparte** en presupuestos y selector de markup en el borrador.
 
-### Loop 4: Campo y flota — BASE Y API IMPLEMENTADAS (Claude Code, 2026-11-03), sin commit
+### Loop 4: Campo y flota — BASE, API Y PANTALLAS (Claude Code, 2026-11-03); pantallas sin commit
 
 L4.E1 (`0009` + fórmulas geo) y L4.E2 (API de flota, hojas de ruta, campo y asistencia) con pruebas `tests/loop4/` (CA-4.1 a CA-4.6). **Faltan** L4.E3 (fotos de odómetro y evidencias en Supabase Storage con URLs firmadas: requiere crear el bucket privado en el proyecto real) y L4.E4 (pantallas móviles de coordinación, "Hoy en la calle", marcación, y cola offline Dexie). Supuestos a confirmar en `docs/LOOP_4_DISENO.md` §0.
 

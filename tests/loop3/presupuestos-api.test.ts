@@ -28,7 +28,7 @@ describe('L3.E2 — API de presupuestos', () => {
     expect((await api('POST', `/api/presupuestos/${p.id}/items`, item({ sucursalId: c.sucursal }))).status).toBe(201);
   });
 
-  it('enviar calcula el total en el servidor, exacto (170 × 1,15 = 196) y sin ítems inactivos', async () => {
+  it('enviar calcula el precio en el servidor (margen sobre venta: 170 ÷ 0,85 = 200) sin ítems inactivos; el precio redondeado manda', async () => {
     const api = await sesion(['comercial']);
     const c = await cliente();
     const p = (await api('POST', '/api/presupuestos', { clienteId: c.id, titulo: 'zz_test', margenPct: 15 })).j;
@@ -37,8 +37,16 @@ describe('L3.E2 — API de presupuestos', () => {
     await api('PATCH', `/api/presupuestos/${p.id}/items/${inactivo.id}`, { activo: false });
     const e = await api('POST', `/api/presupuestos/${p.id}/enviar`, { desde: 'BORRADOR' });
     expect(e.status).toBe(200);
-    expect(e.j.total_gs).toBe(196);
-    expect(e.j.iva_gs).toBe(20); // IVA aparte: 10 % de 196 = 19,6 → 20
+    expect(e.j.total_gs).toBe(200);
+    expect(e.j.iva_gs).toBe(20); // IVA aparte: 10 % de 200
+    const p2 = (await api('POST', '/api/presupuestos', { clienteId: c.id, titulo: 'zz_test', margenPct: 30 })).j;
+    await api('POST', `/api/presupuestos/${p2.id}/items`, item({ precioUnitarioGs: 217550 }));
+    const d2 = (await api('GET', `/api/presupuestos/${p2.id}`)).j;
+    expect((await api('PATCH', `/api/presupuestos/${p2.id}`, { precioFinalGs: 330000, updatedAt: d2.updated_at })).status).toBe(200);
+    const e2 = await api('POST', `/api/presupuestos/${p2.id}/enviar`, { desde: 'BORRADOR' });
+    expect(e2.j.total_gs).toBe(330000); // "Vta redondeo" de la planilla
+    expect(e2.j.iva_gs).toBe(33000);
+    expect((await api('POST', '/api/presupuestos', { clienteId: c.id, titulo: 'zz_test', margenPct: 100 })).status).toBe(400);
   });
 
   it('enviar rechaza sin ítems y con sucursales mezcladas', async () => {

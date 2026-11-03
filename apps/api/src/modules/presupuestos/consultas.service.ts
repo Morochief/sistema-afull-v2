@@ -17,7 +17,7 @@ export type FiltroPresupuestos = {
 // leen los valores como texto (ver transiciones.service.ts).
 export const COLUMNAS_PRESUPUESTO = sql`
   p.id, p.numero, p.version, p.cliente_id, c.nombre AS cliente_nombre, p.titulo, p.notas,
-  p.margen_pct::float8 AS margen_pct, p.validez_dias, p.estado, p.total_gs::float8 AS total_gs, p.iva_gs::float8 AS iva_gs,
+  p.margen_pct::float8 AS margen_pct, p.validez_dias, p.estado, p.total_gs::float8 AS total_gs, p.iva_gs::float8 AS iva_gs, p.precio_final_gs::float8 AS precio_final_gs,
   p.enviado_at, p.creado_por, p.created_at, p.updated_at`;
 
 function donde(f: FiltroPresupuestos) {

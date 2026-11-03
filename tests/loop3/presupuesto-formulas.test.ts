@@ -56,19 +56,21 @@ describe('L3.E1 — Fórmulas de Presupuesto y Reparto por Sucursal', () => {
   });
 
   it('calcula total con margen aplicando un único redondeo', () => {
-    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 100000 }], 35)).toBe(135000);
-    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 100001 }], 35)).toBe(135001);
+    // Margen SOBRE LA VENTA: precio = costo ÷ (1 − margen).
+    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 1_000_000 }], 30)).toBe(1_428_571);
+    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 100000 }], 35)).toBe(153846);
   });
 
-  it('(auditoría) aritmética exacta: 170 × 1,15 = 195,5 redondea a 196 (en float daba 195)', () => {
-    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 170 }], 15)).toBe(196);
-    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 870 }], 15)).toBe(1001);
+  it('caso real de la planilla: costo 217.550 con 30 % → "Vta 1" 310.785,71 → 310.786', () => {
+    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 217550 }], 30)).toBe(310786);
+    expect(calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 170 }], 15)).toBe(200);
+    expect(() => calcularTotalPresupuesto([{ cantidad: 1, precio_unitario_gs: 1 }], 100)).toThrow();
     // 3 × 33333,3333 = 99999,9999 exacto; con margen 0 redondea a 100000
     expect(calcularTotalPresupuesto([{ cantidad: 3, precio_unitario_gs: '33333.3333' }], '0.00')).toBe(100000);
   });
 
   it('(auditoría) acepta NUMERIC como string (postgres-js) y rechaza más de 4 decimales', () => {
-    expect(calcularTotalPresupuesto([{ cantidad: '2.5000', precio_unitario_gs: '15000.0000' }], '35.00')).toBe(50625);
+    expect(calcularTotalPresupuesto([{ cantidad: '2.5000', precio_unitario_gs: '15000.0000' }], '25.00')).toBe(50000);
     expect(() => calcularTotalPresupuesto([{ cantidad: '1.00001', precio_unitario_gs: 1 }], 0)).toThrow();
   });
 
@@ -79,11 +81,11 @@ describe('L3.E1 — Fórmulas de Presupuesto y Reparto por Sucursal', () => {
     expect(calcularIvaGs(0)).toBe(0);
   });
 
-  it('(auditoría) el resto del redondeo se ajusta de verdad: 3 sucursales de 1 Gs con 50 %', () => {
+  it('reparto proporcional al costo con precio redondeado a mano: el resto se ajusta y la suma es exacta', () => {
     const items = ['a', 'b', 'c'].map((s) => ({ sucursal_id: s, cantidad: 1, precio_unitario_gs: 1 }));
-    const total = calcularTotalPresupuesto(items, 50); // 4,5 → 5
-    expect(total).toBe(5);
-    const reparto = repartirMontoPorSucursal(items, 50, total); // cada una 1,5 → 2; suma 6 → ajuste −1
+    expect(calcularTotalPresupuesto(items, 50)).toBe(6);
+    const total = 5; // "Vta redondeo" cargado a mano
+    const reparto = repartirMontoPorSucursal(items, 50, total); // cada una 5/3 = 1,67 → 2; suma 6 → ajuste −1
     expect(reparto.reduce((a, r) => a + r.montoOtGs, 0)).toBe(5);
     expect(reparto.map((r) => r.montoOtGs).sort()).toEqual([1, 2, 2]);
   });

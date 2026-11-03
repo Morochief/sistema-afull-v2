@@ -99,12 +99,13 @@ export function PresupuestoDetallePage() {
             <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={() => setItemModal({ item: null })}><Plus className="h-3.5 w-3.5" /> Agregar Ítem</Button>
           )}
         </div>
-        {editable && <SelectorMarkup presupuestoId={p.id} margenPct={p.margen_pct} updatedAt={p.updated_at} onCambio={recargar} />}
+        {editable && <SelectorMarkup presupuestoId={p.id} margenPct={p.margen_pct} precioFinalGs={p.precio_final_gs} updatedAt={p.updated_at} onCambio={recargar} />}
         <TablaItems
           items={p.items}
           margenPct={p.margen_pct}
           totalCongelado={p.total_gs}
           ivaCongelado={p.iva_gs}
+          precioFinal={p.precio_final_gs}
           editable={editable}
           onEditar={(item) => setItemModal({ item })}
           onAlternarActivo={(i) => void alternar(i)}

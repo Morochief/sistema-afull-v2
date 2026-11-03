@@ -26,6 +26,7 @@ export type PresupuestoFila = {
   estado: EstadoPresupuesto;
   total_gs: number | null; // precio sin IVA
   iva_gs: number | null; // IVA 10 % aparte
+  precio_final_gs: number | null; // precio sin IVA redondeado a mano (borrador)
   enviado_at: string | null;
   creado_por: string;
   created_at: string;
@@ -99,6 +100,7 @@ export const CLAVES_PRESUPUESTO_FILA = [
   'estado',
   'total_gs',
   'iva_gs',
+  'precio_final_gs',
   'enviado_at',
   'creado_por',
   'created_at',
