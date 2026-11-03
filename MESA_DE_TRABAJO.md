@@ -1287,3 +1287,50 @@ OK   7 Juan sube el precio de la lona y lo ya cargado no cambia
   ```
 - **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
 - **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
+
+
+---
+
+## Entrega: Loop 6 — Costeo Real por OT, Consolidado de Proyecto y Rentabilidad
+
+**Fecha:** 2026-11-03 16:00  
+**Commit:** `650a0fe` — `feat(loop6): costeo real por OT — snapshot al cerrar, consolidado de proyecto y rentabilidad (Claude Code)`  
+**GitHub Actions CI Run:** [#41697246949](https://github.com/Morochief/sistema-afull-v2/actions/runs/41697246949) — **Success** (Lint 0, Tipos 0, 142 tests backend en CI, 115 tests web, Build Vite 8).
+
+### 1. Migración 0014 aplicada en `afull-dev`
+- **Comando:** `pnpm db:migrate`
+- **Salida:**
+  ```text
+  [✓] 0014_costeo.sql applied successfully!
+  [✓] migrations applied successfully!
+  ```
+- **Esquema:** Tabla `ot_costeo` con snapshot inmutable por trigger (`tg_ot_costeo_inmutable` bloquea `UPDATE` y `TRUNCATE`), índices sobre `ot_costeo(orden_trabajo_id)` y `ot_costeo(cerrado_en)`.
+
+### 2. Recorrido Playwright en Vercel (`scripts/prueba-loop6.cjs`)
+Ejecutado con `$env:BASE_URL="https://sistema-afull-v2-api.vercel.app"`:
+```text
+OK   1 fixtures: Sofi, Edu (tarifa 20.000/h), proyecto con 2 OTs, horas, material y un viaje de 30 km
+OK   2 Sofi abre la OT: costo a la fecha Gs 200.000 (40.000 + 122.500 + 37.500), margen 60 % y aviso de horas sin tarifa
+OK   3 Sofi termina la OT y el costo queda congelado
+OK   4 Rentabilidad lista la OT con su margen; el proyecto muestra el consolidado (Gs 237.500, 70,31 %)
+OK   5 Edu (taller) no ve "Rentabilidad" y si escribe la URL vuelve a su pantalla
+
+>>> RECORRIDO LOOP 6 EN VERDE: 5/5 PASOS OK <<<
+```
+
+### 3. Estado de la Suite Completa
+- **Vitest Backend (local con `anon.test.ts`):**
+  ```text
+   Test Files  37 passed (37)
+        Tests  144 passed (144)
+     Duration  528.74s
+  ```
+  *(En GitHub Actions CI sin `anon.test.ts`: 36 suites, 142 tests pasando en verde)*
+- **Vitest Web:**
+  ```text
+   Test Files  23 passed (23)
+        Tests  115 passed (115)
+     Duration  9.19s
+  ```
+- **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
