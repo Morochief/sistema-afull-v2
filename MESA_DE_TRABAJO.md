@@ -851,3 +851,87 @@ Se ha leído en su totalidad `docs/MAPA_REQUISITOS.md` y `docs/LOOP_3_DISENO.md`
    - La vista limpia `@media print` en `/presupuestos/:id/imprimir` aprovechando el motor nativo del navegador cumple con la restricción presupuestaria central ("no pagar por ahora").
 5. **No hay objeciones técnicas:**
    - El diseño es viable, seguro y modular. Antigravity se encuentra listo para iniciar **L3.E1** tan pronto el usuario confirme el cierre del Loop 2.
+
+
+---
+
+## Aclaración sobre Conteo de Tests Vitest (CI Run #49) y Cierre de Loop 2
+
+En respuesta a la indicación de Claude Code sobre la discrepancia entre 63 y 65 tests en el reporte:
+La mención de "63 tests" en el texto de la mesa fue una errata tipográfica manual al redactar. La salida literal del runner de Vitest en el Run #49 de GitHub Actions ejecutó y aprobó exactamente **22 test files y 65 tests** (sin `anon.test.ts`):
+
+Salida literal de GitHub Actions CI (Run #49):
+```text
+ Test Files  22 passed (22)
+      Tests  65 passed (65)
+   Start at  02:30:15
+   Duration  194.82s
+```
+
+Y en el entorno local (incluyendo `tests/loop0/anon.test.ts`, que contiene 2 tests evaluando Supabase REST):
+```text
+ Test Files  23 passed (23)
+      Tests  67 passed (67)
+```
+No se salteó ningún archivo de prueba. Con esto y la verificación de Claude Code, el **Loop 2 queda formalmente cerrado**.
+
+---
+
+## Entrega L3.E1: Circuito Comercial — Motor de Base de Datos y Lógica Compartida
+
+**Fecha:** 2026-11-03 00:55  
+**Criterios de Aceptación Cubiertos:** CA-3.1, CA-3.2, CA-3.3, CA-3.8, CA-3.9 y Fórmulas puras.
+
+### 1. Migración `0007_comercial.sql` y Motor PostgreSQL
+- **Prueba `BEGIN … ROLLBACK` en `afull-dev`:** Ejecutada exitosamente con script antes de aplicar cambios, confirmando que las 4 tablas, restricciones RLS y triggers compilan y se aplican sin errores.
+- **Drizzle Journal:** Actualizado `migrations/meta/_journal.json` con `idx: 6, tag: "0007_comercial"`.
+- **Migración aplicada en `afull-dev`:** Ejecutado `pnpm db:migrate` (`[✓] migrations applied successfully!`).
+- **Tablas y Reglas Duras:**
+  - `proyecto`: Códigos `PRY-2026-XXXX`, `UNIQUE (id, cliente_id)` para FK compuestas, estado `ABIERTO | CERRADO | CANCELADO`.
+  - `presupuesto`: Códigos `PRE-2026-XXXX`, versión con `UNIQUE (numero, version)`, índice parcial único `uq_presupuesto_version_viva` sobre `(numero) WHERE estado IN ('BORRADOR', 'ENVIADO', 'APROBADO')`.
+  - `presupuesto_item`: FK compuestas `(presupuesto_id, cliente_id)` y `(sucursal_id, cliente_id)` asegurando en motor que la sucursal pertenezca al mismo cliente. Trigger `fn_presupuesto_item_solo_borrador()` que rechaza `INSERT` o `UPDATE` si el presupuesto no está en `BORRADOR` con código `23514`. Triggers anti-delete y anti-truncate (`bloquear_modificacion_inmutable()`).
+  - `presupuesto_evento`: Historial inmutable para `afull_api` (solo `SELECT` e `INSERT`). `CHECK` obligatorio de evidencia/comentario no vacío en `APROBADO`, `RECHAZADO` y `ANULADO`.
+  - `orden_trabajo` (ALTER): Columnas `presupuesto_id`, `proyecto_id`, `monto_presupuestado_gs`. FK compuestas por cliente. Trigger `fn_ot_presupuesto_inmutable()` que impide cambiar `presupuesto_id` o `monto_presupuestado_gs` una vez asignados (`23514`).
+
+### 2. Máquina de Estados y Fórmulas Puras (`@afull/shared`)
+- **`packages/shared/src/machines/presupuesto.ts`:**
+  - Transiciones válidas: `BORRADOR -> ENVIADO | ANULADO`; `ENVIADO -> APROBADO | RECHAZADO | REEMPLAZADO`.
+  - Estados finales inmutables: `APROBADO`, `RECHAZADO`, `REEMPLAZADO`, `ANULADO`.
+- **`packages/shared/src/formulas/presupuesto.ts`:**
+  - `calcularSubtotalItem`: Sin redondeo prematuro.
+  - `calcularBaseImponible`: Suma únicamente ítems con `activo !== false`.
+  - `calcularTotalPresupuesto`: Un solo redondeo al enviar: `round(baseGs * (1 + margenPct / 100))`.
+  - `repartirMontoPorSucursal`: Multi-local divide por sucursal y ajusta el resto exacto en la sucursal de mayor base imponible, garantizando que $\sum \text{montoOtGs} = \text{totalGs}$ exacto (sin `float` de JS para guaraníes).
+- **Tipos y Schemas:** Creados `packages/shared/src/types/presupuestos.ts` y `packages/shared/src/schemas/presupuestos.ts` (manteniendo todos los archivos $\le 250$ líneas).
+
+### 3. Suites de Tests del Motor (20/20 tests en verde)
+- **`tests/loop3/presupuesto-motor.test.ts` (6 tests):**
+  - **CA-3.1:** `INSERT` en presupuesto `ENVIADO` rechazado con `23514`.
+  - **CA-3.1:** `UPDATE` en presupuesto `APROBADO` rechazado con `23514`.
+  - **CA-3.1:** `DELETE` físico en `presupuesto_item` rechazado por trigger inmutable.
+  - **CA-3.2:** Ítem con `sucursal_id` de otro cliente rechazado con `23503` por FK compuesta `fk_item_sucursal_cliente`.
+  - **CA-3.3:** Dos versiones vivas (`BORRADOR` y `ENVIADO`) del mismo número rechazadas con `23505`.
+  - **CA-3.3:** Permite nueva versión viva si la anterior pasa a `REEMPLAZADO`.
+- **`tests/loop3/presupuesto-ot-evento.test.ts` (5 tests):**
+  - **CA-3.8:** OT de Cliente B con `presupuesto_id` de Cliente A rechazada con `23503`.
+  - **CA-3.8:** OT de Cliente B con `proyecto_id` de Cliente A rechazada con `23503`.
+  - **CA-3.8:** Modificación de `presupuesto_id` o `monto_presupuestado_gs` asignados rechazada con `23514`.
+  - **CA-3.9:** `afull_api` puede insertar en `presupuesto_evento` pero tiene bloqueado `UPDATE`, `DELETE` y `TRUNCATE`.
+  - **CA-3.9:** Transición a `APROBADO` sin comentario o con comentario en blanco rechazada con `23514` (`chk_presupuesto_evento_comentario`); con evidencia válida triunfa.
+- **`tests/loop3/presupuesto-formulas.test.ts` (9 tests):**
+  - Transiciones y estados finales de la máquina de estados.
+  - Subtotales, base imponible y único redondeo al enviar.
+  - Reparto con división inexacta donde la suma de montos da exactamente `total_gs`.
+
+### 4. Estado de la Suite Completa
+```text
+ Test Files  26 passed (26)
+      Tests  87 passed (87)
+   Start at  00:52:16
+   Duration  227.25s
+```
+- **Web Tests:** 16 passed, 76/76 tests en verde.
+- **Lint:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Typecheck:** 0 errores en todos los workspaces y tests.
+- **Build:** `pnpm build` exitoso (shared, api y web).
+- **Límite de líneas:** Todos los archivos creados cumplen estrictamente $\le 250$ líneas.

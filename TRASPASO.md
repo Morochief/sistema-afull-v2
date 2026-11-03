@@ -163,6 +163,8 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 | `0003_intento_login` | Tabla de intentos de login |
 | `0004_clientes_ot` | `pg_trgm` (esquema `extensions`), `cliente`, `cliente_contacto`, `cliente_marca`, `sucursal` (GPS dentro de Paraguay), `orden_trabajo` (FK compuesta sucursal-cliente), `ot_evento` (inmutable) |
 | `0005_default_privileges_funciones` | `ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;` (global, sin `IN SCHEMA`) y barrido idempotente en `public`. Cierra la herencia implícita de `EXECUTE` en funciones nuevas para `anon`/`authenticated`/`afull_api`. |
+| `0006_tareas_cronometro` | `btree_gist` (en extensions), `tarea`, `tarea_evento` (inmutable), `tarea_intervalo` (inmutable, EXCLUDE sin solapamiento), `persona_tarifa_horaria` (EXCLUDE sin solapamiento). |
+| `0007_comercial` | `proyecto`, `presupuesto`, `presupuesto_item` (con sucursal opcional y FK compuesta multitenant), `presupuesto_evento` (inmutable para afull_api), ALTER `orden_trabajo` (`presupuesto_id`, `proyecto_id`, `monto_presupuestado_gs` inmutables tras asignación). |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
@@ -286,11 +288,8 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al principio 7 (2026-11-02, decisión del usuario):** se inició y cerró Loop 1B con el Loop 0 abierto en dos puntos: (a) CA-0.9, el simulacro manual de restore en `afull-restore-drill`; (b) los secrets `DEV_*` restantes y la corrida de `tests-dev.yml`. **Bloqueo:** no se crea `afull-prod` con datos reales ni se carga ningún dato real hasta cerrar (a) y (b). Nota: los artefactos de backup duran 30 días; si el simulacro se hace después del 2026-12-02, volver a correr `backup-db.yml`.
 
-1. **Confirmación del usuario del cierre formal del Loop 2.**
-2. **Inicio de Loop 3 Comercial (Entrega L3.E1):**
-   - Migración `0007_comercial.sql` (proyecto, presupuesto, presupuesto_item con sucursal opcional y FK compuestas por cliente, presupuesto_evento inmutable, ALTER orden_trabajo).
-   - Máquina de estados de presupuesto y fórmulas puras en `packages/shared`.
-   - Criterios de aceptación CA-3.1, 3.2, 3.3, 3.8, 3.9. Mantener bloqueo sobre producción y datos reales hasta el cierre de (a) y (b).
+1. **Auditoría de Claude Code sobre Entrega L3.E1:** migración `0007_comercial.sql`, máquina de estados, fórmulas puras y pruebas de motor CA-3.1, CA-3.2, CA-3.3, CA-3.8, CA-3.9.
+2. **Inicio de Entrega L3.E2:** API de presupuestos (borrador, ítems, enviar, versiones, rechazar, anular) + CA-3.6 (total_gs congelado). Mantener bloqueo sobre producción y datos reales hasta el cierre de (a) y (b).
 
 ---
 
@@ -336,3 +335,5 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `bcbdc07` | **Loop 2 — Entrega L2.E4:** Frontend completo de Loop 2 (Mi trabajo, tareas en OT, En vivo, Personas), reloj simulado (CA-2.7), usuarios vinculables y recorrido Playwright CA-2.9 (9/9 pasos OK en Vercel). | 64/64 tests backend en dev, 76/76 web, CI Run `#48` (`#41555637358`) green, Playwright Vercel 9/9 OK |
 | 2026-11-02 | `546d9c3` | docs: reportar entrega L2.E4 y actualizar bitacora de traspaso. | CI Run `#41556206008` green |
 | 2026-11-02 | `8fccd02` | fix(loop2): cronómetro no queda abierto en OT final ni persona inactiva; guarda de rutas por capacidad (auditoría Claude Code). | 65/65 tests backend en dev, 76/76 web, CI Run `#49` (`#41565305619`) green, Playwright Vercel 9/9 OK |
+| 2026-11-02 | `e595e9e` | docs: incorporar diseno de Loop 3 Comercial y mapa de requisitos renumerado. | CI Run `#50` green |
+| 2026-11-03 | `HEAD` | **Loop 3 Comercial — Entrega L3.E1:** Migración 0007 (proyecto, presupuesto, ítems con sucursal opcional y eventos), máquina de estados, fórmulas puras (reparto multi-sucursal con absorción de resto) y suites CA-3.1, 3.2, 3.3, 3.8, 3.9. | 87/87 tests backend en dev, 76/76 web, Build OK |
