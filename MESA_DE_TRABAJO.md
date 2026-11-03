@@ -1092,3 +1092,79 @@ OK   9 la hoja de impresión muestra el total
 - **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
 
 
+
+---
+
+## Entrega: Pantallas de Campo (L4.E4) y Procesos / Margen sobre Venta / Cronómetro Comercial
+
+**Fecha:** 2026-11-03 11:35  
+**Commits:**
+1. `b84d640` — `feat(loop4): pantallas de campo — En la calle, hojas de ruta y flota (Claude Code)`
+2. `cbcdd4e` — `feat: margen sobre venta, precio redondeado, catálogo de procesos y cronómetro para Comercial (Claude Code)`
+**GitHub Actions CI Run:** [#41654974092](https://github.com/Morochief/sistema-afull-v2/actions/runs/41654974092) — **Success** (Lint 0, Tipos 0, 125 tests backend en CI, 99 tests web, Build Vite 8).
+
+### 1. Migración Aplicada en `afull-dev`
+- **Migración `0012_procesos_margen.sql`:**
+  - `tipo_tarea`: catálogo administrable de procesos (26 procesos iniciales de las planillas), trigger de actualización.
+  - `tarea.tipo`: pasa de constraint `CHECK` a foreign key contra `tipo_tarea(codigo)` con `ON UPDATE CASCADE ON DELETE RESTRICT`.
+  - `presupuesto`: margen sobre la venta (`CHECK margen_pct < 100`, 30 % por defecto) y `precio_final_gs` (redondeo manual opcional congelado al enviar).
+- Salida de `pnpm db:migrate`: `[✓] migrations applied successfully!`.
+- Verificación de seguridad: carpeta `Documentos/`, `*.xlsx` y `*.docx` no aparecen en git (protegidas por `.gitignore`).
+
+### 2. Recorridos Playwright en Vercel (`https://sistema-afull-v2-api.vercel.app`)
+
+#### A. Recorrido Loop 3 — Presupuestos con Margen sobre Venta (`scripts/prueba-loop3.cjs`)
+```text
+OK   1 fixtures: usuario comercial, cliente con 2 sucursales
+OK   2 login comercial
+OK   3 crear presupuesto desde el menú
+OK   4 agregar ítem para Luque
+OK   5 agregar ítem para Villa Elisa
+OK   6 enviar: precio sin IVA congelado 357.143 (250.000 ÷ 0,70)
+OK   7 nueva versión y quitar Villa Elisa
+OK   8 enviar v2 y aprobar con evidencia → abre la OT
+OK   9 la hoja de impresión muestra el total
+
+>>> RECORRIDO LOOP 3 (CA-3.10) EN VERDE: 9/9 PASOS OK <<<
+```
+
+#### B. Recorrido Loop 4 — Campo y Flota (`scripts/prueba-loop4.cjs`)
+```text
+OK   1 fixtures: coordinadora, montador con persona, vehículo, sede, OT en Luque
+OK   2 coordinación crea la hoja de hoy con el vehículo
+OK   3 agrega al montador como conductor y la parada de la OT
+OK   4 el montador marca entrada dentro de la zona
+OK   5 inicia el viaje con 1000 km
+OK   6 completa la parada → la hoja queda terminada
+OK   7 cierra el viaje con 1030 km
+
+>>> RECORRIDO LOOP 4 EN VERDE: 7/7 PASOS OK <<<
+```
+
+#### C. Recorrido Loop 7 — Diseños y Verificación (`scripts/prueba-loop7.cjs`)
+```text
+OK   1 fixtures: Sofi, Nachi (persona), Edu y OT con tarea de diseño para Nachi
+OK   2 Nachi entra, va a Mi trabajo y carga el enlace de Drive
+OK   3 Edu todavía no lo ve en "Para producir"
+OK   4 Sofi lo ve por verificar y lo aprueba desde la OT
+OK   5 Edu lo ve con el botón "Abrir en Drive" apuntando al original
+
+>>> RECORRIDO LOOP 7 EN VERDE: 5/5 PASOS OK <<<
+```
+
+### 3. Estado de la Suite Completa
+- **Vitest Backend (local con `anon.test.ts`):**
+  ```text
+   Test Files  33 passed (33)
+        Tests  127 passed (127)
+     Duration  414.70s
+  ```
+  *(En GitHub Actions CI sin `anon.test.ts`: 32 suites, 125 tests pasando en verde)*
+- **Vitest Web:**
+  ```text
+   Test Files  20 passed (20)
+        Tests  99 passed (99)
+     Duration  4.61s
+  ```
+- **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
