@@ -991,3 +991,44 @@ OK   9 la hoja de impresión muestra el total
 - **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
 - **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
 - **Criterios de Aceptación:** CA-3.1 al CA-3.10 cumplidos al 100%. CA-4.1 a CA-4.6 verificados en base y API.
+
+---
+
+## Ajuste por Roles Reales — Tipo de Tarea DISENO y Capacidad diseno en Mi Trabajo
+
+**Fecha:** 2026-11-03 09:50  
+**Commit:** `befe856` (`feat: tipo de tarea DISENO y capacidad diseno en Mi trabajo (Claude Code)`)  
+**GitHub Actions CI Run:** [#41639067401](https://github.com/Morochief/sistema-afull-v2/actions/runs/41639067401) — **Success** (Lint 0, Tipos 0, 118 tests backend en CI, 84 tests web, Build Vite 8).
+
+### 1. Migración Aplicada en `afull-dev`
+- **Migración `0010_tarea_diseno.sql`:**
+  ```sql
+  ALTER TABLE "tarea" DROP CONSTRAINT IF EXISTS "tarea_tipo_check";
+  ALTER TABLE "tarea" ADD CONSTRAINT "tarea_tipo_check" CHECK (
+    tipo IN ('DISENO', 'TALLER_IMPRESION', 'TALLER_CORTE', 'TALLER_HERRERIA', 'TALLER_ARMADO', 'MONTAJE_CALLE', 'OTRO')
+  );
+  ```
+- Salida de `pnpm db:migrate`: `[✓] migrations applied successfully!`.
+
+### 2. Cambios de Negocio y Arquitectura
+- **Registro operativo para Diseño:** Nachi cronometra tareas de diseño en `/mi-trabajo` como todos los colaboradores; sus horas entran al costeo real de la OT.
+- **Acceso por capacidades:** Quienes posean la capacidad `diseno` pueden acceder a `/mi-trabajo`, aparecen en el módulo Control en Vivo (`/api/live/estado`) y figuran como personas asignables para tareas de tipo `DISENO`.
+- **UI:** Formularios de asignación y modales (`ModalNuevaTareaOT`, `SelectorTareasOT`) y guardia de navegación (`routes/app-layout.tsx` y `rutas.ts`).
+
+### 3. Estado de la Suite Completa
+- **Vitest Backend (local con `anon.test.ts`):**
+  ```text
+   Test Files  31 passed (31)
+        Tests  120 passed (120)
+     Duration  376.37s
+  ```
+  *(En GitHub Actions CI sin `anon.test.ts`: 30 suites, 118 tests pasando en verde)*
+- **Vitest Web:**
+  ```text
+   Test Files  18 passed (18)
+        Tests  84 passed (84)
+     Duration  5.43s
+  ```
+- **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
+
