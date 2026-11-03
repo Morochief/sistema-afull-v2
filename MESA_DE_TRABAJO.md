@@ -1168,3 +1168,36 @@ OK   5 Edu lo ve con el botón "Abrir en Drive" apuntando al original
   ```
 - **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
 - **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
+
+---
+
+## Entrega: Loop 5 (Parte 1) — Insumos y Consumos sin Stock
+
+**Fecha:** 2026-11-03 14:18  
+**Commit:** `2613f63` (`feat(loop5): insumos y consumos sin stock — catálogo, merma, plancha compartida e importador (Claude Code)`)  
+**GitHub Actions CI Run:** [#41682727337](https://github.com/Morochief/sistema-afull-v2/actions/runs/41682727337) — **Success** (Lint 0, Tipos 0, 134 tests backend en CI, 99 tests web, Build Vite 8).
+
+### 1. Migración Aplicada en `afull-dev`
+- **Migración `0013_insumos_consumos.sql`:**
+  - `insumo`: catálogo de materiales con unidad de medida, estado activo y trigger de timestamp.
+  - `insumo_precio`: historial de precios inmutable (precio vigente por fecha de creación) con trigger de solo inserción (sin UPDATE ni TRUNCATE).
+  - `consumo_insumo`: registro inmutable de consumo por OT/tarea con costo unitario congelado, tipo de consumo (`NORMAL`, `PIEZA`, `DESPERDICIO`, `CORRECCION`), grupo de cálculo para mermas/repartos, y corrección estricta por contra-asiento negativo.
+- Salida de `pnpm db:migrate`: `[✓] migrations applied successfully!`.
+- **Importador de Insumos (`scripts/importar-insumos.ts`):** Validado en seco (dry-run). No se ejecutó con `--aplicar` en respeto al bloqueo de datos reales hasta decisión explícita del usuario.
+
+### 2. Estado de la Suite Completa
+- **Vitest Backend (local con `anon.test.ts`):**
+  ```text
+   Test Files  35 passed (35)
+        Tests  136 passed (136)
+     Duration  488.64s
+  ```
+  *(En GitHub Actions CI sin `anon.test.ts`: 34 suites, 134 tests pasando en verde)*
+- **Vitest Web:**
+  ```text
+   Test Files  20 passed (20)
+        Tests  99 passed (99)
+     Duration  11.02s
+  ```
+- **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
