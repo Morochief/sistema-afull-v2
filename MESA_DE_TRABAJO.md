@@ -880,6 +880,8 @@ No se salteó ningún archivo de prueba. Con esto y la verificación de Claude C
 ## Entrega L3.E1: Circuito Comercial — Motor de Base de Datos y Lógica Compartida
 
 **Fecha:** 2026-11-03 00:55  
+**Commit:** `780fe04`  
+**GitHub Actions CI Run:** [#41575493940](https://github.com/Morochief/sistema-afull-v2/actions/runs/41575493940) — **Success** (Lint 0, Tipos 0, 85 tests backend en CI / 87 en local, 76 tests web, Build Vite 8).  
 **Criterios de Aceptación Cubiertos:** CA-3.1, CA-3.2, CA-3.3, CA-3.8, CA-3.9 y Fórmulas puras.
 
 ### 1. Migración `0007_comercial.sql` y Motor PostgreSQL
