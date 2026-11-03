@@ -172,6 +172,7 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 | `0010_tarea_diseno` | Tipo de tarea `DISENO` (Nachi registra su tiempo como todos). `diseno` entra a "Mi trabajo", Control en Vivo y personas asignables. Aplicada en `afull-dev`. |
 | `0011_iva_disenos` | (A) `presupuesto.iva_gs` (IVA 10 % aparte, congelado al enviar). (B) `diseno_version` (enlace de Drive, origen cliente/diseñadora, una pendiente por OT, una sola revisión, inmutable). Aplicada en `afull-dev`. |
 | `0012_procesos_margen` | Catálogo `tipo_tarea` (procesos administrables, `tarea.tipo` pasa de `CHECK` a FK, 26 procesos iniciales de las planillas); margen **sobre la venta** (`CHECK margen_pct < 100`, default 30) y `precio_final_gs` (redondeo manual) congelado al enviar. Aplicada en `afull-dev`. |
+| `0013_insumos_consumos` | (Loop 5, sin stock) `insumo`, `insumo_precio` (historial inmutable), `consumo_insumo` (inmutable, costo congelado, corrección por negativo, tarea de la misma OT por FK compuesta). Aplicada en `afull-dev`. |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
@@ -200,6 +201,10 @@ Criterios de aceptación:
 - **CA-0.3 (cronómetros concurrentes) se movió al Loop 2**: necesita tablas que aún no existen.
 
 Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,seed}.test.ts`. El test de la `anon key` no corre en CI (necesita la API REST de Supabase); correrá a diario contra `dev` en `tests-dev.yml` (pendiente). Los tests tienen un guard `TEST_ENV=dev` y **nunca se corren contra `prod`**.
+
+### Loop 5: Insumos y consumos — BASE, API E IMPORTADOR (Claude Code, 2026-11-03), sin commit; pantallas pendientes
+
+Sin stock (decisión del usuario): cada operario carga lo que usó, con costo congelado; merma de bobina y plancha compartida para Edu; importador del Excel de insumos (246 listos, 15 a revisar; **no aplicado** por el bloqueo de datos reales). Detalle: `docs/LOOP_5_DISENO.md`.
 
 ### Loop 7: Diseño y verificación — IMPLEMENTADO (Claude Code, 2026-11-03), sin commit
 

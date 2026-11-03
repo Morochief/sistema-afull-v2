@@ -13,6 +13,7 @@
     { "idx": 8, "version": "7", "when": 1793000008000, "tag": "0009_campo_flota", "breakpoints": true },
     { "idx": 9, "version": "7", "when": 1793000009000, "tag": "0010_tarea_diseno", "breakpoints": true },
     { "idx": 10, "version": "7", "when": 1793000010000, "tag": "0011_iva_disenos", "breakpoints": true },
-    { "idx": 11, "version": "7", "when": 1793000011000, "tag": "0012_procesos_margen", "breakpoints": true }
+    { "idx": 11, "version": "7", "when": 1793000011000, "tag": "0012_procesos_margen", "breakpoints": true },
+    { "idx": 12, "version": "7", "when": 1793000012000, "tag": "0013_insumos_consumos", "breakpoints": true }
   ]
 }

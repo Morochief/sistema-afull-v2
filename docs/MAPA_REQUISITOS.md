@@ -48,9 +48,9 @@ Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proye
 | Asistencia con geocerca de 100 m (disuasiva) | 4 | ✅ Base, API y marcación en "En la calle"; falta la pantalla de RR.HH. |
 | Fotos de evidencia de montaje y **muestras de impresión antes del despacho** (REQ-03, McDonald's) | 4 | Planificado: la infraestructura de fotos (URLs firmadas, bucket privado) se hace una vez y sirve para odómetro, montaje y muestras de tarea |
 | Trabajo offline de cuadrillas | 4 | Planificado |
-| Insumos y stock en unidades o metros, entradas con factura | 5 | Planificado |
-| Cálculo automático de aprovechamiento y merma por medidas (REQ-04) | 5 | Planificado (fórmula pura en `shared/formulas`, se calcula al registrar consumo) |
-| Prorrateo de planchas o bobinas compartidas entre varios clientes/OTs | 5 | Planificado (un consumo repartido en N OTs por m², en la misma transacción) |
+| Insumos (catálogo con historial de precios) y consumo por OT — **sin stock** por decisión del usuario | 5 | ✅ Base, API e importador (sin commit); faltan pantallas |
+| Cálculo automático de aprovechamiento y merma por medidas (REQ-04) | 5 | ✅ Fórmula y API (`/api/consumos/merma`); falta la calculadora en pantalla |
+| Prorrateo de planchas o bobinas compartidas entre varios clientes/OTs | 5 | ✅ Fórmula y API (`/api/consumos/compartido`); falta la pantalla |
 | Costeo real (horas × tarifa + insumos + km) y prefactura con margen | 6 | Planificado (snapshot al cierre de la OT) |
 | Aprobación de diseños (REQ-06, **corregido por el usuario 2026-11-03**): el diseño puede venir del cliente o de Nachi; queda en Google Drive; **Juan o Sofi** (cualquiera de los dos) dan el OK; recién ahí Edu ve el enlace (hoy Edu pregunta en el grupo "¿la ruleta ya tienen?": eso lo resuelve la cola) | 7 | ✅ Implementado (sin commit): `docs/LOOP_7_DISENO.md` |
 | Botón "Abrir original en Drive" para Edu | 7 | ✅ Implementado (sin commit) |

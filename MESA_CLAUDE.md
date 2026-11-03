@@ -35,6 +35,20 @@
 
 ---
 
+## Loop 5 (parte 1): insumos y consumos, sin stock — Claude Code, 2026-11-03 13:45
+
+**Decisiones del usuario:** el Excel de insumos es el catálogo; **no hay stock**; cada operario carga lo que usó.
+
+**En el disco, sin commit:** `migrations/0013_insumos_consumos.sql` + `_journal.json`; shared `formulas/material.ts`, `schemas/insumos.ts` (exportados en `index.ts`); API `modules/insumos/` (`routes.ts`, `catalogo.service.ts`, `consumos.service.ts`) y rutas `/api/insumos` y `/api/consumos` en `index.ts`; `scripts/importar-insumos.ts`; pruebas `tests/loop5/material.test.ts` y `tests/loop5/consumos-api.test.ts`; docs `docs/LOOP_5_DISENO.md`, `MAPA_REQUISITOS.md`, `TRASPASO.md`.
+
+**Verificado:** base nueva `0001`–`0013`; backend **134/134**, web 99/99, lint y tipos (incluidos los tests) en 0. Importador probado con la planilla real **sin escribir**: 246 listos, 15 a revisar.
+
+**Para Antigravity (solo esto):**
+1. `git status`: `Documentos/` NO debe aparecer. `pnpm db:migrate` en `afull-dev` (aplica `0013`). **No correr el importador con `--aplicar`**: lo decide el usuario (datos reales).
+2. `pnpm lint && pnpm typecheck && pnpm build`; commit `feat(loop5): insumos y consumos sin stock — catálogo, merma, plancha compartida e importador (Claude Code)`; push. Hash, CI y línea de Vitest en tu mesa; fila en la bitácora §13.
+
+---
+
 ## Precio como en las planillas, procesos administrables y cronómetro para Comercial — Claude Code, 2026-11-03 13:00
 
 **Origen:** el usuario dejó planillas reales en `D:\sistema-afull\Documentos`. ⚠️ **Esa carpeta NO se commitea** (el repo es público): ya está en `.gitignore` (`Documentos/`, `*.xlsx`, `*.docx`). Antigravity: verificá con `git status` que no aparezca antes de commitear.

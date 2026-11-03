@@ -16,6 +16,7 @@ import { campoRoutes } from './modules/campo/routes.js';
 import { asistenciaRoutes } from './modules/asistencia/routes.js';
 import { disenosRoutes } from './modules/disenos/routes.js';
 import { procesosRoutes } from './modules/procesos/routes.js';
+import { insumosRoutes, consumosRoutes } from './modules/insumos/routes.js';
 import { verificarOrigen } from './modules/auth/middleware.js';
 import { ErrorApp } from './lib/errores.js';
 
@@ -39,6 +40,8 @@ app.route('/api/campo', campoRoutes);
 app.route('/api/asistencia', asistenciaRoutes);
 app.route('/api/disenos', disenosRoutes);
 app.route('/api/procesos', procesosRoutes);
+app.route('/api/insumos', insumosRoutes);
+app.route('/api/consumos', consumosRoutes);
 
 app.onError((e, c) => {
   if (e instanceof ErrorApp) return c.json({ error: e.message }, e.status);
