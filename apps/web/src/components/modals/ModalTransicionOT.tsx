@@ -89,10 +89,8 @@ export function ModalTransicionOT({
       onCerrar();
     } catch (err: unknown) {
       if (err instanceof ErrorApi && err.status === 409) {
-        toast.warning(
-          'La OT cambió de estado concurrentemente en el servidor. Se recargará la información.',
-          { duration: 8000 }
-        );
+        // El 409 puede ser un cambio concurrente o tareas en curso: mostrar el motivo real.
+        toast.warning(mensajeDeError(err, 'La OT cambió de estado en el servidor.'), { duration: 8000 });
         onTransicionExitosa?.();
         onCerrar();
         return;

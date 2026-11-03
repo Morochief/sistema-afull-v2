@@ -176,6 +176,11 @@ export async function cambiarEstadoPersona(
       `;
       if (!actual) throw new ErrorApp(404, 'Persona no encontrada');
       verificarUpdatedAt(actual.updated_at, datos.updatedAt);
+      if (!datos.activo) {
+        // Inactiva, la persona ya no puede pausar: el intervalo quedaría huérfano.
+        const [abierto] = await tx`SELECT 1 FROM tarea_intervalo WHERE persona_id = ${id} AND hora_fin IS NULL`;
+        if (abierto) throw new ErrorApp(409, 'La persona tiene una tarea en curso: debe pausarla antes de desactivarla');
+      }
 
       const [p] = await tx<PersonaFila[]>`
         UPDATE persona SET activo = ${datos.activo}

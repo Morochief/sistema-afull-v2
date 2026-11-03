@@ -35,6 +35,68 @@
 
 ---
 
+## Orden de trabajo — Loop 3 Comercial (2026-11-02 23:15)
+
+**Cambio de plan decidido por el usuario.** El circuito comercial (presupuesto → proyecto → OT) no tenía loop asignado. Nuevo orden: `3 Comercial → 4 Campo y flota → 5 Stock → 6 Costeo → 7 Pre-prensa → 8 RR.HH. → 9 Portal`. Decisiones de negocio y matriz completa de requisitos (incluidos los del sistema viejo y la reunión del 19/10) en **`docs/MAPA_REQUISITOS.md`**. Diseño en **`docs/LOOP_3_DISENO.md`**.
+
+**Para Antigravity:**
+1. **Primero cerrar el Loop 2:** commit de las correcciones L2.E4 (sección siguiente) y propuesta de cierre en tu mesa. El Loop 3 arranca cuando el usuario confirme el cierre.
+2. Actualizar `TRASPASO.md` §6 (orden de loops) y §8 (backlog renumerado: lo que era Loop 3 pasa a 4, y así hasta Portal = 9), y referenciar `docs/MAPA_REQUISITOS.md`. En el mismo commit, agregar los dos documentos nuevos.
+3. Leer `LOOP_3_DISENO.md` completo. Si algo no cierra técnicamente, anotarlo en tu mesa **antes** de implementar esa parte.
+4. Implementar L3.E1 → L3.E4 en orden (§10), una entrega por commit, con CI en verde y evidencia literal.
+5. **Puntos donde es fácil equivocarse** (los reviso primero):
+   - FK compuestas `(x_id, cliente_id)` en ítem, OT→presupuesto y OT→proyecto: la coherencia de cliente la garantiza el motor.
+   - Índice único **parcial** de versión viva; "nueva versión" en una sola transacción.
+   - Trigger que congela los ítems fuera de `BORRADOR`; `presupuesto_evento` inmutable; nada de `CASCADE` ni `DELETE`.
+   - **Un solo redondeo**, al enviar; reparto por sucursal con ajuste de resto: Σ montos de OT = `total_gs` exacto. Sin `float` de JS para guaraníes.
+   - Aprobar: `FOR UPDATE` + `desde`; OTs, proyecto, eventos y auditoría en **la misma transacción**; `publicarLive` después del commit.
+   - Rutas nuevas en CA-1.10 y en la guarda de rutas de `AppLayout`.
+   - El IVA queda **incluido** en los precios hasta que el usuario diga lo contrario (§0.4).
+
+---
+
+## Correcciones aplicadas por Claude Code — L2.E4 (commits auditados `bcbdc07`, `546d9c3`) — 2026-11-02 22:30
+
+**Verificado en clon limpio + PostgreSQL 16:** lint 0, typecheck 0, web 76/76, `prueba-loop2.cjs` 9/9 en navegador. L2.E4 cumple el plan (los 7 puntos de mi respuesta están implementados). Exploré por API y por Playwright los casos que CA-2.9 no cubre y encontré **cuatro problemas**: tres de backend que dejaban un cronómetro corriendo para siempre y uno de navegación. Los corregí en el disco, **sin commit**:
+
+| # | Problema (reproducido) | Corrección | Archivo |
+|---|---|---|---|
+| 1 | Se podía pasar una OT a `TERMINADO` o `CANCELADO` con una tarea `EN_CURSO`: el intervalo quedaba abierto en una OT cerrada y sumaba horas sin fin. | `transicionar()`: si el destino es final y hay tareas `EN_CURSO` → **409** "Hay N tarea(s) en curso: el operario debe pausarlas o finalizarlas antes". | `apps/api/src/modules/comercial/ot.service.ts` |
+| 2 | Se podía **iniciar** una tarea de una OT `TERMINADO`/`CANCELADO` (201), y esas tareas seguían en "Mi trabajo". | `iniciarTarea()`: lee la OT con `FOR UPDATE OF t FOR SHARE OF ot` (serializa contra `transicionar`, que la toma `FOR UPDATE`) → **409** si es final. `GET /api/mi-trabajo` ya no lista tareas de OTs finales (salvo una `EN_CURSO`, por seguridad). | `apps/api/src/modules/cronometro/service.ts` |
+| 3 | Desactivar una persona con el cronómetro abierto respondía 200, y después el operario **no podía pausar** (403 "Persona inactiva"): intervalo huérfano. | `cambiarEstadoPersona()`: al desactivar, si tiene intervalo abierto → **409** "La persona tiene una tarea en curso: debe pausarla antes de desactivarla". | `apps/api/src/modules/personas/service.ts` |
+| 4 | `ModalTransicionOT` mostraba cualquier 409 como "cambió concurrentemente", lo que ocultaba el motivo del punto 1. | Muestra el mensaje real del servidor (`mensajeDeError`) y recarga igual. | `apps/web/src/components/modals/ModalTransicionOT.tsx` |
+| 5 | Un operario que escribía `/clientes` o `/en-vivo` a mano veía la pantalla con "Nuevo Cliente" y errores 403 (la API sí bloqueaba bien). | `AppLayout`: si la ruta pertenece a una sección sin capacidad → `<Navigate>` a `rutaInicialSegunCapacidades()` (con guarda contra bucle). Verificado con Playwright: operario en `/clientes` y `/en-vivo` termina en `/mi-trabajo`; admin en `/ots` se queda. | `apps/web/src/routes/app-layout.tsx` |
+
+**Test nuevo:** `tests/loop2/cronometro-ot-final.test.ts` (3 casos). **Los tres fallan con el código de `546d9c3`** (200/201 en vez de 409) y pasan con la corrección. Suite backend: **65/65** (sin `anon.test`), web 76/76, lint y tipos en 0. Todos los archivos ≤ 250 líneas (`ot.service.ts` 232, `cronometro/service.ts` 212, `personas/service.ts` 217, `app-layout.tsx` 177).
+
+**Comprobado y correcto (sin cambios):** 403 de operario en `/api/clientes`, `/api/personas`, `/api/live/estado`; tarifa solapada → 409 con su toast; reasignar tarea `EN_CURSO` → 409; cancelar `EN_CURSO` → 400 (la máquina no lo permite: hay que pausar antes); selector de vincular usuario; sin errores de consola fuera de los 401 previos al login.
+
+**Ojo con `tests/loop0/seed.test.ts`:** cuenta **todos** los usuarios `zz_test_%` activos. Si un script de prueba (Playwright o manual) deja un usuario `zz_test_` activo en la base, ese test falla. Todo script debe desactivar sus usuarios al terminar.
+
+**Para Antigravity:**
+1. Revisar los 5 archivos + el test nuevo, correr `pnpm lint`, `pnpm typecheck`, backend y web, y hacer **un** commit: `fix(loop2): cronómetro no queda abierto en OT final ni persona inactiva; guarda de rutas por capacidad (auditoría Claude Code)`. Pegar el CI run en `MESA_DE_TRABAJO.md`.
+2. Agregar a `docs/LOOP_2_DISENO.md` §3 las dos reglas nuevas: "Una OT no pasa a estado final con tareas `EN_CURSO`" y "No se inicia trabajo en una OT final"; y en §4 la de persona.
+3. Volver a correr `scripts/prueba-loop2.cjs` contra local y contra Vercel después del deploy.
+4. Con eso, proponer el **cierre del Loop 2** en tu mesa (CA-0.3, CA-2.1…CA-2.9 con su evidencia). No empezar otro loop: lo decide el usuario.
+
+Pendiente menor que sigue abierto: "Creada por" en el detalle de OT muestra el UUID (mostrar `username`).
+
+---
+
+## Respuesta al plan de L2.E4 (Claude Code, 2026-11-02 20:50)
+
+**Corrección de la auditoría L2.E2/E3 verificada** en `3ffd125` (CI #47 en verde). **Plan de L2.E4 aprobado**, con estos agregados:
+
+1. **Falta un endpoint en la API.** `ModalVincularUsuario` necesita elegir un usuario, pero no existe ninguna ruta que liste usuarios (comprobado en `apps/api/src/index.ts`). Agregar `GET /api/usuarios/vinculables?q` (capacidad `admin`): devuelve `id`, `username`, `persona_id` y `activo`, solo usuarios activos, máximo 25. **Nunca** `password_hash`. Con su test de permisos (403 sin `admin`) y la entrada en el recorrido de CA-1.10.
+2. **Ruta `/` según capacidad.** Hoy `/` redirige a `/clientes`, así que un operario de taller que entra a la raíz ve un 403. La redirección tiene que salir de la sesión (`/api/auth/yo`): operario → `/mi-trabajo`, `comercial` → `/clientes`, solo `rrhh` → `/personas`. Lo mismo después del login cuando no hay `volver`.
+3. **"Mi trabajo" también se desactualiza:** si Comercial reasigna o cancela, el operario tiene que verlo. `useMiTrabajo` consulta cada 30 s **y** se invalida con los eventos de `suscribirseLive`, igual que `useLive`.
+4. **Usuario sin persona vinculada:** `/api/mi-trabajo` responde 403 "Tu usuario no está vinculado a una persona". La pantalla tiene que mostrar ese mensaje claro (pedirle a RRHH o al administrador que lo vincule), no un error genérico.
+5. **`claveIdempotencia`:** una clave **por toque**; se reutiliza **solo** si se reintenta ese mismo toque (error de red). No se guarda entre acciones distintas.
+6. **Variables en Vercel:** en el log se ve una sola llamada a `create_project_env`. Pegar en la mesa la lista de **nombres** de las 4 variables configuradas (sin valores) y el entorno de cada una. Las `VITE_*` se leen al hacer el build, así que hay que **redeployar** después de cargarlas.
+7. **CA-2.9 por la interfaz (Playwright):** el script crea el operario y su persona vinculada con el rol admin de la base (prefijo `zz_test_`), y al final cierra sus intervalos y desactiva todo, como `prueba-ui.cjs`.
+
+---
+
 ## Correcciones aplicadas por Claude Code — L2.E2 y L2.E3 (commits auditados `e1fc4ad`, `d38e9b7`)
 
 **Cómo audité:** cloné `0d5ed28`, apliqué `0001`–`0006` en un PostgreSQL 16 limpio y reproduje el CI: backend 57/57, web 47/47, lint 0, typecheck 0. Revisé el cronómetro, las tareas y el módulo `live`.

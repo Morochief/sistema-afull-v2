@@ -206,6 +206,13 @@ export async function transicionar(ctx: Ctx, id: string, t: Transicion) {
       if (actual !== t.desde) throw new ErrorApp(409, `La OT ya está en ${actual}; recargue los datos`);
       if (!puedeTransicionar(actual, t.a)) throw new ErrorApp(400, `Transición no permitida: ${actual} → ${t.a}`);
       if (t.a === 'CANCELADO' && !t.comentario?.trim()) throw new ErrorApp(400, 'Cancelar requiere un motivo justificado');
+      if (esEstadoFinal(t.a)) {
+        // Un cronómetro abierto en una OT cerrada quedaría corriendo para siempre.
+        const [{ n }] = await tx<{ n: number }[]>`
+          SELECT count(*)::int AS n FROM tarea WHERE orden_trabajo_id = ${id} AND estado = 'EN_CURSO'
+        `;
+        if (n > 0) throw new ErrorApp(409, `Hay ${n} tarea(s) en curso: el operario debe pausarlas o finalizarlas antes`);
+      }
 
       await tx`UPDATE orden_trabajo SET estado = ${t.a} WHERE id = ${id}`;
       await tx`

@@ -32,6 +32,9 @@
 ## 3. Máquina de estados de tarea — `packages/shared/src/machines/tarea.ts`
 `PENDIENTE → EN_CURSO | CANCELADA` · `EN_CURSO → PAUSADA | LISTO` · `PAUSADA → EN_CURSO | LISTO | CANCELADA` · `LISTO` y `CANCELADA` son finales.
 **Invariante:** `estado = 'EN_CURSO'` ⇔ existe un intervalo abierto de esa tarea. Un test lo verifica después de cada operación del cronómetro.
+**Reglas de coherencia con la OT:**
+- Una OT no pasa a estado final (`TERMINADO` o `CANCELADO`) si tiene tareas `EN_CURSO` (responde **409** "Hay N tarea(s) en curso: el operario debe pausarlas o finalizarlas antes").
+- No se inicia trabajo en una OT final (responde **409** "La OT ya está [estado]: no se puede iniciar trabajo en ella"). `iniciarTarea` serializa la lectura de la OT con `FOR SHARE OF ot` contra `transicionar` (`FOR UPDATE`).
 
 ## 4. API
 
@@ -45,6 +48,7 @@
 | Tarifas | `GET /api/personas/:id/tarifas` · `POST /api/personas/:id/tarifas` · `PATCH /api/tarifas/:id/cerrar` `{ fechaFin }` | `rrhh` (un solapamiento → `23P01` → **409**) |
 
 `persona` necesita `updated_at` para el control de `409`: ya lo tiene (`0001`).
+- **Desactivar persona:** Al pasar `activo = false`, si la persona tiene un intervalo abierto responde **409** ("La persona tiene una tarea en curso: debe pausarla antes de desactivarla") para evitar intervalos huérfanos que el operario ya no podría pausar por ser persona inactiva.
 
 ### 4.2 Tareas (Comercial)
 - **Alta junto con la OT:** `nuevaOTSchema` suma `tareas?: { tipo, descripcion, personaAsignadaId? }[]` (máx. 30). `crearOT` las inserta **en la misma transacción**, cada una con su `tarea_evento` inicial.

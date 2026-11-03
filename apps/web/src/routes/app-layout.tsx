@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Outlet, Link, useNavigate, useRouterState } from '@tanstack/react-router';
+import { Outlet, Link, Navigate, useNavigate, useRouterState } from '@tanstack/react-router';
+import { rutaInicialSegunCapacidades } from '../lib/rutas.js';
 import { useSesion } from '../hooks/useSesion.js';
 import { Users, FileText, LogOut, Clock, Radio, UserCheck } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
@@ -56,7 +57,7 @@ export function AppLayout() {
     return null;
   }
 
-  const itemsNavegacion = [
+  const todosLosItems = [
     {
       titulo: 'Mi Trabajo',
       ruta: '/mi-trabajo',
@@ -87,7 +88,19 @@ export function AppLayout() {
       icono: UserCheck,
       visible: tieneCapacidad('rrhh'),
     },
-  ].filter((item) => item.visible);
+  ];
+  const itemsNavegacion = todosLosItems.filter((item) => item.visible);
+
+  // URL escrita a mano hacia una sección sin capacidad: la API igual responde 403,
+  // pero no mostramos una pantalla rota; se va a su pantalla de inicio.
+  const ruta = routerState.location.pathname;
+  const prohibida = todosLosItems.some(
+    (i) => !i.visible && (ruta === i.ruta || ruta.startsWith(i.ruta + '/'))
+  );
+  const inicio = rutaInicialSegunCapacidades(usuario.capacidades);
+  if (prohibida && inicio !== ruta) {
+    return <Navigate to={inicio} replace />;
+  }
 
   const handleLogout = async () => {
     try {

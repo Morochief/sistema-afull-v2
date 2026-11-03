@@ -1,7 +1,14 @@
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
 import { publicarLive } from '../live/publicar.js';
-import { puedeTransicionarTarea, type MiTrabajoRespuesta, type MiTrabajoTarea, type EstadoTarea } from '@afull/shared';
+import {
+  puedeTransicionarTarea,
+  esEstadoFinal,
+  type MiTrabajoRespuesta,
+  type MiTrabajoTarea,
+  type EstadoTarea,
+  type EstadoOT,
+} from '@afull/shared';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
 
@@ -71,6 +78,7 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
       JOIN cliente c ON c.id = ot.cliente_id
       WHERE t.persona_asignada_id = ${persona.id}
         AND t.estado NOT IN ('LISTO', 'CANCELADA')
+        AND (t.estado = 'EN_CURSO' OR ot.estado NOT IN ('TERMINADO', 'CANCELADO'))
       ORDER BY
         CASE WHEN t.estado = 'EN_CURSO' THEN 0 ELSE 1 END,
         t.updated_at DESC
@@ -115,12 +123,20 @@ export async function iniciarTarea(ctx: Ctx, tareaId: string, claveIdempotencia:
         return { esIdempotente: true, intervaloId: existente.id, tareaId: existente.tarea_id, horaInicio: existente.hora_inicio };
       }
 
-      const [tarea] = await tx<{ id: string; persona_asignada_id: string | null; estado: string }[]>`
-        SELECT id, persona_asignada_id, estado FROM tarea WHERE id = ${tareaId} FOR UPDATE
+      // FOR SHARE sobre la OT: serializa contra transicionar() (que la toma FOR UPDATE),
+      // así no se puede abrir un cronómetro en una OT que se está terminando o cancelando.
+      const [tarea] = await tx<{ id: string; persona_asignada_id: string | null; estado: string; ot_estado: string }[]>`
+        SELECT t.id, t.persona_asignada_id, t.estado, ot.estado AS ot_estado
+        FROM tarea t JOIN orden_trabajo ot ON ot.id = t.orden_trabajo_id
+        WHERE t.id = ${tareaId}
+        FOR UPDATE OF t FOR SHARE OF ot
       `;
       if (!tarea) throw new ErrorApp(404, 'Tarea no encontrada');
       if (tarea.persona_asignada_id !== persona.id) {
         throw new ErrorApp(403, 'Solo puedes operar tareas asignadas a tu persona');
+      }
+      if (esEstadoFinal(tarea.ot_estado as EstadoOT)) {
+        throw new ErrorApp(409, `La OT ya está ${tarea.ot_estado}: no se puede iniciar trabajo en ella`);
       }
       if (!puedeTransicionarTarea(tarea.estado as EstadoTarea, 'EN_CURSO')) {
         throw new ErrorApp(400, `No se puede iniciar una tarea en estado ${tarea.estado}`);
