@@ -12,6 +12,7 @@ import { Skeleton } from '../../components/ui/skeleton.js';
 import { ModalEditarOT } from '../../components/modals/ModalEditarOT.js';
 import { ModalTransicionOT } from '../../components/modals/ModalTransicionOT.js';
 import { SeccionTareasOT } from '../../components/ots/SeccionTareasOT.js';
+import { SeccionDisenoOT } from '../../components/disenos/SeccionDisenoOT.js';
 
 function badgeEstado(estado: EstadoOT): { variant: BadgeVariant; texto: string } {
   switch (estado) {
@@ -148,6 +149,8 @@ export function OTsDetallePage() {
           </div>
         </div>
       </div>
+
+      <SeccionDisenoOT otId={ot.id} otFinalizada={final} />
 
       <SeccionTareasOT otId={ot.id} otFinalizada={final} />
 

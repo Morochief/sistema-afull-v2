@@ -170,6 +170,7 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 | `0008_comercial_blindaje` | (auditoría Claude Code) `IS DISTINCT FROM` en el trigger de OT↔presupuesto; ítems no cambian de presupuesto y bloquean la cabecera `FOR SHARE`; cabecera congelada fuera de `BORRADOR` (`fn_presupuesto_congelado`); `total_gs >= 0`; total obligatorio salvo en `BORRADOR`/`ANULADO` (el `CHECK` de 0007 impedía anular un borrador). **Pendiente de aplicar en `afull-dev`.** |
 | `0009_campo_flota` | (Claude Code, Loop 4) `sede` (geocerca), `vehiculo`, `hoja_ruta` + `hoja_ruta_persona` + `hoja_ruta_parada` (motivo obligatorio en EXTRA/OMITIDA), `viaje` (un abierto por vehículo y por conductor, un solo cierre, km_fin ≥ km_inicio), `marcacion_asistencia` (inmutable). Aplicada en `afull-dev`. |
 | `0010_tarea_diseno` | Tipo de tarea `DISENO` (Nachi registra su tiempo como todos). `diseno` entra a "Mi trabajo", Control en Vivo y personas asignables. Aplicada en `afull-dev`. |
+| `0011_iva_disenos` | (A) `presupuesto.iva_gs` (IVA 10 % aparte, congelado al enviar). (B) `diseno_version` (enlace de Drive, origen cliente/diseñadora, una pendiente por OT, una sola revisión, inmutable). Aplicada en `afull-dev`. |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
@@ -198,6 +199,10 @@ Criterios de aceptación:
 - **CA-0.3 (cronómetros concurrentes) se movió al Loop 2**: necesita tablas que aún no existen.
 
 Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,seed}.test.ts`. El test de la `anon key` no corre en CI (necesita la API REST de Supabase); correrá a diario contra `dev` en `tests-dev.yml` (pendiente). Los tests tienen un guard `TEST_ENV=dev` y **nunca se corren contra `prod`**.
+
+### Loop 7: Diseño y verificación — IMPLEMENTADO (Claude Code, 2026-11-03), sin commit
+
+Se adelantó por decisión del usuario. Enlace de Drive por versión, verificación obligatoria de Juan o Sofi (también para el diseño del cliente), cola "Para producir" de Edu, carga desde "Mi trabajo" para Nachi. Detalle: `docs/LOOP_7_DISENO.md`. Además: **IVA aparte** en presupuestos y selector de markup en el borrador.
 
 ### Loop 4: Campo y flota — BASE Y API IMPLEMENTADAS (Claude Code, 2026-11-03), sin commit
 

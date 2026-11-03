@@ -89,4 +89,4 @@ Listados: 25 filas por servidor, búsqueda por número/título/**nombre de clien
 - API: `apps/api/src/modules/presupuestos/` (`consultas`, `borrador`, `transiciones`, `aprobacion`) y `apps/api/src/modules/proyectos/`.
 - Web: `/presupuestos`, `/presupuestos/$id`, `/presupuestos/$id/imprimir` (fuera del layout), `/proyectos`, `/proyectos/$id`; enlaces y monto en el detalle de OT; "Creada por" con el nombre de usuario.
 - Pruebas: `tests/loop3/*` (CA-3.1 a 3.9) y `scripts/prueba-loop3.cjs` (CA-3.10, 9/9 en local).
-- Supuesto pendiente de confirmar: **precios con IVA incluido** (§0.4).
+- **IVA aparte** (usuario, 2026-11-03): `total_gs` = precio sin IVA (costo × (1 + markup)), que se reparte a las OTs; `iva_gs` = 10 % congelado al enviar (`0011`). El markup se cambia en el borrador con botones 25/30/35/40 % o un valor libre.

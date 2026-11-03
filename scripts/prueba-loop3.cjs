@@ -83,7 +83,7 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
     await paso('enviar: total congelado 337.500 (250.000 + 35 %)', async () => {
       await page.getByRole('button', { name: /Enviar al cliente/ }).click();
       await page.getByRole('dialog').getByRole('button', { name: /^Enviar$/ }).click();
-      await page.getByTestId('total-presupuesto').filter({ hasText: '337.500' }).waitFor();
+      await page.getByTestId('neto-presupuesto').filter({ hasText: '337.500' }).waitFor();
     });
 
     await paso('nueva versión y quitar Villa Elisa', async () => {
@@ -91,7 +91,7 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
       await page.getByRole('dialog').getByRole('button', { name: /Crear versión/ }).click();
       await page.getByText(/v2/).first().waitFor();
       await page.locator('tr', { hasText: 'Villa Elisa' }).getByTitle('Quitar ítem').click();
-      await page.getByTestId('total-presupuesto').filter({ hasText: '202.500' }).waitFor();
+      await page.getByTestId('neto-presupuesto').filter({ hasText: '202.500' }).waitFor();
     });
 
     await paso('enviar v2 y aprobar con evidencia → abre la OT', async () => {

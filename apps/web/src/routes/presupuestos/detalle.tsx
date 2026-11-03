@@ -14,6 +14,7 @@ import { Badge } from '../../components/ui/badge.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
 import { ESTADO_PRESUPUESTO } from '../../components/presupuestos/etiquetas.js';
 import { TablaItems } from '../../components/presupuestos/TablaItems.js';
+import { SelectorMarkup } from '../../components/presupuestos/SelectorMarkup.js';
 import { ModalItemPresupuesto } from '../../components/modals/ModalItemPresupuesto.js';
 import { ModalAccionPresupuesto } from '../../components/modals/ModalAccionPresupuesto.js';
 
@@ -75,7 +76,7 @@ export function PresupuestoDetallePage() {
             </div>
             <p className="text-xs text-neutral-400">
               Cliente: <Link to="/clientes/$id" params={{ id: p.cliente_id }} className="text-[#ea580c] hover:underline">{p.cliente_nombre}</Link>
-              {' · '}Validez {p.validez_dias} días{p.total_gs !== null && <> · Total {formatearGs(p.total_gs)}</>}
+              {' · '}Validez {p.validez_dias} días{p.total_gs !== null && <> · Total {formatearGs(p.total_gs + (p.iva_gs ?? 0))} (IVA incl.)</>}
             </p>
           </div>
         </div>
@@ -98,10 +99,12 @@ export function PresupuestoDetallePage() {
             <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={() => setItemModal({ item: null })}><Plus className="h-3.5 w-3.5" /> Agregar Ítem</Button>
           )}
         </div>
+        {editable && <SelectorMarkup presupuestoId={p.id} margenPct={p.margen_pct} updatedAt={p.updated_at} onCambio={recargar} />}
         <TablaItems
           items={p.items}
           margenPct={p.margen_pct}
           totalCongelado={p.total_gs}
+          ivaCongelado={p.iva_gs}
           editable={editable}
           onEditar={(item) => setItemModal({ item })}
           onAlternarActivo={(i) => void alternar(i)}
@@ -114,7 +117,7 @@ export function PresupuestoDetallePage() {
           {p.versiones.map((v) => (
             <Link key={v.id} to="/presupuestos/$id" params={{ id: v.id }} className={`flex justify-between rounded px-2 py-1 text-xs hover:bg-[#1f2937] ${v.id === p.id ? 'bg-[#1f2937] text-white' : 'text-neutral-300'}`}>
               <span>v{v.version} · {ESTADO_PRESUPUESTO[v.estado].texto}</span>
-              <span className="font-mono">{v.total_gs === null ? '—' : formatearGs(v.total_gs)}</span>
+              <span className="font-mono">{v.total_gs === null ? '—' : formatearGs(v.total_gs)} <span className="text-neutral-500">+ IVA</span></span>
             </Link>
           ))}
         </div>

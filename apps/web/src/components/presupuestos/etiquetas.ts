@@ -23,6 +23,3 @@ export const CONCEPTO: Record<ConceptoItemPresupuesto, string> = {
   MOVILIDAD: 'Movilidad',
   OTRO: 'Otro',
 };
-
-/** IVA 10 % incluido en el precio (decisión pendiente de confirmar: ver LOOP_3_DISENO §0.4). */
-export const ivaIncluido = (total: number) => Math.round(total / 11);

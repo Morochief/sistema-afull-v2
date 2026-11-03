@@ -7,6 +7,7 @@ import {
   calcularBaseImponible,
   calcularTotalPresupuesto,
   repartirMontoPorSucursal,
+  calcularIvaGs,
 } from '../../packages/shared/src/index.js';
 
 describe('L3.E1 — Máquina de Estados de Presupuesto', () => {
@@ -69,6 +70,13 @@ describe('L3.E1 — Fórmulas de Presupuesto y Reparto por Sucursal', () => {
   it('(auditoría) acepta NUMERIC como string (postgres-js) y rechaza más de 4 decimales', () => {
     expect(calcularTotalPresupuesto([{ cantidad: '2.5000', precio_unitario_gs: '15000.0000' }], '35.00')).toBe(50625);
     expect(() => calcularTotalPresupuesto([{ cantidad: '1.00001', precio_unitario_gs: 1 }], 0)).toThrow();
+  });
+
+  it('IVA 10 % aparte sobre el precio sin IVA, mitad hacia arriba', () => {
+    expect(calcularIvaGs(1_250_000)).toBe(125_000);
+    expect(calcularIvaGs(196)).toBe(20);
+    expect(calcularIvaGs(194)).toBe(19);
+    expect(calcularIvaGs(0)).toBe(0);
   });
 
   it('(auditoría) el resto del redondeo se ajusta de verdad: 3 sucursales de 1 Gs con 50 %', () => {

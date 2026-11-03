@@ -6,7 +6,7 @@ import { obtenerPresupuesto } from '../../lib/api-presupuestos.js';
 import { mensajeDeError, type ErrorApi } from '../../lib/api.js';
 import { formatearDia } from '../../lib/fechas.js';
 import { formatearGs } from '../../lib/formato.js';
-import { CONCEPTO, ivaIncluido } from '../../components/presupuestos/etiquetas.js';
+import { CONCEPTO } from '../../components/presupuestos/etiquetas.js';
 
 /**
  * Hoja limpia para imprimir o "Guardar como PDF" desde el navegador (sin librerías ni costo).
@@ -81,16 +81,21 @@ export function PresupuestoImprimirPage() {
           </table>
         ))}
         <div className="ml-auto mt-4 w-64 space-y-1">
-          <div className="flex justify-between border-t-2 border-neutral-900 pt-1 text-base font-bold">
-            <span>TOTAL</span>
-            <span className="font-mono">{total === null ? 'Borrador' : formatearGs(total)}</span>
-          </div>
-          {total !== null && (
-            <div className="flex justify-between text-xs text-neutral-500"><span>IVA 10 % incluido</span><span className="font-mono">{formatearGs(ivaIncluido(total))}</span></div>
+          {total === null ? (
+            <div className="flex justify-between border-t-2 border-neutral-900 pt-1 text-base font-bold"><span>TOTAL</span><span>Borrador</span></div>
+          ) : (
+            <>
+              <div className="flex justify-between text-xs"><span>Subtotal</span><span className="font-mono">{formatearGs(total)}</span></div>
+              <div className="flex justify-between text-xs"><span>IVA 10 %</span><span className="font-mono">{formatearGs(p.iva_gs ?? 0)}</span></div>
+              <div className="flex justify-between border-t-2 border-neutral-900 pt-1 text-base font-bold">
+                <span>TOTAL</span>
+                <span className="font-mono">{formatearGs(total + (p.iva_gs ?? 0))}</span>
+              </div>
+            </>
           )}
         </div>
         <footer className="mt-10 border-t border-neutral-200 pt-3 text-[11px] text-neutral-500">
-          Validez de la oferta: {p.validez_dias} días{vence && ` (hasta el ${formatearDia(vence.toISOString())})`}. Precios en guaraníes.
+          Validez de la oferta: {p.validez_dias} días{vence && ` (hasta el ${formatearDia(vence.toISOString())})`}. Precios en guaraníes, IVA 10 % discriminado.
           {total !== null && ' Los importes por línea están redondeados; el total es el que rige.'}
         </footer>
       </div>

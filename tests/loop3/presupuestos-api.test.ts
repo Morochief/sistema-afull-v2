@@ -38,6 +38,7 @@ describe('L3.E2 — API de presupuestos', () => {
     const e = await api('POST', `/api/presupuestos/${p.id}/enviar`, { desde: 'BORRADOR' });
     expect(e.status).toBe(200);
     expect(e.j.total_gs).toBe(196);
+    expect(e.j.iva_gs).toBe(20); // IVA aparte: 10 % de 196 = 19,6 → 20
   });
 
   it('enviar rechaza sin ítems y con sucursales mezcladas', async () => {

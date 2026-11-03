@@ -1,13 +1,14 @@
 import { Edit2, EyeOff, Eye } from 'lucide-react';
-import { calcularTotalPresupuesto, type PresupuestoItemFila } from '@afull/shared';
+import { calcularIvaGs, calcularTotalPresupuesto, type PresupuestoItemFila } from '@afull/shared';
 import { Button } from '../ui/button.js';
 import { formatearGs } from '../../lib/formato.js';
-import { CONCEPTO, ivaIncluido } from './etiquetas.js';
+import { CONCEPTO } from './etiquetas.js';
 
 type Props = {
   items: PresupuestoItemFila[];
   margenPct: number;
   totalCongelado: number | null;
+  ivaCongelado: number | null;
   editable: boolean;
   onEditar: (i: PresupuestoItemFila) => void;
   onAlternarActivo: (i: PresupuestoItemFila) => void;
@@ -19,10 +20,11 @@ const cant = (n: number) => n.toLocaleString('es-PY', { maximumFractionDigits: 4
  * Ítems agrupados por sucursal. El total "en vivo" usa la MISMA fórmula exacta que el servidor;
  * una vez enviado se muestra el total congelado de la base.
  */
-export function TablaItems({ items, margenPct, totalCongelado, editable, onEditar, onAlternarActivo }: Props) {
+export function TablaItems({ items, margenPct, totalCongelado, ivaCongelado, editable, onEditar, onAlternarActivo }: Props) {
   const visibles = editable ? items : items.filter((i) => i.activo);
   const activos = items.filter((i) => i.activo);
-  const total = totalCongelado ?? (activos.length ? calcularTotalPresupuesto(activos, margenPct) : 0);
+  const neto = totalCongelado ?? (activos.length ? calcularTotalPresupuesto(activos, margenPct) : 0);
+  const iva = ivaCongelado ?? calcularIvaGs(neto);
   const base = activos.reduce((a, i) => a + i.cantidad * i.precio_unitario_gs, 0);
 
   if (visibles.length === 0) {
@@ -69,13 +71,14 @@ export function TablaItems({ items, margenPct, totalCongelado, editable, onEdita
         </table>
       </div>
       <div className="ml-auto w-full max-w-xs space-y-1 text-xs">
-        <div className="flex justify-between text-neutral-400"><span>Subtotal</span><span className="font-mono">{formatearGs(base)}</span></div>
-        <div className="flex justify-between text-neutral-400"><span>Margen</span><span className="font-mono">{margenPct.toLocaleString('es-PY')} %</span></div>
+        <div className="flex justify-between text-neutral-400"><span>Costo (suma de ítems)</span><span className="font-mono">{formatearGs(base)}</span></div>
+        <div className="flex justify-between text-neutral-400"><span>Markup</span><span className="font-mono">{margenPct.toLocaleString('es-PY')} %</span></div>
+        <div className="flex justify-between text-neutral-200"><span>Precio sin IVA</span><span className="font-mono" data-testid="neto-presupuesto">{formatearGs(neto)}</span></div>
+        <div className="flex justify-between text-neutral-400"><span>IVA 10 %</span><span className="font-mono">{formatearGs(iva)}</span></div>
         <div className="flex justify-between border-t border-[#1f2937] pt-1 text-sm font-semibold text-white">
           <span>Total {totalCongelado === null ? '(estimado)' : ''}</span>
-          <span className="font-mono text-[#ea580c]" data-testid="total-presupuesto">{formatearGs(total)}</span>
+          <span className="font-mono text-[#ea580c]" data-testid="total-presupuesto">{formatearGs(neto + iva)}</span>
         </div>
-        <div className="flex justify-between text-[11px] text-neutral-500"><span>IVA 10 % incluido</span><span className="font-mono">{formatearGs(ivaIncluido(total))}</span></div>
       </div>
     </div>
   );

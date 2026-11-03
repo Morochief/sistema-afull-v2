@@ -3,6 +3,7 @@ import { Button } from '../ui/button.js';
 import { Badge } from '../ui/badge.js';
 import { formatearTiempoTranscurrido } from '../../lib/reloj.js';
 import type { MiTrabajoTarea } from '@afull/shared';
+import { BotonSubirDiseno } from '../disenos/BotonSubirDiseno.js';
 
 export function TarjetaTareaActiva({
   tarea,
@@ -53,6 +54,7 @@ export function TarjetaTareaActiva({
           <CheckCircle2 className="h-4 w-4 mr-2" /> Finalizar
         </Button>
       </div>
+      {tarea.tipo === 'DISENO' && <BotonSubirDiseno otId={tarea.orden_trabajo_id} />}
     </div>
   );
 }
@@ -89,6 +91,7 @@ export function TarjetaTareaAsignada({
         <Play className="h-4 w-4 fill-white" />
         {tarea.estado === 'PAUSADA' ? 'Reanudar Trabajo' : 'Iniciar Trabajo'}
       </Button>
+      {tarea.tipo === 'DISENO' && <BotonSubirDiseno otId={tarea.orden_trabajo_id} />}
     </div>
   );
 }

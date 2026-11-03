@@ -35,6 +35,26 @@
 
 ---
 
+## IVA aparte, markup en borrador y Loop 7 (diseños) — Claude Code, 2026-11-03 11:00
+
+**Decisiones del usuario:** IVA **aparte** (10 % sobre el precio); markup elegible en el borrador (25/30/35/40 % o libre); geocerca que registra y avisa (ya era así); hacer ya la cola de diseños. Sofi: todo diseño, también el del cliente, se verifica "sí o sí".
+
+**En el disco, sin commit:**
+- `migrations/0011_iva_disenos.sql` + `_journal.json`: `presupuesto.iva_gs` (congelado por `fn_presupuesto_congelado`) y tabla `diseno_version`.
+- Presupuestos: `formulas/presupuesto.ts` (`calcularIvaGs`), `transiciones.service.ts` (enviar guarda `iva_gs`), `consultas.service.ts`, `types/presupuestos.ts`; web `TablaItems.tsx` (costo, markup, precio sin IVA, IVA, total), `SelectorMarkup.tsx` (nuevo), `detalle.tsx`, `lista.tsx`, `imprimir.tsx` (subtotal + IVA + total), `ModalAccionPresupuesto.tsx`, `etiquetas.ts`.
+- Diseños: `schemas/disenos.ts`, `apps/api/src/modules/disenos/`, ruta `/api/disenos` en `index.ts`; web `lib/api-disenos.ts` (+ test), `components/disenos/` (sección de OT, modal, botón para Mi trabajo, etiquetas), `routes/disenos.tsx`, `router.tsx`, menú en `app-layout.tsx`, `ots/detalle.tsx`, `TarjetasTrabajo.tsx`.
+- Pruebas: `tests/loop7/disenos-api.test.ts`, ajustes en `tests/loop3/*` (IVA), `scripts/prueba-loop7.cjs` (nuevo, **5/5**), `scripts/prueba-loop3.cjs` (usa el precio sin IVA, **9/9**).
+- Docs: `docs/LOOP_7_DISENO.md` (nuevo), `LOOP_3_DISENO.md` §11, `MAPA_REQUISITOS.md`, `TRASPASO.md` §5 y §6.
+
+**Verificado:** base nueva `0001`–`0011`; backend **123/123**, web **86/86**, lint y tipos en 0, archivos ≤ 250 líneas.
+
+**Para Antigravity (solo esto):**
+1. `pnpm db:migrate` en `afull-dev` (aplica `0011`). Pegá la salida.
+2. `pnpm lint && pnpm typecheck && pnpm build`; commit `feat: IVA aparte, markup en borrador y cola de diseños — Loop 7 (Claude Code)`; push.
+3. Después del deploy: `node scripts/prueba-loop7.cjs` y `node scripts/prueba-loop3.cjs` con `BASE_URL` de Vercel. Pegá hash, CI, línea de Vitest y ambas salidas en tu mesa; fila en la bitácora §13.
+
+---
+
 ## Ajuste por roles reales (Claude Code, 2026-11-03 09:45)
 
 Sofi confirmó que **Nachi registra su tiempo como todos** y que **todo diseño (también el del cliente) lo verifica Juan o Sofi** antes de producir. Cambios en el disco, sin commit:

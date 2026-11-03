@@ -77,7 +77,7 @@ export function ModalAccionPresupuesto({ accion, presupuestoId, desde, totalGs, 
       <form onSubmit={confirmar} className="space-y-4">
         {totalGs !== null && accion === 'aprobar' && (
           <p className="rounded border border-[#1f2937] bg-[#090a0f] p-2.5 text-xs text-neutral-300">
-            Total aprobado: <strong className="text-white">{formatearGs(totalGs)}</strong>
+            Total sin IVA aprobado: <strong className="text-white">{formatearGs(totalGs)}</strong>
           </p>
         )}
         {t.pide && (

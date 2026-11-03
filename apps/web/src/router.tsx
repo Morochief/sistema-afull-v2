@@ -19,6 +19,7 @@ import { PresupuestoDetallePage } from './routes/presupuestos/detalle.js';
 import { PresupuestoImprimirPage } from './routes/presupuestos/imprimir.js';
 import { ProyectosListaPage } from './routes/proyectos/lista.js';
 import { ProyectoDetallePage } from './routes/proyectos/detalle.js';
+import { DisenosPage } from './routes/disenos.js';
 import { useSesion } from './hooks/useSesion.js';
 import { rutaInicialSegunCapacidades } from './lib/rutas.js';
 
@@ -155,6 +156,12 @@ const proyectoDetalleRoute = createRoute({
   component: ProyectoDetallePage,
 });
 
+const disenosRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/disenos',
+  component: DisenosPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   presupuestoImprimirRoute,
@@ -171,6 +178,7 @@ const routeTree = rootRoute.addChildren([
     presupuestoDetalleRoute,
     proyectosRoute,
     proyectoDetalleRoute,
+    disenosRoute,
   ]),
 ]);
 

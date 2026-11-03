@@ -52,6 +52,7 @@ describe('L3.E1 (auditoría Claude Code) — motor del circuito comercial', () =
     await expect(api`UPDATE presupuesto SET margen_pct = 50 WHERE id = ${pre}`).rejects.toMatchObject({ code: '23514' });
     await expect(api`UPDATE presupuesto SET total_gs = 1 WHERE id = ${pre}`).rejects.toMatchObject({ code: '23514' });
     await expect(api`UPDATE presupuesto SET titulo = 'otro' WHERE id = ${pre}`).rejects.toMatchObject({ code: '23514' });
+    await expect(api`UPDATE presupuesto SET iva_gs = 1 WHERE id = ${pre}`).rejects.toMatchObject({ code: '23514' });
     // La transición de estado sí está permitida.
     await api`UPDATE presupuesto SET estado = 'RECHAZADO' WHERE id = ${pre}`;
   });

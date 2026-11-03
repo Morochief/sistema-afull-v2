@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, Link, Navigate, useNavigate, useRouterState } from '@tanstack/react-router';
 import { rutaInicialSegunCapacidades } from '../lib/rutas.js';
 import { useSesion } from '../hooks/useSesion.js';
-import { Users, FileText, LogOut, Clock, Radio, UserCheck, Calculator, FolderKanban } from 'lucide-react';
+import { Users, FileText, LogOut, Clock, Radio, UserCheck, Calculator, FolderKanban, Palette } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
 import { Badge } from '../components/ui/badge.js';
 
@@ -87,6 +87,12 @@ export function AppLayout() {
       ruta: '/proyectos',
       icono: FolderKanban,
       visible: tieneCapacidad('comercial'),
+    },
+    {
+      titulo: 'Diseños',
+      ruta: '/disenos',
+      icono: Palette,
+      visible: tieneCapacidad('comercial') || tieneCapacidad('taller'),
     },
     {
       titulo: 'Control en Vivo',

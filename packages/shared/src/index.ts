@@ -12,3 +12,4 @@ export * from './types/usuarios.js';
 export * from './types/presupuestos.js';
 export * from './formulas/geo.js';
 export * from './schemas/campo.js';
+export * from './schemas/disenos.js';

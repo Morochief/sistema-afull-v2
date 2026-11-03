@@ -24,7 +24,8 @@ export type PresupuestoFila = {
   margen_pct: number;
   validez_dias: number;
   estado: EstadoPresupuesto;
-  total_gs: number | null;
+  total_gs: number | null; // precio sin IVA
+  iva_gs: number | null; // IVA 10 % aparte
   enviado_at: string | null;
   creado_por: string;
   created_at: string;
@@ -97,6 +98,7 @@ export const CLAVES_PRESUPUESTO_FILA = [
   'validez_dias',
   'estado',
   'total_gs',
+  'iva_gs',
   'enviado_at',
   'creado_por',
   'created_at',

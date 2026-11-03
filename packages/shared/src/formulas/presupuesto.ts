@@ -64,6 +64,12 @@ export function calcularTotalPresupuesto(items: readonly ItemCalculoPresupuesto[
   return Number(conMargen(base8, margenPct));
 }
 
+/** IVA 10 % aparte (decisión del usuario), sobre el precio sin IVA ya redondeado; mitad hacia arriba. */
+export const TASA_IVA_PCT = 10;
+export function calcularIvaGs(netoGs: number): number {
+  return Number(dividirRedondeando(BigInt(netoGs) * BigInt(TASA_IVA_PCT), 100n));
+}
+
 export interface RepartoSucursal {
   sucursalId: string | null;
   baseGs: number;

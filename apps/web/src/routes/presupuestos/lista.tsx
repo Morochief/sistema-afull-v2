@@ -45,7 +45,7 @@ export function PresupuestosListaPage() {
     },
     {
       id: 'total',
-      encabezado: 'Total',
+      encabezado: 'Total sin IVA',
       ancho: 'w-36',
       alinear: 'der',
       celda: (f) => <span className="font-mono text-xs text-neutral-200">{f.total_gs === null ? '—' : formatearGs(f.total_gs)}</span>,

@@ -1,6 +1,6 @@
 import { sql } from '../../db/client.js';
 import type { TransactionSql } from 'postgres';
-import { calcularTotalPresupuesto, puedeTransicionarPresupuesto, type EstadoPresupuesto } from '@afull/shared';
+import { calcularIvaGs, calcularTotalPresupuesto, puedeTransicionarPresupuesto, type EstadoPresupuesto } from '@afull/shared';
 import { auditar } from '../auditoria/service.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
@@ -58,9 +58,10 @@ export function enviarPresupuesto(ctx: Ctx, id: string, desde: EstadoPresupuesto
       throw new ErrorApp(400, 'O todos los ítems tienen sucursal o ninguno: completá la sucursal de los que faltan');
     }
     const total = calcularTotalPresupuesto(items, p.margen);
-    await tx`UPDATE presupuesto SET estado = 'ENVIADO', total_gs = ${total}, enviado_at = now() WHERE id = ${id}`;
+    const iva = calcularIvaGs(total);
+    await tx`UPDATE presupuesto SET estado = 'ENVIADO', total_gs = ${total}, iva_gs = ${iva}, enviado_at = now() WHERE id = ${id}`;
     await registrar(tx, ctx, p, 'ENVIADO', null);
-    return { id, estado: 'ENVIADO' as const, total_gs: total };
+    return { id, estado: 'ENVIADO' as const, total_gs: total, iva_gs: iva };
   });
 }
 
