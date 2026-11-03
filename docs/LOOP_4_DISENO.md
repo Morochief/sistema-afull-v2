@@ -1,6 +1,6 @@
 # Loop 4 — Campo y flota (diseño de Claude Code)
 
-> **Estado:** L4.E1 y L4.E2 (base y API) IMPLEMENTADAS por Claude Code el 2026-11-03, sin commit. L4.E3 (fotos en Storage) y L4.E4 (pantallas móviles + offline) **pendientes**: necesitan el proyecto Supabase real (bucket privado) y prueba en celular.
+> **Estado (2026-11-03):** L4.E1 y L4.E2 (base y API) en `main`. **L4.E4 pantallas** IMPLEMENTADAS por Claude Code, sin commit: "En la calle" (marcación con GPS, odómetro con motivo cuando el servidor lo pide, paradas con "Ir" a Google Maps, Hecha u Omitida), "Hojas de ruta" (coordinación) y "Flota y sedes" (admin). Recorrido `scripts/prueba-loop4.cjs` 7/7 en local. **Pendientes:** L4.E3 (fotos en Storage: necesita crear el bucket privado en el proyecto real) y la **cola offline** de L4.E4 (Dexie; probar en celular). Supuesto §0.1 (geocerca que registra y avisa) **confirmado por el usuario**.
 > **Fuentes:** `ARQUITECTURA_V3.md` §5–7 (`vehiculo`, `hoja_ruta*`, `viaje`, `marcacion_asistencia`), `TRASPASO.md` §3 (auditoría de flota informativa, geocerca disuasiva) y §8, `docs/MAPA_REQUISITOS.md`.
 
 ## 0. Supuestos (el usuario no estaba disponible: confirmar o corregir)
