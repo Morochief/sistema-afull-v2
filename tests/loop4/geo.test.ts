@@ -35,3 +35,25 @@ describe('Loop 4 — fórmulas geográficas', () => {
     expect(lejos.distanciaM).toBeGreaterThan(100);
   });
 });
+
+import { admin, cerrarConexiones } from '../loop0/helpers.js';
+import { sesion } from '../loop3/helpers-comercial.js';
+import { afterAll } from 'vitest';
+
+afterAll(cerrarConexiones);
+
+describe('0010 — diseño como tarea con cronómetro (Nachi registra su tiempo como todos)', () => {
+  it('una tarea DISENO se crea, y la diseñadora con capacidad diseno accede a Mi trabajo', async () => {
+    const com = await sesion(['comercial']);
+    const tag = crypto.randomUUID().slice(0, 8);
+    const [c] = await admin`INSERT INTO cliente (codigo, nombre) VALUES (${'ZD' + tag}, ${'zz_test_cli_dis_' + tag}) RETURNING id`;
+    const ot = await com('POST', '/api/comercial/ot', {
+      clienteId: c.id, titulo: 'zz_test Ruleta', tareas: [{ tipo: 'DISENO', descripcion: 'Diseño ruleta' }],
+    });
+    expect(ot.status).toBe(201);
+    const nachi = await sesion(['diseno']);
+    // Sin persona vinculada responde 403 "no vinculado", pero NO por falta de capacidad.
+    const r = await nachi('GET', '/api/mi-trabajo');
+    expect(String(r.j.error ?? '')).not.toMatch(/requiere capacidad/);
+  });
+});

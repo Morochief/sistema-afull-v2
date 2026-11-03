@@ -62,7 +62,7 @@ export function AppLayout() {
       titulo: 'Mi Trabajo',
       ruta: '/mi-trabajo',
       icono: Clock,
-      visible: tieneCapacidad('taller') || tieneCapacidad('montaje'),
+      visible: tieneCapacidad('taller') || tieneCapacidad('montaje') || tieneCapacidad('diseno'),
     },
     {
       titulo: 'Clientes',

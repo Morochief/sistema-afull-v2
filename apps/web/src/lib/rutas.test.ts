@@ -6,6 +6,7 @@ describe('rutas: redirección inicial según capacidades', () => {
     expect(rutaInicialSegunCapacidades(['taller'])).toBe('/mi-trabajo');
     expect(rutaInicialSegunCapacidades(['montaje'])).toBe('/mi-trabajo');
     expect(rutaInicialSegunCapacidades(['taller', 'montaje'])).toBe('/mi-trabajo');
+    expect(rutaInicialSegunCapacidades(['diseno'])).toBe('/mi-trabajo');
   });
 
   it('comercial va a /clientes', () => {

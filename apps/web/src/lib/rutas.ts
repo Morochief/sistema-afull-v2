@@ -5,7 +5,7 @@ export function rutaInicialSegunCapacidades(capacidades?: string[]): string {
     ? ['admin', 'comercial', 'rrhh', 'taller', 'montaje']
     : caps;
 
-  if (todas.includes('taller') || todas.includes('montaje')) {
+  if (todas.includes('taller') || todas.includes('montaje') || todas.includes('diseno')) {
     if (!todas.includes('comercial')) {
       return '/mi-trabajo';
     }

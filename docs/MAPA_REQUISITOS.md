@@ -21,7 +21,8 @@ Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proye
 - **Juan:** dueño de aFull (capacidad `admin`). Aprueba diseños.
 - **Sofi:** administración y comercial (`comercial`, `rrhh`). Aprueba diseños.
 - **Edu:** taller, impresión y corte (`taller`). Abre el diseño aprobado en Drive.
-- **Nachi:** diseñadora **externa** (no es empleada): solo sube diseños a Drive cuando el cliente no trae uno. Tendrá un usuario con capacidad `diseno` y acceso mínimo; **no usa cronómetro ni entra en Control en Vivo**. Su costo va como ítem `TERCERIZADO` (a confirmar).
+- **Nachi:** diseñadora externa que trabaja con ellos; diseña solo cuando el cliente no trae diseño. **Registra su tiempo como todos** (hoy: "Acción: … / Cliente: …" y "fin" en su planilla, confirmado por Sofi 2026-11-03): usuario con capacidad `diseno`, persona con tarifa, cronómetro en "Mi trabajo" sobre tareas tipo `DISENO` (migración `0010`). Sube el original a Drive y hoy avisa a Edu por el grupo de WhatsApp "Impresiones / Cortes".
+- **Verificación obligatoria (Sofi):** todo diseño, **también el que trae el cliente**, lo verifica Juan o Sofi ("sí o sí, medidas y demás") antes de que Edu lo produzca.
 
 ## Matriz
 
@@ -43,7 +44,7 @@ Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proye
 | Cálculo automático de aprovechamiento y merma por medidas (REQ-04) | 5 | Planificado (fórmula pura en `shared/formulas`, se calcula al registrar consumo) |
 | Prorrateo de planchas o bobinas compartidas entre varios clientes/OTs | 5 | Planificado (un consumo repartido en N OTs por m², en la misma transacción) |
 | Costeo real (horas × tarifa + insumos + km) y prefactura con margen | 6 | Planificado (snapshot al cierre de la OT) |
-| Aprobación de diseños (REQ-06, **corregido por el usuario 2026-11-03**): el diseño puede venir del cliente o de Nachi; queda en Google Drive; **Juan o Sofi** (cualquiera de los dos) dan el OK; recién ahí Edu ve el enlace | 7 | Planificado (estado del diseño por OT + historial de quién aprobó; el archivo sigue en Drive) |
+| Aprobación de diseños (REQ-06, **corregido por el usuario 2026-11-03**): el diseño puede venir del cliente o de Nachi; queda en Google Drive; **Juan o Sofi** (cualquiera de los dos) dan el OK; recién ahí Edu ve el enlace (hoy Edu pregunta en el grupo "¿la ruleta ya tienen?": eso lo resuelve la cola) | 7 | Planificado (estado del diseño por OT + historial de quién aprobó; el archivo sigue en Drive) |
 | Botón "Abrir original en Drive" para Edu | 7 | Planificado |
 | Permisos y justificaciones con comprobante (RR.HH.) | 8 | Planificado |
 | Portal del cliente por enlace, pedidos por local con foto | 9 | Planificado (aquí nace `pedido`) |

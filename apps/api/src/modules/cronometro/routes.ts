@@ -10,7 +10,7 @@ import type { Ctx } from '../clientes/service.js';
 const ctxDe = (c: Context): Ctx => ({ usuarioId: c.get('usuario').id, ip: ipDe(c) });
 
 export const cronometroRoutes = new Hono()
-  .use('*', requireSesion, requireAlgunaCapacidad('taller', 'montaje'))
+  .use('*', requireSesion, requireAlgunaCapacidad('taller', 'montaje', 'diseno'))
   .get('/', async (c) => {
     return c.json(await obtenerMiTrabajo(ctxDe(c)));
   })

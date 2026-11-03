@@ -17,6 +17,7 @@ type Props = {
 };
 
 const ETIQUETAS_TIPO: Record<TipoTarea, string> = {
+  DISENO: 'Diseño',
   TALLER_IMPRESION: 'Impresión',
   TALLER_CORTE: 'Corte',
   TALLER_HERRERIA: 'Herrería',

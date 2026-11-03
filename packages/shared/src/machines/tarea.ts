@@ -9,6 +9,7 @@ export const ESTADOS_TAREA = [
 export type EstadoTarea = (typeof ESTADOS_TAREA)[number];
 
 export const TIPOS_TAREA = [
+  'DISENO',
   'TALLER_IMPRESION',
   'TALLER_CORTE',
   'TALLER_HERRERIA',

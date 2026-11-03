@@ -35,6 +35,20 @@
 
 ---
 
+## Ajuste por roles reales (Claude Code, 2026-11-03 09:45)
+
+Sofi confirmó que **Nachi registra su tiempo como todos** y que **todo diseño (también el del cliente) lo verifica Juan o Sofi** antes de producir. Cambios en el disco, sin commit:
+- `migrations/0010_tarea_diseno.sql` + `_journal.json`: tipo de tarea `DISENO`.
+- `packages/shared/src/machines/tarea.ts`: `DISENO` en `TIPOS_TAREA`.
+- API: capacidad `diseno` en `cronometro/routes.ts`, `live/service.ts` y `personas/vinculos.service.ts` (asignables).
+- Web: `lib/rutas.ts` (+ test), `routes/app-layout.tsx`, etiquetas en `ModalNuevaTareaOT.tsx` y `SelectorTareasOT.tsx`.
+- `tests/loop4/geo.test.ts`: caso de tarea `DISENO` y acceso de `diseno` a "Mi trabajo".
+- `docs/MAPA_REQUISITOS.md`, `TRASPASO.md` §5.
+
+Verificado: backend 118/118, web 84/84, lint y tipos en 0. **Antigravity:** incluir en el commit del Loop 4 (o un `feat:` aparte) y correr `pnpm db:migrate` (aplica `0010`).
+
+---
+
 ## Loop 4 (parte 1) implementado por Claude Code — L4.E1 y L4.E2 (2026-11-03 04:30)
 
 **Qué hay en el disco (sin commit), además de todo el Loop 3 de la sección siguiente:**
