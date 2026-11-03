@@ -766,3 +766,88 @@ OK   9. comercial verifica en Control en Vivo
 - **Web Tests:** **16 suites pasadas, 76/76 tests en verde** (Vitest + jsdom).
 - **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
 - **Regla de Tamaño:** Todos los archivos de `apps/` y `packages/` cumplen estrictamente con `max-lines: 250`.
+
+
+---
+
+## Resolución de Auditoría L2.E4 y Propuesta de Cierre del Loop 2
+
+**Fecha:** 2026-11-02 23:20  
+**Commit:** `8fccd02` (`fix(loop2): cronómetro no queda abierto en OT final ni persona inactiva; guarda de rutas por capacidad (auditoría Claude Code)`)  
+**GitHub Actions CI Run:** [#41565305619](https://github.com/Morochief/sistema-afull-v2/actions/runs/41565305619) (Run #49) — **Success** (Lint 0, Tipos 0, 63 tests backend en CI / 65 en local, 76 tests web, Build Vite 8).
+
+### 1. Correcciones de Auditoría Integradas
+1. **Bloqueo de transición a estado final con tareas en curso (`ot.service.ts`):**
+   - Si la OT pasa a `TERMINADO` o `CANCELADO` y tiene tareas `EN_CURSO`, responde `HTTP 409` *"Hay N tarea(s) en curso: el operario debe pausarlas o finalizarlas antes"*.
+2. **Serialización e impedimento de iniciar tareas en OTs finales (`cronometro/service.ts`):**
+   - `iniciarTarea` aplica `FOR UPDATE OF t FOR SHARE OF ot` serializando contra `transicionar()` (que toma la OT con `FOR UPDATE`). Si la OT es final, rechaza con `HTTP 409`.
+   - `GET /api/mi-trabajo` excluye tareas de OTs en estado final (salvo que ya esté `EN_CURSO` por protección).
+3. **Bloqueo de desactivación de persona con intervalo abierto (`personas/service.ts`):**
+   - `cambiarEstadoPersona` con `activo = false` verifica si existe un intervalo sin cerrar (`hora_fin IS NULL`) y responde `HTTP 409` impidiendo dejar intervalos huérfanos.
+4. **Claridad en errores de transición en cliente (`ModalTransicionOT.tsx`):**
+   - Renderiza el mensaje de error real del servidor en lugar del texto genérico de cambio concurrente.
+5. **Guarda de navegación por capacidades (`app-layout.tsx`):**
+   - Si un usuario ingresa directamente por URL a una sección no autorizada según sus capacidades (ej: operario a `/clientes` o `/en-vivo`), `AppLayout` redirige limpia y reactivamente a `rutaInicialSegunCapacidades()` mediante `<Navigate replace />`.
+6. **Nueva suite de pruebas:**
+   - `tests/loop2/cronometro-ot-final.test.ts` (3/3 tests pasando en verde).
+7. **Reglas documentadas en diseño:**
+   - Actualizado `docs/LOOP_2_DISENO.md` (§3 y §4) reflejando las restricciones de OTs finales y desactivación de personal.
+
+### 2. Evidencia Literal del Recorrido Playwright en Vercel (Post-Deploy)
+```text
+================================================================
+RECORRIDO PLAYWRIGHT LOOP 2 (CA-2.9)
+Destino: https://sistema-afull-v2-api.vercel.app
+================================================================
+
+OK   0. setup fixtures (usuarios y persona vinculada)
+OK   1. login comercial
+OK   2. comercial crea OT con 2 tareas asignadas
+OK   3. logout comercial
+OK   4. login operario -> redirección a /mi-trabajo
+OK   5. operario inicia Tarea A
+OK   6. operario inicia Tarea B (auto-pausa de Tarea A)
+OK   7. operario finaliza Tarea B
+OK   8. logout operario
+OK   9. comercial verifica en Control en Vivo
+
+================================================================
+>>> RECORRIDO COMPLETO LOOP 2 (CA-2.9) EN VERDE: 9/9 PASOS OK <<<
+================================================================
+
+[CLEANUP] Limpiando fixtures de prueba...
+[CLEANUP OK] Conexiones cerradas y datos desactivados.
+```
+
+### 3. Propuesta de Cierre Formal del Loop 2
+Con todos los criterios de aceptación cumplidos y verificados:
+- **CA-0.3:** Concurrencia de 10 inicios simultáneos serializados por persona (`FOR UPDATE`), 1 solo intervalo abierto, códigos `23505` capturados con 409.
+- **CA-2.1:** Idempotencia estricta por `claveIdempotencia` (reintentos devuelven 200 con el mismo intervalo).
+- **CA-2.2:** Auto-pausa atómica transicionando tarea previa a `PAUSADA` con motivo `CAMBIO_TAREA`.
+- **CA-2.3:** Inmutabilidad absoluta en `tarea_intervalo` y `tarea_evento` con triggers de base de datos.
+- **CA-2.4:** Tarifas horarias con control de solapamiento en motor (`btree_gist` + `EXCLUDE`) devolviendo 409 (`23P01`).
+- **CA-2.5:** Autorización RBAC por capacidades operativas (`taller`, `montaje`, `comercial`, `rrhh`, `admin`).
+- **CA-2.6:** Broadcast Realtime portable y desacoplado (payload `{ tipo, id }`, resiliente ante caídas de Supabase).
+- **CA-2.7:** Reloj en cliente con corrección de desfase positivo/negativo simulado (< 5 ms tolerancia) y formateadores.
+- **CA-2.8:** Componentes frontend en paleta oficial (#090a0f, #111318, #ea580c), sin azules, radios 4–6 px, y $\le 250$ líneas por archivo.
+- **CA-2.9:** Recorrido E2E en navegador Playwright en verde (9/9 pasos OK) en local y directamente contra Vercel.
+
+**Se propone formalmente el CIERRE DEL LOOP 2.** Queda a la espera de la confirmación explícita del usuario.
+
+---
+
+## Análisis Técnico y Recepción del Loop 3 Comercial
+
+Se ha leído en su totalidad `docs/MAPA_REQUISITOS.md` y `docs/LOOP_3_DISENO.md`.
+
+### Evaluación de Arquitectura para Loop 3 Comercial
+1. **Coherencia Multitenant por Motor (FK Compuestas):**
+   - El uso de llaves compuestas `(id, cliente_id)` en `proyecto`, `presupuesto`, `presupuesto_item` y `orden_trabajo` asegura que una sucursal, un presupuesto o un proyecto jamás apunten a un cliente cruzado, delegando la integridad dura en PostgreSQL.
+2. **Índice Parcial de Versión Viva:**
+   - `UNIQUE (numero) WHERE estado IN ('BORRADOR','ENVIADO','APROBADO')` es una solución elegante para impedir versiones concurrentes activas y permitir tantas versiones históricas `REEMPLAZADO` o `RECHAZADO` como sean necesarias.
+3. **Inmutabilidad y Redondeo sin `float` de JS:**
+   - La regla de congelamiento al enviar, el reparto de resto de montos presupuestados por sucursal (`Σ montos OT = total_gs` exacto) y el uso de `BIGINT` y `NUMERIC` previenen desfasajes de centavos en moneda nacional.
+4. **Impresión / PDF sin costo:**
+   - La vista limpia `@media print` en `/presupuestos/:id/imprimir` aprovechando el motor nativo del navegador cumple con la restricción presupuestaria central ("no pagar por ahora").
+5. **No hay objeciones técnicas:**
+   - El diseño es viable, seguro y modular. Antigravity se encuentra listo para iniciar **L3.E1** tan pronto el usuario confirme el cierre del Loop 2.

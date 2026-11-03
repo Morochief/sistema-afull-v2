@@ -1,0 +1,47 @@
+# Mapa de requisitos del negocio → loops
+
+> **Fuente:** documentos del sistema anterior (`DOCUMENTO_ARQUITECTURA_SISTEMA_AFULL.md` v2.5 y `ARQUITECTURA_Y_AUDITORIA_SISTEMA_AFULL.md`, incluida la minuta de la reunión del 19/10/2026 con Sofi, Gerardo, Edu, Nachi y Juan). El código viejo no se reutiliza; **sus requisitos sí**.
+> **Regla:** todo requisito tiene un loop asignado o está marcado como descartado, con motivo. Nada queda "en el aire".
+> **Actualizado:** 2026-11-02 por Claude Code, con decisiones del usuario.
+
+## Orden de loops (decisión del usuario, 2026-11-02)
+
+`0 Base → 1 Clientes + OT → 2 Tareas y cronómetro → 3 Comercial → 4 Campo y flota → 5 Stock → 6 Costeo → 7 Pre-prensa → 8 RR.HH. → 9 Portal B2B`
+
+Cambio respecto de `TRASPASO.md` §6: entra **3 Comercial** (presupuesto y proyecto, que no tenían loop) y los demás se corren un lugar.
+
+## Decisiones de negocio del circuito comercial (usuario, 2026-11-02)
+
+1. **Tres caminos:** OT directa (urgencias, mantenimiento, sin presupuesto: REQ-05); presupuesto → 1 OT; presupuesto con varios locales → proyecto + N OTs (una por sucursal).
+2. **Aprobación todo o nada, con versiones.** Si el cliente aprueba 3 de 5 locales, se hace una v2 con los 3 y se aprueba entera; la v1 queda en el historial.
+3. **El diseño previo para vender no se registra** por ahora (pasa poco).
+4. **No hay tabla `pedido` para el trabajo interno:** Comercial abre directamente un presupuesto en borrador. `pedido` llega con el portal (Loop 9), donde el cliente carga por local.
+
+## Matriz
+
+| Requisito (origen) | Loop | Estado |
+| :--- | :--- | :--- |
+| Pausar y saltar entre tareas sin perder tiempo (REQ-01) | 2 | ✅ Hecho (`tarea_intervalo`, auto-pausa) |
+| Permisos por capacidad, sin cédulas fijas en el código (P2-02) | 0 | ✅ Hecho |
+| OT sin presupuesto obligatorio (REQ-05) | 1 | ✅ Hecho |
+| Control en vivo de quién trabaja en qué | 2 | ✅ Hecho |
+| Presupuesto con ítems, margen e impresión/PDF | 3 | Diseñado (`LOOP_3_DISENO.md`) |
+| Proyecto como contenedor de varias OTs (campañas multi-local) | 3 | Diseñado |
+| Presupuestado vs. real por OT y por proyecto | 3 (presupuestado) + 6 (real) | Diseñado |
+| Hoja de ruta diaria con paradas y cuadrilla | 4 | Planificado |
+| Viajes: odómetro con foto, GPS, alerta de desvío informativa | 4 | Planificado |
+| Asistencia con geocerca de 100 m (disuasiva) | 4 | Planificado |
+| Fotos de evidencia de montaje y **muestras de impresión antes del despacho** (REQ-03, McDonald's) | 4 | Planificado: la infraestructura de fotos (URLs firmadas, bucket privado) se hace una vez y sirve para odómetro, montaje y muestras de tarea |
+| Trabajo offline de cuadrillas | 4 | Planificado |
+| Insumos y stock en unidades o metros, entradas con factura | 5 | Planificado |
+| Cálculo automático de aprovechamiento y merma por medidas (REQ-04) | 5 | Planificado (fórmula pura en `shared/formulas`, se calcula al registrar consumo) |
+| Prorrateo de planchas o bobinas compartidas entre varios clientes/OTs | 5 | Planificado (un consumo repartido en N OTs por m², en la misma transacción) |
+| Costeo real (horas × tarifa + insumos + km) y prefactura con margen | 6 | Planificado (snapshot al cierre de la OT) |
+| Aprobación de diseños Nachi → Sofi → Juan (REQ-06) | 7 | Planificado (máquina de estados + historial) |
+| Botón "Abrir original en Drive" para Edu | 7 | Planificado |
+| Permisos y justificaciones con comprobante (RR.HH.) | 8 | Planificado |
+| Portal del cliente por enlace, pedidos por local con foto | 9 | Planificado (aquí nace `pedido`) |
+| Pantalla propia de impresión y corte para Edu (REQ-02) | — | **A revisar con Edu después de usar "Mi trabajo"** del Loop 2. Si hace falta, entra como entrega extra del Loop 5 (cola por máquina) |
+| Importar planillas de papel por foto con IA (REQ-07) | — | **Descartado por ahora:** costo y fiabilidad; el operario carga en el celular en el momento |
+| Importar Excel de partes diarios (sistema viejo) | — | **Descartado como función:** solo el script único de migración de datos (`--dry-run`) antes de salir a producción |
+| Facturación fiscal (SIFEN) | — | Fuera de alcance: aFull hace prefactura; la factura legal sale del sistema contable |

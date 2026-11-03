@@ -1,6 +1,6 @@
 # Traspaso del proyecto aFull
 
-Última actualización: 2 de noviembre de 2026 — 22:00 (America/Asuncion).
+Última actualización: 2 de noviembre de 2026 — 23:25 (America/Asuncion).
 Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada tarea o commit.
 
 ---
@@ -37,7 +37,7 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 | Tests Loop 0 (Vitest) | **22/22 en verde contra Supabase `dev` y CI** (RLS, anon key `42501`, funciones y default privileges cerrados en `funciones.test.ts`, auth, seed idempotente, inmutabilidad, concurrencia por pooler + `sinPipelining`, CSRF en `csrf.test.ts`). |
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
 | Tests Loop 1B (Vitest frontend + contrato) | **45/45 tests web en verde** (9 suites) y **6 tests de contrato/API adicionales**, más **15/15 pasos Playwright UI en verde contra Vercel**. **Loop 1B cerrado (CA-1.11 a CA-1.16)**. |
-| Tests Loop 2 (Vitest backend + web) | **22 suites backend en verde contra Supabase `dev`** (64/64 tests en local; 62 en CI sin `anon.test.ts`), **16 suites web en verde** (76/76 tests). **Recorrido Playwright CA-2.9 en Vercel (9/9 pasos OK)**. Loop 2 implementado completo (L2.E1 a L2.E4). |
+| Tests Loop 2 (Vitest backend + web) | **Loop 2 CERRADO** (L2.E1 a L2.E4 + auditoría final): 65/65 tests backend en dev (63 en CI sin anon.test.ts), 76/76 tests web, Playwright CA-2.9 9/9 pasos OK contra Vercel. CA-0.3 y CA-2.1 a CA-2.9 cumplidos. |
 | Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2, #5 y #6 con D5-1 y migración 0006 con btree_gist comprobados**). |
 | `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 3** (hoy no se usa Storage). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
@@ -170,8 +170,8 @@ Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guar
 
 ## 6. Estado por loop
 
-Orden: 0 Base → 1 Clientes + OT → 2 Tareas, cronómetro y Control en Vivo → 3 Campo offline + flota → 4 Stock → 5 Costeo → 6 Pre-prensa → 7 RR.HH. → 8 Portal B2B.
-(Costeo va temprano porque es lo que justifica el sistema.)
+Orden (decisión del usuario, 2026-11-02; ver `docs/MAPA_REQUISITOS.md`): 0 Base → 1 Clientes + OT → 2 Tareas, cronómetro y Control en Vivo → 3 Comercial (presupuestos y proyectos) → 4 Campo offline y flota → 5 Stock → 6 Costeo → 7 Pre-prensa → 8 RR.HH. → 9 Portal B2B.
+(Costeo se corre al Loop 6 porque se nutre de Comercial, Campo y Stock; Comercial entra en Loop 3 para ordenar el origen de las OTs).
 
 ### Loop 0: Base (22/22 tests + CA-0.1 en caliente y CA-0.10 por HTTP en Vercel verificados; CA-0.1 cerrado con excepción; pendientes tests-dev.yml y restore manual de CA-0.9)
 
@@ -227,16 +227,17 @@ Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "C
 
 ---
 
-## 8. Backlog por loop (anotado para no olvidarlo)
+## 8. Backlog por loop (renumerado por decisión del usuario; ver `docs/MAPA_REQUISITOS.md`)
 
-- **Loop 2 (L2.E1 a L2.E4 completados):** CA-0.3 (concurrencia de inicios simultáneos con serialización `FOR UPDATE` en persona, rechazo Postgres 23505 y sincronización con `clock_timestamp()` contra `23514`). Exclusion constraint de tarifas con `btree_gist` (migración `0006`). CA-2.1 a CA-2.6 verificados (módulo `live` portable, broadcast REST aceptado con 202 por clave anon, y endpoint `/api/live/estado`). L2.E4 completado: vistas frontend (Mi trabajo, tareas en OT, En vivo, Personas), CA-2.7 (reloj con desfase simulado, 4 tests en verde), variables de entorno en Vercel y CA-2.9 (recorrido Playwright de 9/9 pasos OK contra Vercel con cleanup garantizado).
-- **Loop 3:** la cola Dexie guarda también los **blobs de las fotos**, e **idempotencia** en `marcacion_asistencia`, viajes e intervalos. **Un `401` no descarta eventos**: se conservan, se pide login y se reintenta. Definir la regla de reparto de km entre varias OT de un mismo viaje (por paradas o por km de tramo) en `shared/formulas`. `sucursal.gps_lat/lng` ya existe.
-- **Loop 4:** cada `consumo_insumo` genera su `movimiento_stock` (`SALIDA_PRODUCCION`) **en la misma transacción**, con FK entre ambos y costo unitario congelado al momento del consumo. Definir cómo se deriva el costo promedio (promedio móvil). Quitar `costo_promedio_gs` y `km_actual` como contadores mutables del diseño original.
-- **Loop 5:** snapshot de costeo al cierre de la OT (no vista materializada): horas × tarifa vigente + insumos + km × costo por km. Cálculo en alta precisión y redondeo único al final.
-- **Loop 6:** máquina de estados de diseño en `shared/machines`; el botón "Abrir original en Drive" para Edu.
-- **Loop 7:** formulario PDF de permisos, generado on-demand (sin `pg-boss`).
-- **Loop 8:** `token_portal` guardado hasheado; el portal usa un acceso por enlace sin contraseña.
-- **Fuera de v1, con punto de enganche anotado:** retrabajos y garantías, desperdicio de material, mantenimiento de vehículos, notificaciones al cliente (WhatsApp/email).
+- **Loop 2 (CERRADO):** CA-0.3, CA-2.1 a CA-2.9 cumplidos. Bloqueo de OT final con tareas en curso, prohibición de inicio en OT final, bloqueo de desactivación de persona con intervalo abierto, guarda de rutas por capacidad en AppLayout, reloj con desfase simulado y recorrido Playwright 9/9 OK.
+- **Loop 3: Comercial (presupuestos y proyectos; diseño en `docs/LOOP_3_DISENO.md`):** presupuesto (borrador, ítems con sucursal opcional, enviar, versiones, aprobación todo o nada), proyecto como contenedor de N OTs multi-local, cálculo y monto presupuestado por OT con ajuste de resto, impresión/PDF limpio desde navegador.
+- **Loop 4: Campo offline y flota (antes Loop 3):** cola Dexie, blobs de fotos en Storage, viajes con odómetro y GPS, asistencia con geocerca de 100 m, fotos de evidencia de montaje y muestras de impresión (REQ-03), reparto de km entre OTs.
+- **Loop 5: Stock e insumos (antes Loop 4):** consumo_insumo con movimiento_stock en la misma transacción, merma y aprovechamiento de material (REQ-04), prorrateo de planchas entre OTs.
+- **Loop 6: Costeo real (antes Loop 5):** snapshot de costeo al cierre de OT (horas × tarifa + insumos + km × costo por km), margen real por OT y consolidado por proyecto.
+- **Loop 7: Pre-prensa y diseño (antes Loop 6):** máquina de estados de aprobación Nachi → Sofi → Juan (REQ-06), botón "Abrir original en Drive" para Edu.
+- **Loop 8: RR.HH. y permisos (antes Loop 7):** permisos y justificaciones con comprobante.
+- **Loop 9: Portal B2B de clientes (antes Loop 8):** token_portal hasheado, acceso por enlace sin contraseña, aquí nace pedido por local con foto.
+- **Fuera de v1, con punto de enganche anotado:** retrabajos y garantías, mantenimiento de vehículos, notificaciones al cliente (WhatsApp/email). Pantalla propia de Edu (REQ-02) a evaluar tras uso de Mi trabajo; OCR de planillas (REQ-07) descartado por costo/fiabilidad.
 
 ---
 
@@ -285,10 +286,11 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al principio 7 (2026-11-02, decisión del usuario):** se inició y cerró Loop 1B con el Loop 0 abierto en dos puntos: (a) CA-0.9, el simulacro manual de restore en `afull-restore-drill`; (b) los secrets `DEV_*` restantes y la corrida de `tests-dev.yml`. **Bloqueo:** no se crea `afull-prod` con datos reales ni se carga ningún dato real hasta cerrar (a) y (b). Nota: los artefactos de backup duran 30 días; si el simulacro se hace después del 2026-12-02, volver a correr `backup-db.yml`.
 
-1. **Auditoría de Entrega L2.E4 por Claude Code** en `MESA_CLAUDE.md` y dictamen/cierre de Loop 2.
-2. **Apertura de Loop 3 (App Offline de Móviles y Flota de Vehículos):**
-   - Cola Dexie en cliente, subida de fotos de odómetro/evidencia, reparto de km de viaje entre OTs, y sincronización resiliente.
-   - Mantener el bloqueo activo sobre producción y datos reales hasta el cierre de (a) y (b).
+1. **Confirmación del usuario del cierre formal del Loop 2.**
+2. **Inicio de Loop 3 Comercial (Entrega L3.E1):**
+   - Migración `0007_comercial.sql` (proyecto, presupuesto, presupuesto_item con sucursal opcional y FK compuestas por cliente, presupuesto_evento inmutable, ALTER orden_trabajo).
+   - Máquina de estados de presupuesto y fórmulas puras en `packages/shared`.
+   - Criterios de aceptación CA-3.1, 3.2, 3.3, 3.8, 3.9. Mantener bloqueo sobre producción y datos reales hasta el cierre de (a) y (b).
 
 ---
 
@@ -332,3 +334,5 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | 2026-11-02 | `3ffd125` | fix(api,web): live sin claves fijas, día de Asunción, idempotencia de pausar/finalizar y bloqueo de reasignación en curso (auditoría L2.E2/E3). | 61/61 tests backend en dev, 47/47 web, CI Run `#47` green |
 | 2026-11-02 | `cf2cf95` | docs: registrar resolucion de auditoria L2.E2/E3 en mesa y bitacora. | CI Run `#47` green |
 | 2026-11-02 | `bcbdc07` | **Loop 2 — Entrega L2.E4:** Frontend completo de Loop 2 (Mi trabajo, tareas en OT, En vivo, Personas), reloj simulado (CA-2.7), usuarios vinculables y recorrido Playwright CA-2.9 (9/9 pasos OK en Vercel). | 64/64 tests backend en dev, 76/76 web, CI Run `#48` (`#41555637358`) green, Playwright Vercel 9/9 OK |
+| 2026-11-02 | `546d9c3` | docs: reportar entrega L2.E4 y actualizar bitacora de traspaso. | CI Run `#41556206008` green |
+| 2026-11-02 | `8fccd02` | fix(loop2): cronómetro no queda abierto en OT final ni persona inactiva; guarda de rutas por capacidad (auditoría Claude Code). | 65/65 tests backend en dev, 76/76 web, CI Run `#49` (`#41565305619`) green, Playwright Vercel 9/9 OK |
