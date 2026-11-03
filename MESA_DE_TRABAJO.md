@@ -1432,3 +1432,58 @@ OK   7 Sofi revoca el enlace y el cliente ya no entra
   ```
 - **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
 - **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
+
+
+---
+
+## Entrega: Loop 4 (L4.E4) — Modo Sin Señal en la Calle y Service Worker
+
+**Fecha:** 2026-11-03 18:55  
+**Commit:** `15656f4` — `feat(loop4): sin señal en la calle — cola en el celular con hora real y app que abre sin conexión (Claude Code)`  
+**GitHub Actions CI Run:** [#41725271653](https://github.com/Morochief/sistema-afull-v2/actions/runs/41725271653) — **Success** (Lint 0, Tipos 0, 152 tests backend en CI, 141 tests web, Build Vite 8).
+
+### 1. Migración 0017 aplicada en `afull-dev`
+- **Comando:** `pnpm db:migrate`
+- **Salida:**
+  ```text
+  [✓] 0017_sin_senal.sql applied successfully!
+  [✓] migrations applied successfully!
+  ```
+- **Esquema:** Columnas `sin_senal` (boolean) y `servidor_recibido_en` (timestamp) en tablas de marcación, viaje, parada_accion y consumo_ot; validación de reloj real del dispositivo en el servidor (rechazo con 400 si es futuro o anterior a 72 horas).
+
+### 2. Verificación de `/sw.js` en Vercel
+- Solicitud HTTP contra `https://sistema-afull-v2-api.vercel.app/sw.js`:
+  - Status: `200 OK`
+  - Content-Type: `application/javascript; charset=utf-8`
+  - Content-Length: 1619 bytes (código del Service Worker, sin fallback a `index.html`).
+
+### 3. Recorridos Playwright en Vercel
+- **Recorrido de cola y sincronización (`scripts/prueba-sin-senal.cjs`):**
+  ```text
+  OK   1 fixtures: montador con persona, vehículo, hoja de hoy con él como conductor y una parada
+  OK   2 abre "En la calle" con señal
+  OK   3 sin señal: marca entrada, inicia el viaje y completa la parada; todo queda guardado
+  OK   4 vuelve la señal: se envía solo, en orden, con la hora real y marcado "sin señal"
+
+  >>> RECORRIDO SIN SEÑAL EN VERDE: 4/4 PASOS OK <<<
+  ```
+- **Recorrido de recarga offline vía Service Worker (`scripts/prueba-sin-senal-recarga.cjs`):**
+  ```text
+  >>> RECARGA SIN SEÑAL EN VERDE: la app abrió y mostró lo último bajado <<<
+  ```
+
+### 4. Estado de la Suite Completa
+- **Vitest Backend:**
+  ```text
+   Test Files  40 passed (40)
+        Tests  154 passed (154)
+  ```
+  *(En GitHub Actions CI sin `anon.test.ts`: 39 suites, 152 tests pasando en verde)*
+- **Vitest Web:**
+  ```text
+   Test Files  26 passed (26)
+        Tests  141 passed (141)
+     Duration  8.94s
+  ```
+- **Linter & Typecheck:** 0 errores, 0 advertencias (`eslint . --max-warnings 0`).
+- **Build:** `pnpm build` exitoso (shared, api y web Vite 8).
