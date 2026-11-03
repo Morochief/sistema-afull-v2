@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, Link, Navigate, useNavigate, useRouterState } from '@tanstack/react-router';
 import { rutaInicialSegunCapacidades } from '../lib/rutas.js';
 import { useSesion } from '../hooks/useSesion.js';
-import { Users, FileText, LogOut, Clock, Radio, UserCheck, Calculator, FolderKanban, Palette, Truck, Route, MapPinned, ListChecks } from 'lucide-react';
+import { Users, FileText, LogOut, Clock, Radio, UserCheck, Calculator, FolderKanban, Palette, Truck, Route, MapPinned, ListChecks, Package } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
 import { Badge } from '../components/ui/badge.js';
 
@@ -110,6 +110,12 @@ export function AppLayout() {
       titulo: 'Flota y sedes',
       ruta: '/flota',
       icono: Truck,
+      visible: tieneCapacidad('admin'),
+    },
+    {
+      titulo: 'Insumos',
+      ruta: '/insumos',
+      icono: Package,
       visible: tieneCapacidad('admin'),
     },
     {

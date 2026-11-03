@@ -36,6 +36,8 @@ describe('Loop 4 — campo y flota', () => {
     const e = await escenario();
     const hoy = (await e.op('GET', '/api/campo/hoy')).j;
     expect((hoy.hojas as unknown[]).length).toBe(1);
+    // L5: la parada trae el id de la OT para poder cargar material desde la calle.
+    expect((hoy.hojas as { paradas: { orden_trabajo_id: string }[] }[])[0].paradas[0].orden_trabajo_id).toBe(e.ot);
     const clave = uuid();
     const a = await e.op('POST', '/api/campo/viajes/iniciar', { vehiculoId: e.vehiculo, hojaRutaId: e.hoja, kmInicio: 1000, claveIdempotencia: clave });
     const b = await e.op('POST', '/api/campo/viajes/iniciar', { vehiculoId: e.vehiculo, hojaRutaId: e.hoja, kmInicio: 1000, claveIdempotencia: clave });

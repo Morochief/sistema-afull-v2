@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { CheckCircle2, Navigation, XCircle } from 'lucide-react';
+import { CheckCircle2, Navigation, Package, XCircle } from 'lucide-react';
 import { completarParada, omitirParada, type MiDiaCampo } from '../../lib/api-campo.js';
 import { enlaceMapa } from '../../lib/dispositivo.js';
 import { mensajeDeError } from '../../lib/api.js';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
+import { ModalCargarMaterial } from '../insumos/ModalCargarMaterial.js';
 
 type Hoja = MiDiaCampo['hojas'][number];
 
@@ -14,6 +15,7 @@ type Hoja = MiDiaCampo['hojas'][number];
 export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => void }) {
   const [omitiendo, setOmitiendo] = useState<string | null>(null);
   const [motivo, setMotivo] = useState('');
+  const [material, setMaterial] = useState<Hoja['paradas'][number] | null>(null);
 
   const accion = async (id: string, completar: boolean) => {
     try {
@@ -42,7 +44,10 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
                 <div className="font-medium text-white">{p.orden}. {p.cliente}{p.sucursal && ` · ${p.sucursal}`}{p.tipo === 'EXTRA' && ' (extra)'}</div>
                 <div className="text-neutral-400">{p.codigo_ot} · {p.titulo}{p.hora_estimada && ` · ${p.hora_estimada.slice(0, 5)}`}</div>
               </div>
-              {p.estado !== 'PENDIENTE' && <Badge variant={p.estado === 'COMPLETADA' ? 'success' : 'danger'}>{p.estado === 'COMPLETADA' ? 'Hecha' : 'Omitida'}</Badge>}
+              <div className="flex shrink-0 items-center gap-1">
+                <Button size="sm" variant="ghost" className="h-8 gap-1 text-[11px]" onClick={() => setMaterial(p)} aria-label={`Material ${p.codigo_ot}`}><Package className="h-3.5 w-3.5" /> Material</Button>
+                {p.estado !== 'PENDIENTE' && <Badge variant={p.estado === 'COMPLETADA' ? 'success' : 'danger'}>{p.estado === 'COMPLETADA' ? 'Hecha' : 'Omitida'}</Badge>}
+              </div>
             </div>
             {p.estado === 'PENDIENTE' && (
               omitiendo === p.id ? (
@@ -65,6 +70,7 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
           </div>
         );
       })}
+      {material && <ModalCargarMaterial otId={material.orden_trabajo_id} titulo={`${material.codigo_ot} · ${material.titulo}`} onCerrar={() => setMaterial(null)} />}
     </section>
   );
 }

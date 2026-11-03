@@ -51,7 +51,7 @@ export async function miDiaEnCampo(ctx: Ctx) {
       coalesce((
         SELECT json_agg(json_build_object(
           'id', pa.id, 'orden', pa.orden_secuencia, 'tipo', pa.tipo, 'estado', pa.estado,
-          'hora_estimada', pa.hora_estimada::text, 'codigo_ot', o.codigo_ot, 'titulo', o.titulo,
+          'hora_estimada', pa.hora_estimada::text, 'orden_trabajo_id', o.id, 'codigo_ot', o.codigo_ot, 'titulo', o.titulo,
           'cliente', c.nombre, 'sucursal', s.nombre, 'direccion', s.direccion,
           'gps_lat', s.gps_lat::float8, 'gps_lng', s.gps_lng::float8
         ) ORDER BY pa.orden_secuencia)

@@ -25,6 +25,7 @@ import { HojasRutaListaPage } from './routes/hojas-ruta/lista.js';
 import { HojaRutaDetallePage } from './routes/hojas-ruta/detalle.js';
 import { FlotaPage } from './routes/flota.js';
 import { ProcesosPage } from './routes/procesos.js';
+import { InsumosPage } from './routes/insumos.js';
 import { useSesion } from './hooks/useSesion.js';
 import { rutaInicialSegunCapacidades } from './lib/rutas.js';
 
@@ -172,6 +173,7 @@ const hojasRutaRoute = createRoute({ getParentRoute: () => appLayoutRoute, path:
 const hojaRutaDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/hojas-ruta/$id', component: HojaRutaDetallePage });
 const flotaRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/flota', component: FlotaPage });
 const procesosRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/procesos', component: ProcesosPage });
+const insumosRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/insumos', component: InsumosPage });
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
@@ -195,6 +197,7 @@ const routeTree = rootRoute.addChildren([
     hojaRutaDetalleRoute,
     flotaRoute,
     procesosRoute,
+    insumosRoute,
   ]),
 ]);
 
