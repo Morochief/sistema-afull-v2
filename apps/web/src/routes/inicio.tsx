@@ -31,9 +31,9 @@ export function InicioPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Indicador titulo="Pedidos nuevos" valor={t.pedidos_nuevos.length} a="/pedidos" tono={t.pedidos_nuevos.length ? 'alerta' : 'normal'} detalle="del portal de clientes" />
+        <Indicador titulo="Pedidos nuevos" valor={t.pedidos_nuevos_total} a="/pedidos?estado=NUEVO" tono={t.pedidos_nuevos_total ? 'alerta' : 'normal'} detalle="del portal de clientes" />
         <Indicador titulo="Diseños por verificar" valor={t.disenos_por_verificar} a="/disenos" tono={t.disenos_por_verificar ? 'alerta' : 'normal'} />
-        <Indicador titulo="Presupuestos enviados" valor={t.presupuestos_enviados.n} a="/presupuestos?estado=ENVIADO" detalle={`${formatearGs(t.presupuestos_enviados.monto_gs)} esperando respuesta`} />
+        <Indicador titulo="Presupuestos enviados" valor={t.presupuestos_enviados.n} a="/presupuestos?estado=ENVIADO" detalle={`${formatearGs(t.presupuestos_enviados.monto_gs)} sin IVA, esperando respuesta`} />
         <Indicador titulo="Permisos pendientes" valor={t.permisos_pendientes} a="/permisos?estado=PENDIENTE" tono={t.permisos_pendientes ? 'alerta' : 'normal'} />
       </div>
 
@@ -64,7 +64,7 @@ export function InicioPage() {
           ))}
         </Bloque>
 
-        <Bloque titulo={`OTs atrasadas (${t.atrasadas.length})`} hayDatos={t.atrasadas.length > 0} vacio="Ninguna OT pasó su fecha prometida.">
+        <Bloque titulo={`OTs atrasadas (${t.atrasadas_total})`} hayDatos={t.atrasadas.length > 0} vacio="Ninguna OT pasó su fecha prometida.">
           {t.atrasadas.map((o) => (
             <Link key={o.id} to="/ots/$id" params={{ id: o.id }} className="flex justify-between gap-2 px-3 py-2 text-xs hover:bg-white/5">
               <span><b className="text-white">{o.codigo_ot}</b> · {o.titulo} <span className="text-neutral-500">({o.cliente})</span></span>
@@ -73,7 +73,7 @@ export function InicioPage() {
           ))}
         </Bloque>
 
-        <Bloque titulo="Pedidos nuevos del portal" hayDatos={t.pedidos_nuevos.length > 0} vacio="No hay pedidos sin atender." accion={<Link to="/pedidos" className="text-[11px] text-[#ea580c] hover:underline">Pedidos →</Link>}>
+        <Bloque titulo={`Pedidos nuevos del portal (${t.pedidos_nuevos_total})`} hayDatos={t.pedidos_nuevos.length > 0} vacio="No hay pedidos sin atender." accion={<Link to="/pedidos" className="text-[11px] text-[#ea580c] hover:underline">Pedidos →</Link>}>
           {t.pedidos_nuevos.map((p) => (
             <Link key={p.id} to="/pedidos" className="block px-3 py-2 text-xs hover:bg-white/5">
               <div><b className="text-white">{p.numero}</b> · {p.cliente}</div>

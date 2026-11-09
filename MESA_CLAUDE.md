@@ -585,3 +585,22 @@ CA-1.11 a CA-1.16 (diseño §8) con evidencia. Después, actualizar `TRASPASO.md
   3. En 375 px los montos del Inicio y Rentabilidad se cortaban: una columna en el celular.
   4. Portal: decía "Todavía no hiciste pedidos" mientras cargaba: ahora "Cargando…".
 - **Verificación:** lint 0, tsc 0, build web 0, web 155/155, API (inicio + costeo) en verde; anon.test.ts solo corre con Supabase (CI dev). Recorrido de 24 rutas en Vercel sin errores; celular: Inicio, Mi trabajo (Gerardo), En la calle, Portal.
+
+---
+
+## 2026-11-09 — Loop 10: Tablero de Inicio cerrado con diseño y tests
+
+La primera versión del Inicio salió sin diseño previo y con un test superficial. Se rehizo como loop: `docs/LOOP_10_INICIO_DISENO.md` (reglas de cada número y CA-10.1 a CA-10.9), tests escritos antes del arreglo, y cada test comprobado contra el código viejo.
+
+**Errores encontrados al escribir el diseño (corregidos):**
+1. "Pedidos nuevos" y "OTs atrasadas" mostraban el largo de la lista (tope 5 y 10), no el total → `pedidos_nuevos_total`, `atrasadas_total`.
+2. "Terminadas (mes)" contaba por `orden_trabajo.updated_at` → ahora por el costeo congelado `TERMINADO` del mes; las canceladas ya no aparecen.
+3. Presupuestos enviados: se suma `total_gs` (sin IVA, el mismo número de la lista; ya incluye el precio final redondeado).
+4. Paradas resueltas: `COMPLETADA` u `OMITIDA` explícito.
+
+**Evidencia (local, PostgreSQL 16):**
+- `tests/loop10/inicio-api.test.ts` 2/2 (escenario por la API: 11 atrasadas + 1 prometida hoy + terminada y cancelada atrasadas, diseño pendiente, cronómetro abierto, presupuesto enviado, OT con venta terminada, 6 pedidos del portal, permiso, hoja de hoy con una parada omitida desde la calle; deltas exactos).
+- `tests/loop10/rentabilidad-resumen.test.ts` 1/1: `resumen = { venta_gs: 1000000, costo_gs: 200000, costo_sin_venta_gs: 120000, margen_pct: 80 }`. Con el código viejo: `costo_gs: 320000` → falla.
+- Web: `routes/inicio.test.tsx` 6/6 (con `pedidos_nuevos.length` en vez del total → falla), `routes/portal.test.tsx` 2/2 (sin el estado de carga → falla), `routes/rentabilidad.test.tsx` 2/2.
+- `scripts/prueba-inicio.cjs` (Playwright, local): **6/6 OK**. Con la grilla vieja de montos: `FALLA 5 celular 375 px … montos cortados: Gs. 8.000.000, Gs. 2.000.000`.
+- Totales: API 173/174 (falla solo `anon.test.ts`, necesita Supabase; corre en tests-dev), web 165/165, lint 0, tsc 0, build 0, archivos ≤ 250 líneas.

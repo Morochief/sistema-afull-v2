@@ -7,7 +7,10 @@ export type HojaHoy = { id: string; descripcion: string | null; estado: string; 
 export type Tablero = {
   ots_por_estado: Record<string, number>;
   trabajando_ahora: TrabajandoAhora[];
+  /** Totales reales; las listas traen como mucho 10 atrasadas y 5 pedidos. */
+  atrasadas_total: number;
   atrasadas: OTAtrasada[];
+  pedidos_nuevos_total: number;
   pedidos_nuevos: PedidoNuevo[];
   disenos_por_verificar: number;
   presupuestos_enviados: { n: number; monto_gs: number };

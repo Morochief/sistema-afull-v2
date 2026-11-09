@@ -4,14 +4,16 @@ import { puedeVerCostos } from '@afull/shared';
 const ZONA = 'America/Asuncion';
 
 /**
- * Tablero de inicio: lo que hay que mirar hoy. Una sola ida a la API; cada consulta lleva
+ * Tablero de inicio (docs/LOOP_10_INICIO_DISENO.md §2): lo que hay que mirar hoy. Una sola ida a la API; cada consulta lleva
  * al menos un parámetro (regla del pooler 6543). Los montos solo van a quien puede ver costos.
  */
 export async function tableroInicio(capacidades: string[]) {
-  const [porEstado, trabajando, atrasadas, pedidos, disenos, presupuestos, hojas, permisos] = await Promise.all([
-    sql`SELECT estado, count(*)::int AS n FROM orden_trabajo
-        WHERE estado NOT IN ('TERMINADO', 'CANCELADO') OR updated_at >= date_trunc('month', now() AT TIME ZONE ${ZONA}) AT TIME ZONE ${ZONA}
-        GROUP BY estado`,
+  const [porEstado, trabajando, atrasadas, atrasadasTotal, pedidos, pedidosTotal, disenos, presupuestos, hojas, permisos] = await Promise.all([
+    // Abiertas por estado + terminadas del mes según el costeo congelado (el evento de cierre, que no cambia).
+    sql`SELECT estado, count(*)::int AS n FROM orden_trabajo WHERE estado NOT IN (${'TERMINADO'}, 'CANCELADO') GROUP BY estado
+        UNION ALL
+        SELECT 'TERMINADO', count(*)::int FROM ot_costeo
+        WHERE estado_final = 'TERMINADO' AND created_at >= date_trunc('month', now() AT TIME ZONE ${ZONA}) AT TIME ZONE ${ZONA}`,
     sql`SELECT p.nombre AS persona, t.tipo, t.descripcion, o.id AS ot_id, o.codigo_ot, c.nombre AS cliente, i.hora_inicio
         FROM tarea_intervalo i JOIN persona p ON p.id = i.persona_id JOIN tarea t ON t.id = i.tarea_id
         JOIN orden_trabajo o ON o.id = t.orden_trabajo_id JOIN cliente c ON c.id = o.cliente_id
@@ -19,15 +21,18 @@ export async function tableroInicio(capacidades: string[]) {
     sql`SELECT o.id, o.codigo_ot, o.titulo, o.estado, o.fecha_prometida::text AS fecha_prometida, c.nombre AS cliente
         FROM orden_trabajo o JOIN cliente c ON c.id = o.cliente_id
         WHERE o.estado NOT IN ('TERMINADO', 'CANCELADO') AND o.fecha_prometida < (now() AT TIME ZONE ${ZONA})::date
-        ORDER BY o.fecha_prometida LIMIT 10`,
+        ORDER BY o.fecha_prometida, o.codigo_ot LIMIT 10`,
+    sql`SELECT count(*)::int AS n FROM orden_trabajo
+        WHERE estado NOT IN ('TERMINADO', 'CANCELADO') AND fecha_prometida < (now() AT TIME ZONE ${ZONA})::date`,
     sql`SELECT p.id, p.numero, p.descripcion, p.created_at, c.nombre AS cliente
         FROM pedido p JOIN cliente c ON c.id = p.cliente_id WHERE p.estado = ${'NUEVO'} ORDER BY p.created_at DESC LIMIT 5`,
+    sql`SELECT count(*)::int AS n FROM pedido WHERE estado = ${'NUEVO'}`,
     sql`SELECT count(*)::int AS n FROM diseno_version WHERE estado = ${'PENDIENTE'}`,
-    sql`SELECT count(*)::int AS n, coalesce(sum(coalesce(precio_final_gs, total_gs)), 0)::float8 AS monto
+    sql`SELECT count(*)::int AS n, coalesce(sum(total_gs), 0)::float8 AS monto
         FROM presupuesto WHERE estado = ${'ENVIADO'}`,
     sql`SELECT h.id, h.descripcion, h.estado, v.chapa,
                (SELECT count(*)::int FROM hoja_ruta_parada pa WHERE pa.hoja_ruta_id = h.id) AS paradas,
-               (SELECT count(*)::int FROM hoja_ruta_parada pa WHERE pa.hoja_ruta_id = h.id AND pa.estado <> 'PENDIENTE') AS resueltas,
+               (SELECT count(*)::int FROM hoja_ruta_parada pa WHERE pa.hoja_ruta_id = h.id AND pa.estado IN ('COMPLETADA', 'OMITIDA')) AS resueltas,
                (SELECT string_agg(pe.nombre, ', ' ORDER BY pe.nombre) FROM hoja_ruta_persona hp JOIN persona pe ON pe.id = hp.persona_id
                  WHERE hp.hoja_ruta_id = h.id AND hp.activo) AS cuadrilla
         FROM hoja_ruta h LEFT JOIN vehiculo v ON v.id = h.vehiculo_id
@@ -47,9 +52,11 @@ export async function tableroInicio(capacidades: string[]) {
   }
 
   return {
-    ots_por_estado: Object.fromEntries(porEstado.map((f) => [f.estado as string, f.n as number])),
+    ots_por_estado: Object.fromEntries(porEstado.filter((f) => f.n > 0).map((f) => [f.estado as string, f.n as number])),
     trabajando_ahora: [...trabajando],
+    atrasadas_total: atrasadasTotal[0].n as number,
     atrasadas: [...atrasadas],
+    pedidos_nuevos_total: pedidosTotal[0].n as number,
     pedidos_nuevos: [...pedidos],
     disenos_por_verificar: disenos[0].n as number,
     presupuestos_enviados: { n: presupuestos[0].n as number, monto_gs: presupuestos[0].monto as number },
