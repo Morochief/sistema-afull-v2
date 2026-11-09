@@ -1,7 +1,9 @@
 import { Hono } from 'hono';
 import { setCookie, deleteCookie } from 'hono/cookie';
 import { z } from 'zod';
+import { cambiarMiPasswordSchema } from '@afull/shared';
 import { login, logout } from './service.js';
+import { cambiarMiPassword } from './usuarios.service.js';
 import { requireSesion } from './middleware.js';
 import { COOKIE_SESION, DURACION_SESION_DIAS } from './session.js';
 import { ErrorApp } from '../../lib/errores.js';
@@ -32,4 +34,8 @@ export const authRoutes = new Hono()
     deleteCookie(c, COOKIE_SESION, { path: '/' });
     return c.json({ ok: true });
   })
-  .get('/yo', requireSesion, (c) => c.json(c.get('usuario')));
+  .get('/yo', requireSesion, (c) => c.json(c.get('usuario')))
+  .post('/cambiar-password', requireSesion, async (c) => {
+    const d = cambiarMiPasswordSchema.parse(await c.req.json().catch(() => null));
+    return c.json(await cambiarMiPassword({ usuarioId: c.get('usuario').id, ip: ipDe(c) }, c.get('sesionId'), d.actual, d.nueva));
+  });

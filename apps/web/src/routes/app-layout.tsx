@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Outlet, Navigate, useNavigate, useRouterState } from '@tanstack/react-router';
 import { rutaInicialSegunCapacidades } from '../lib/rutas.js';
 import { useSesion } from '../hooks/useSesion.js';
-import { LogOut, Menu } from 'lucide-react';
+import { KeyRound, LogOut, Menu } from 'lucide-react';
+import { ModalClave } from '../components/usuarios/ModalClave.js';
 import { itemsDeMenu } from '../components/layout/menu.js';
 import { MenuLateral } from '../components/layout/MenuLateral.js';
 import { Button } from '../components/ui/button.js';
@@ -14,6 +15,7 @@ export function AppLayout() {
   const routerState = useRouterState();
   // Celular: el menú es un panel que se abre con ☰. Se cierra solo al cambiar de pantalla.
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [miClave, setMiClave] = useState(false);
   const rutaActual = routerState.location.pathname;
   useEffect(() => setMenuAbierto(false), [rutaActual]);
 
@@ -114,12 +116,19 @@ export function AppLayout() {
             </div>
           </div>
 
+          <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => setMiClave(true)} className="gap-1.5 text-xs text-neutral-400 hover:text-white" title="Cambiar mi contraseña">
+            <KeyRound className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Mi clave</span>
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-1.5 text-xs text-neutral-400 hover:text-red-400">
             <LogOut className="h-3.5 w-3.5" />
             <span>Salir</span>
           </Button>
+          </div>
         </header>
 
+        <ModalClave abierto={miClave} onCerrar={() => setMiClave(false)} />
         <main className="flex-1 overflow-auto p-3 md:p-6">
           <Outlet />
         </main>

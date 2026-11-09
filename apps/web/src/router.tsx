@@ -14,6 +14,7 @@ import { OTsDetallePage } from './routes/ots/detalle.js';
 import { MiTrabajoPage } from './routes/mi-trabajo.js';
 import { EnVivoPage } from './routes/en-vivo.js';
 import { PersonasPage } from './routes/personas.js';
+import { UsuariosPage } from './routes/usuarios.js';
 import { PresupuestosListaPage } from './routes/presupuestos/lista.js';
 import { PresupuestoDetallePage } from './routes/presupuestos/detalle.js';
 import { PresupuestoImprimirPage } from './routes/presupuestos/imprimir.js';
@@ -97,6 +98,7 @@ const otsDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path
 const miTrabajoRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/mi-trabajo', component: MiTrabajoPage });
 const enVivoRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/en-vivo', component: EnVivoPage });
 const personasRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/personas', component: PersonasPage });
+const usuariosRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/usuarios', component: UsuariosPage });
 const listadoSearchSchema = z.object({
   q: z.string().optional(),
   estado: z.string().optional(),
@@ -158,6 +160,7 @@ const routeTree = rootRoute.addChildren([
     miTrabajoRoute,
     enVivoRoute,
     personasRoute,
+    usuariosRoute,
     presupuestosRoute,
     presupuestoDetalleRoute,
     proyectosRoute,
