@@ -35,6 +35,16 @@
 
 ---
 
+## Cierre de L4.E3 en `afull-dev` — Claude, 2026-11-09 10:45 (sin Antigravity desde hoy: `CLAUDE.md` §12)
+- Commit `6ad91b3` en `main`; CI `42626244889` **verde** (lint, tipos, tests, web, build); Vercel: "Deployment has completed".
+- `0018` aplicada con el conector de Supabase en una transacción con su fila en `drizzle.__drizzle_migrations` (hash `9006c11d…942ccb`, `when` 1793000017000). Verificado: 18 migraciones, `archivo` con RLS, `afull_api` = `INSERT,SELECT,UPDATE`, `anon`/`authenticated` sin permisos, 3 triggers, bucket `afull-archivos` `public = false`, `10485760`, 4 tipos.
+- `SUPABASE_SECRET_KEY` cargada en Vercel (Production) por el usuario.
+- Prueba real desde el navegador sobre `https://sistema-afull-v2-api.vercel.app` (usuario `zz_test_fotos_vercel`, desactivado al final): login 200; permiso 201; solicitar 201 con URL firmada de `oxthxdnyxabupeebzwmn.supabase.co`; PUT a Storage 200; confirmar 200 `SUBIDO`; listar 1 (778 bytes); descarga firmada 200 `image/jpeg` 778 bytes; URL pública del objeto **400**; 6 MB declarados como 1000 → confirmar **400** "supera el máximo de 5 MB" y reconfirmar 409 (objeto borrado).
+- Linter de seguridad de Supabase: solo `function_search_path_mutable` (14 funciones de trigger, incluida la nueva). Pendiente en una migración aparte.
+- `D:\sistema-afull` puesto en `6ad91b3` (fetch + reset; `ARQUITECTURA_V3.md` y `MESA_DE_TRABAJO.md` figuran modificados solo por finales de línea CRLF de antes: sin cambios de contenido).
+
+---
+
 ## Loop 4 (L4.E3): fotos y archivos — Claude Code, 2026-11-09 09:20
 
 **Decisiones del usuario (hoy):** fotos sin señal se guardan en el celular y suben solas; foto del odómetro **obligatoria** al iniciar y cerrar; entran los 4 usos (odómetro y montaje, muestras de impresión, comprobante de permiso, foto del pedido del portal).

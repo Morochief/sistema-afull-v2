@@ -78,18 +78,16 @@
 
 ---
 
-## 12. Protocolo de Trabajo Conjunto (Antigravity ↔ Claude Code)
+## 12. Forma de trabajo (vigente desde 2026-11-09, decisión del usuario)
 
-Vigente desde 2026-11-02 16:20 (decisión del usuario):
-1. **Claude Code plantea cada entrega** en `MESA_CLAUDE.md` (orden de trabajo con diseño, métodos, rutas y criterios).
-2. **Antigravity implementa**, hace commit y push, y registra en `MESA_DE_TRABAJO.md` la evidencia literal (CI run, comandos y salidas).
-3. **Claude Code audita** clonando el repositorio público. **Lo que esté mal lo corrige directamente en el disco (`D:\sistema-afull`)**, sin commit, y lo anota en `MESA_CLAUDE.md` bajo "Correcciones aplicadas por Claude Code".
-4. **Antigravity lee esa sección**, revisa los cambios, corre lint, tipos y tests, hace el commit de las correcciones y continúa con la siguiente orden de trabajo.
-
-### Reglas de la Mesa y Archivos
-- `MESA_CLAUDE.md`: exclusivo para órdenes de trabajo y correcciones aplicadas por Claude Code.
-- `MESA_DE_TRABAJO.md`: exclusivo para reportes y evidencias literales de Antigravity.
-- Ninguno de los dos agentes sobrescribe el archivo del otro. Evidencia cruda y literal siempre.
+**Antigravity ya no participa.** Claude hace todo el ciclo:
+1. Diseña la entrega (en `docs/LOOP_*_DISENO.md`), implementa y prueba en una base local nueva (Vitest, lint, tipos, build y recorrido Playwright).
+2. Hace commit y push a `main` (GitHub, con la app de Claude instalada en el repo) y espera el CI en verde. Vercel publica solo.
+3. Aplica las migraciones en `afull-dev` con el conector de Supabase, en una transacción que incluye la fila de `drizzle.__drizzle_migrations` (hash SHA-256 del archivo y `when` del journal), para que `pnpm db:migrate` las dé por aplicadas. El usuario acepta la confirmación del conector.
+4. Prueba contra Vercel con el navegador integrado de la app (corre en la compu del usuario) y usuarios `zz_test_` que desactiva al terminar.
+5. Deja la evidencia literal en `MESA_CLAUDE.md` y actualiza `TRASPASO.md` (§0/§5/§6/§12/§13) y `D:\sistema-afull` (fetch + reset al commit subido).
+- Lo único manual del usuario: claves secretas (se cargan en Vercel o Supabase, **nunca** por el chat) y aceptar las confirmaciones.
+- `MESA_DE_TRABAJO.md` queda como historial de Antigravity (no se escribe más).
 
 
 
