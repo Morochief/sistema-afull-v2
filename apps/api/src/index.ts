@@ -21,6 +21,8 @@ import { costeoRoutes } from './modules/costeo/routes.js';
 import { permisosRoutes } from './modules/permisos/routes.js';
 import { portalClienteRoutes } from './modules/portal/cliente.routes.js';
 import { portalAccesosRoutes, pedidosRoutes } from './modules/portal/comercial.routes.js';
+import { archivosRoutes, archivosFalsoRoutes } from './modules/archivos/routes.js';
+import { memoriaHabilitada } from './lib/almacenamiento.js';
 import { verificarOrigen } from './modules/auth/middleware.js';
 import { ErrorApp } from './lib/errores.js';
 
@@ -51,6 +53,9 @@ app.route('/api/permisos', permisosRoutes);
 app.route('/api/portal', portalClienteRoutes);
 app.route('/api/portal-accesos', portalAccesosRoutes);
 app.route('/api/pedidos', pedidosRoutes);
+app.route('/api/archivos', archivosRoutes);
+// Storage falso para probar en local (nunca en producción: memoriaHabilitada() lo impide).
+if (memoriaHabilitada()) app.route('/api/archivos-falso', archivosFalsoRoutes);
 
 app.onError((e, c) => {
   if (e instanceof ErrorApp) return c.json({ error: e.message }, e.status);

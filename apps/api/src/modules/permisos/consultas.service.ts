@@ -10,7 +10,8 @@ const COLUMNAS = sql`
   s.id, s.numero, s.persona_id, p.nombre AS persona_nombre, s.tipo, s.detalle_tipo, s.motivo, s.modalidad,
   s.fecha_desde::text AS fecha_desde, s.fecha_hasta::text AS fecha_hasta, to_char(s.hora_desde, 'HH24:MI') AS hora_desde,
   to_char(s.hora_hasta, 'HH24:MI') AS hora_hasta, s.comprobante_url, s.fuera_de_plazo, s.estado, s.con_descuento,
-  s.cargado_por, s.created_at, s.updated_at`;
+  s.cargado_por, s.created_at, s.updated_at,
+  (SELECT count(*)::int FROM archivo ar WHERE ar.solicitud_permiso_id = s.id AND ar.estado = 'SUBIDO') AS comprobantes`;
 
 /** RR.HH. y el jefe ven todas; el resto solo las propias (como solicitante). 25 por página. */
 export async function listarSolicitudes(ctx: CtxPermiso, f: Filtro) {

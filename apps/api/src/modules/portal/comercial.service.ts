@@ -49,7 +49,8 @@ export async function revocarAcceso(ctx: Ctx, id: string) {
 const COLUMNAS = sql`
   pe.id, pe.numero, pe.cliente_id, c.nombre AS cliente_nombre, pe.sucursal_id, s.nombre AS sucursal_nombre, pe.descripcion, pe.foto_url,
   pe.estado, pe.motivo_descarte, pe.created_at, pe.resuelto_at, pe.orden_trabajo_id, o.codigo_ot, pe.presupuesto_id, pr.numero AS presupuesto_numero,
-  a.descripcion AS cargado_por_contacto`;
+  a.descripcion AS cargado_por_contacto,
+  (SELECT count(*)::int FROM archivo ar WHERE ar.pedido_id = pe.id AND ar.estado = 'SUBIDO') AS fotos`;
 const DESDE = sql`
   FROM pedido pe JOIN cliente c ON c.id = pe.cliente_id LEFT JOIN sucursal s ON s.id = pe.sucursal_id
   LEFT JOIN orden_trabajo o ON o.id = pe.orden_trabajo_id LEFT JOIN presupuesto pr ON pr.id = pe.presupuesto_id

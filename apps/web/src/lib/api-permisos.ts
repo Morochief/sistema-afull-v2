@@ -5,7 +5,7 @@ import { queryListado, type FiltrosListado } from './api-presupuestos.js';
 export type SolicitudPermiso = {
   id: string; numero: string; persona_id: string; persona_nombre: string; tipo: TipoPermiso; detalle_tipo: string | null; motivo: string;
   modalidad: 'HORAS' | 'DIAS'; fecha_desde: string; fecha_hasta: string; hora_desde: string | null; hora_hasta: string | null;
-  comprobante_url: string | null; fuera_de_plazo: boolean; estado: EstadoPermiso; con_descuento: boolean | null; created_at: string;
+  comprobante_url: string | null; comprobantes: number; fuera_de_plazo: boolean; estado: EstadoPermiso; con_descuento: boolean | null; created_at: string;
 };
 export type EventoPermiso = { id: string; estado_anterior: EstadoPermiso | null; estado_nuevo: EstadoPermiso; con_descuento: boolean | null; comentario: string | null; created_at: string; autor: string };
 export type SolicitudDetalle = SolicitudPermiso & { es_propia: boolean; eventos: EventoPermiso[] };

@@ -8,6 +8,7 @@ import { formatearFechaHora } from '../../lib/fechas.js';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog.js';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
+import { GaleriaArchivos } from '../archivos/GaleriaArchivos.js';
 
 /** Resolver un pedido del portal: OT directa, presupuesto borrador o descartar con motivo (el cliente lo ve). */
 export function ModalPedido({ pedido, onCerrar, onResuelto }: { pedido: PedidoFila | null; onCerrar: () => void; onResuelto: () => void }) {
@@ -42,6 +43,7 @@ export function ModalPedido({ pedido, onCerrar, onResuelto }: { pedido: PedidoFi
       </DialogHeader>
       <div className="space-y-3 text-sm">
         <p className="whitespace-pre-wrap rounded border border-[#1f2937] bg-[#090a0f] p-2 text-neutral-200">{p.descripcion}</p>
+        {p.fotos > 0 && <GaleriaArchivos refArchivo={{ pedidoId: p.id }} />}
         {p.foto_url && <a href={p.foto_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#ea580c] hover:underline">Ver foto <ExternalLink className="h-3 w-3" /></a>}
         {p.estado === 'NUEVO' ? (
           <>

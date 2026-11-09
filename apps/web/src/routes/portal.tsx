@@ -42,7 +42,7 @@ export function PortalPage() {
             {pestana === 'pedidos' ? (
               <div className="space-y-4">
                 <FormPedido token={token!} yo={yo.data} onEnviado={() => void pedidos.refetch()} />
-                <ListaPedidos pedidos={pedidos.data?.items ?? []} />
+                <ListaPedidos pedidos={pedidos.data?.items ?? []} token={token!} onCambio={() => void pedidos.refetch()} />
               </div>
             ) : (
               <ListaTrabajos ots={ots.data?.items ?? []} />

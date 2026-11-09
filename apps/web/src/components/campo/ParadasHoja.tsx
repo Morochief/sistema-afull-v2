@@ -10,6 +10,7 @@ import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { ModalCargarMaterial } from '../insumos/ModalCargarMaterial.js';
+import { FotoMontaje } from './FotoMontaje.js';
 
 type Hoja = MiDiaCampo['hojas'][number];
 
@@ -58,6 +59,7 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
                 {p.estado !== 'PENDIENTE' && <Badge variant={p.estado === 'COMPLETADA' ? 'success' : 'danger'}>{p.estado === 'COMPLETADA' ? 'Hecha' : 'Omitida'}</Badge>}
               </div>
             </div>
+            <FotoMontaje paradaId={p.id} codigoOt={p.codigo_ot} />
             {p.estado === 'PENDIENTE' && porEnviar(p.id) && <p className="text-amber-300">{porEnviar(p.id)!.url.endsWith('/completar') ? 'Hecha' : 'Omitida'} · se envía cuando vuelva la señal</p>}
             {p.estado === 'PENDIENTE' && !porEnviar(p.id) && (
               omitiendo === p.id ? (

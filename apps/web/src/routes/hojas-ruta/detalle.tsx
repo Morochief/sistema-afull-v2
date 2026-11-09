@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button.js';
 import { Badge } from '../../components/ui/badge.js';
 import { Input } from '../../components/ui/input.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
+import { FotosHoja } from '../../components/hojas-ruta/FotosHoja.js';
 
 const selectCls = 'h-9 rounded-md border border-[#1f2937] bg-[#111318] px-2 text-sm text-neutral-100';
 
@@ -73,7 +74,7 @@ export function HojaRutaDetallePage() {
         {h.paradas.map((p) => (
           <div key={p.id} className="flex items-center justify-between border-t border-[#1f2937] pt-2">
             <span className="text-white">{p.orden_secuencia}. <Link to="/ots/$id" params={{ id: p.orden_trabajo_id }} className="font-mono text-[#ea580c] hover:underline">{p.codigo_ot}</Link> {p.cliente_nombre}{p.sucursal_nombre && ` · ${p.sucursal_nombre}`}{p.tipo === 'EXTRA' && ` · extra: ${p.motivo_extra}`}</span>
-            <span className="text-neutral-400">{p.estado === 'OMITIDA' ? `omitida: ${p.motivo_omision}` : p.estado.toLowerCase()}</span>
+            <span className="text-neutral-400">{p.estado === 'OMITIDA' ? `omitida: ${p.motivo_omision}` : p.estado.toLowerCase()}{p.fotos > 0 && ` · ${p.fotos} foto${p.fotos > 1 ? 's' : ''}`}</span>
           </div>
         ))}
         {editable && (
@@ -89,6 +90,7 @@ export function HojaRutaDetallePage() {
           </div>
         )}
       </section>
+      <FotosHoja h={h} />
     </div>
   );
 }

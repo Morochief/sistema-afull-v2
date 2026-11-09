@@ -108,8 +108,9 @@ async function correrCola(): Promise<number> {
 }
 
 /** Reintenta sola: al volver la señal y cada 30 s. Se llama una vez al arrancar la app. */
-export function iniciarSincronizador(onEnviadas?: (n: number) => void) {
-  const correr = () => void sincronizar().then((n) => n > 0 && onEnviadas?.(n));
+export function iniciarSincronizador(onEnviadas?: (n: number) => void, despues?: () => Promise<unknown>) {
+  // Primero las acciones (p. ej. iniciar el viaje) y después lo que depende de ellas (las fotos).
+  const correr = () => void sincronizar().then((n) => { if (n > 0) onEnviadas?.(n); return despues?.(); });
   // Justo al volver la señal la primera conexión suele fallar: se reintenta enseguida y a los pocos segundos.
   const alVolver = () => [0, 2000, 6000].forEach((ms) => window.setTimeout(correr, ms));
   window.addEventListener('online', alVolver);

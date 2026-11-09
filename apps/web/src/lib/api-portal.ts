@@ -8,7 +8,7 @@ export type PortalYo = { cliente: string; para: string; expira_at: string; sucur
 export type PortalOT = { id: string; codigo_ot: string; titulo: string; sucursal: string | null; estado: string; fecha_prometida: string | null; created_at: string };
 export type PortalPedido = {
   id: string; numero: string; sucursal: string | null; descripcion: string; foto_url: string | null; estado: 'NUEVO' | 'CONVERTIDO' | 'DESCARTADO';
-  motivo_descarte: string | null; created_at: string; codigo_ot: string | null; estado_ot: string | null; presupuesto_numero: string | null;
+  motivo_descarte: string | null; created_at: string; codigo_ot: string | null; estado_ot: string | null; presupuesto_numero: string | null; fotos: number;
 };
 
 const CLAVE = 'afull_portal_token';

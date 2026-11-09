@@ -4,6 +4,7 @@ import { obtenerTareasOT } from '../../lib/api-tareas.js';
 import { ModalNuevaTareaOT } from '../modals/ModalNuevaTareaOT.js';
 import { ModalReasignarTarea } from '../modals/ModalReasignarTarea.js';
 import { ModalCancelarTarea } from '../modals/ModalCancelarTarea.js';
+import { MuestrasTarea } from './MuestrasTarea.js';
 import { Button } from '../ui/button.js';
 import { Badge } from '../ui/badge.js';
 import { Plus, UserCheck, XCircle } from 'lucide-react';
@@ -81,6 +82,7 @@ export function SeccionTareasOT({ otId, otFinalizada }: { otId: string; otFinali
                       <strong className="text-[#ea580c]">{t.minutos_trabajados} min</strong>
                     </span>
                   </div>
+                  <MuestrasTarea tareaId={t.id} descripcion={t.descripcion} puedeSubir={t.estado !== 'CANCELADA'} />
                 </div>
 
                 {!otFinalizada && !final && (

@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Truck } from 'lucide-react';
 import { listarVehiculos, type MiDiaCampo } from '../../lib/api-campo.js';
 import { enviarOEncolar } from '../../lib/cola-offline.js';
+import { guardarFoto } from '../../lib/fotos-pendientes.js';
+import { BotonFoto } from '../archivos/BotonFoto.js';
 import { useColaOffline } from '../../hooks/useColaOffline.js';
 import { leerGps } from '../../lib/dispositivo.js';
 import { numero } from '../../lib/numero.js';
@@ -29,6 +31,8 @@ export function ViajeCard({ dia, onCambio }: Props) {
   const [motivo, setMotivo] = useState('');
   const [pideMotivo, setPideMotivo] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  // Foto del odómetro: obligatoria (L4.E3). Queda en el celular y sube sola, aunque no haya señal.
+  const [foto, setFoto] = useState<{ blob: Blob; mime: string } | null>(null);
   const { pendientes } = useColaOffline();
   const inicioPendiente = pendientes.find((p) => p.url === '/api/campo/viajes/iniciar');
   const cierrePendiente = abierto && pendientes.find((p) => p.url === `/api/campo/viajes/${abierto.id}/cerrar`);
@@ -40,6 +44,10 @@ export function ViajeCard({ dia, onCambio }: Props) {
       toast.error('Kilómetros del odómetro, con hasta 1 decimal');
       return;
     }
+    if (!foto) {
+      toast.error('Sacale una foto al odómetro');
+      return;
+    }
     setCargando(true);
     try {
       const gps = await gpsOpcional();
@@ -47,15 +55,19 @@ export function ViajeCard({ dia, onCambio }: Props) {
       const base = { gpsLat: gps?.lat, gpsLng: gps?.lng, claveIdempotencia: clave };
       if (abierto) {
         const envio = await enviarOEncolar<{ recorrido_km: number; alerta_desvio: boolean }>(`Cerrar viaje (${valor} km)`, `/api/campo/viajes/${abierto.id}/cerrar`, { ...base, kmFin: valor, motivoDesvio: motivo.trim() || undefined });
+        await guardarFoto({ etiqueta: `Foto del odómetro (${valor} km)`, tipo: 'ODOMETRO_FIN', ref: { viajeId: abierto.id }, ...foto });
         if (envio.encolada) toast.info('Cierre guardado sin señal: se envía solo cuando vuelva.');
         else toast.success(`Viaje cerrado: ${envio.respuesta.recorrido_km} km${envio.respuesta.alerta_desvio ? ' (con desvío informado)' : ''}.`);
       } else {
         if (!vehiculoId) throw new Error('Elegí el vehículo');
         const hoja = dia.hojas.find((h) => !h.vehiculo_id || h.vehiculo_id === vehiculoId);
         const envio = await enviarOEncolar(`Iniciar viaje (${valor} km)`, '/api/campo/viajes/iniciar', { ...base, vehiculoId, hojaRutaId: hoja?.id, kmInicio: valor, motivoKmInicio: motivo.trim() || undefined });
+        // La foto se ata a la clave del viaje: si el inicio quedó sin señal, sube después de que llegue.
+        await guardarFoto({ etiqueta: `Foto del odómetro (${valor} km)`, tipo: 'ODOMETRO_INICIO', ref: { claveViaje: clave }, ...foto });
         toast.success(envio.encolada ? 'Inicio guardado sin señal: se envía solo cuando vuelva.' : 'Viaje iniciado. ¡Buen viaje!');
       }
       setKm('');
+      setFoto(null);
       setMotivo('');
       setPideMotivo(null);
       onCambio();
@@ -91,6 +103,10 @@ export function ViajeCard({ dia, onCambio }: Props) {
         <div>
           <Label htmlFor="kmOdometro">{abierto ? 'Odómetro al volver (km)' : 'Odómetro al salir (km)'}</Label>
           <Input id="kmOdometro" inputMode="decimal" value={km} onChange={(e) => setKm(e.target.value)} className="h-10" />
+        </div>
+        <div className="flex items-center gap-2">
+          <BotonFoto etiqueta={foto ? 'Sacar otra' : 'Foto del odómetro'} onArchivo={setFoto} variant={foto ? 'outline' : 'secondary'} />
+          {foto ? <span className="text-xs text-emerald-400" data-testid="foto-odometro-lista">Foto lista ✓</span> : <span className="text-xs text-neutral-500">Obligatoria</span>}
         </div>
         {pideMotivo && (
           <div>

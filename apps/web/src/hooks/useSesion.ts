@@ -3,6 +3,7 @@ import type { UsuarioSesion } from '@afull/shared';
 import { useEffect } from 'react';
 import { apiFetch, ErrorApi } from '../lib/api.js';
 import { fijarUsuarioCola } from '../lib/cola-offline.js';
+import { fijarUsuarioFotos } from '../lib/fotos-pendientes.js';
 
 // Sin señal se usa el último usuario conocido para poder mostrar la app (la API igual valida la cookie al mandar).
 const CLAVE_SESION = 'afull_sesion_conocida';
@@ -85,7 +86,10 @@ export function useSesion() {
   });
 
   // La cola sin señal solo manda lo de quien está en sesión (en un celular compartido no se mezcla).
-  useEffect(() => fijarUsuarioCola(usuario?.username ?? null), [usuario?.username]);
+  useEffect(() => {
+    fijarUsuarioCola(usuario?.username ?? null);
+    fijarUsuarioFotos(usuario?.username ?? null);
+  }, [usuario?.username]);
 
   const tieneCapacidad = (cap: string): boolean => {
     if (!usuario) return false;

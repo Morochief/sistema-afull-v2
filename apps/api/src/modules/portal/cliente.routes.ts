@@ -1,7 +1,9 @@
 import { Hono, type MiddlewareHandler } from 'hono';
 import { z } from 'zod';
 import crypto from 'node:crypto';
-import { nuevoPedidoPortalSchema } from '@afull/shared';
+import { nuevoPedidoPortalSchema, solicitarArchivoSchema } from '@afull/shared';
+import { solicitarSubida, confirmarSubida, listarArchivos } from '../archivos/service.js';
+import type { Actor } from '../archivos/referencias.js';
 import { sql } from '../../db/client.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import { TAM_PAGINA, desplazamiento, armarPagina } from '../../lib/paginacion.js';
@@ -33,6 +35,7 @@ const requirePortal: MiddlewareHandler<{ Variables: Variables }> = async (c, nex
   await next();
 };
 
+const actorPortal = (p: Portal): Actor => ({ tipo: 'portal', accesoId: p.accesoId, clienteId: p.clienteId });
 const pagina = (q: string | undefined) => z.coerce.number().int().min(1).max(100_000).catch(1).parse(q);
 
 /** Lo que ve el cliente: sus locales, sus trabajos (sin montos) y sus pedidos. Nunca datos de otro cliente. */
@@ -62,6 +65,7 @@ export const portalClienteRoutes = new Hono<{ Variables: Variables }>()
     const [{ total }] = await sql`SELECT count(*)::int AS total FROM pedido WHERE cliente_id = ${clienteId}`;
     const items = await sql`
       SELECT pe.id, pe.numero, s.nombre AS sucursal, pe.descripcion, pe.foto_url, pe.estado, pe.motivo_descarte, pe.created_at,
+             (SELECT count(*)::int FROM archivo ar WHERE ar.pedido_id = pe.id AND ar.estado = 'SUBIDO') AS fotos,
              o.codigo_ot, o.estado AS estado_ot, pr.numero AS presupuesto_numero
       FROM pedido pe LEFT JOIN sucursal s ON s.id = pe.sucursal_id
       LEFT JOIN orden_trabajo o ON o.id = pe.orden_trabajo_id LEFT JOIN presupuesto pr ON pr.id = pe.presupuesto_id
@@ -99,4 +103,14 @@ export const portalClienteRoutes = new Hono<{ Variables: Variables }>()
       if (e instanceof ErrorApp) throw e;
       traducirErrorPg(e);
     }
+  })
+  // Fotos del pedido (L4.E3): solo de pedidos propios y NUEVOS; el tipo lo fija el portal, no el cliente.
+  .post('/archivos/solicitar', async (c) => {
+    const d = solicitarArchivoSchema.parse({ ...((await c.req.json().catch(() => null)) ?? {}), tipo: 'FOTO_PEDIDO' });
+    return c.json(await solicitarSubida(actorPortal(c.get('portal')), d), 201);
+  })
+  .post('/archivos/:id/confirmar', async (c) => c.json(await confirmarSubida(actorPortal(c.get('portal')), z.string().uuid().parse(c.req.param('id')))))
+  .get('/archivos', async (c) => {
+    const pedidoId = z.string().uuid().parse(c.req.query('pedidoId'));
+    return c.json(await listarArchivos(actorPortal(c.get('portal')), { pedidoId }));
   });

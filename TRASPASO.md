@@ -1,6 +1,6 @@
 # Traspaso del proyecto aFull
 
-Última actualización: 3 de noviembre de 2026 — 02:30 (America/Asuncion).
+Última actualización: 9 de noviembre de 2026 — 09:20 (America/Asuncion).
 
 > **Forma de trabajo desde 2026-11-03 (decisión del usuario):** Claude Code implementa, prueba y documenta; deja los archivos en `D:\sistema-afull` y Antigravity solo hace commit y push. Las instrucciones para el commit están en `MESA_CLAUDE.md`.
 Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada tarea o commit.
@@ -177,7 +177,8 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 | `0014_costeo` | (Loop 6) `ot_costeo`: snapshot **inmutable** del costo real (mano de obra, material, km, total, venta, margen) generado en la misma transacción que pasa la OT a TERMINADO o CANCELADO; único redondeo. Índices para viajes por hoja y paradas por OT. Aplicada en `afull-dev`. |
 | `0015_permisos` | (Loop 8) `solicitud_permiso` (formulario de la empresa; solo cambian estado y descuento; número `PER-AAAA-NNNN`; idempotente) y `solicitud_permiso_evento` (firmas, inmutable). Aplicada en `afull-dev`. |
 | `0016_portal` | (Loop 9) `portal_acceso` (token solo como SHA-256, vence, se revoca sin reactivar) y `pedido` (`PED-AAAA-NNNN`, local del mismo cliente por FK compuesta, se resuelve una vez en OT o presupuesto del mismo cliente o se descarta con motivo); `uq_ot_id_cliente` en `orden_trabajo`. Aplicada en `afull-dev`. |
-| `0017_sin_senal` | (Loop 4, L4.E4) Marcas "sin señal" y hora real de lo cargado sin conexión: `marcacion_asistencia.sin_senal` y `recibida_at`, `viaje.inicio_sin_senal`/`cierre_sin_senal` (con el trigger de cierre protegiendo el del inicio), `hoja_ruta_parada.cierre_sin_senal`. **Pendiente de aplicar en `afull-dev`.** |
+| `0017_sin_senal` | (Loop 4, L4.E4) Marcas "sin señal" y hora real de lo cargado sin conexión: `marcacion_asistencia.sin_senal` y `recibida_at`, `viaje.inicio_sin_senal`/`cierre_sin_senal` (con el trigger de cierre protegiendo el del inicio), `hoja_ruta_parada.cierre_sin_senal`. Aplicada en `afull-dev`. |
+| `0018_archivos` | (Loop 4, L4.E3) `archivo` (odómetro, evidencia de parada, muestra de tarea, comprobante de permiso, foto de pedido; una sola referencia por `CHECK`; solo `PENDIENTE → SUBIDO`; sin `DELETE`/`TRUNCATE`; una foto de odómetro por viaje y momento) y bucket privado `afull-archivos` en `storage.buckets` (10 MB, JPEG/PNG/WebP/PDF; se saltea sin Storage y avisa sin fallar si no hay permiso). **Pendiente de aplicar en `afull-dev`.** |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
@@ -209,7 +210,11 @@ Tests: `tests/loop0/{anon,auditoria,usuarios,secuencia,auth,auditoria.service,se
 
 ### Loop 4 (L4.E4): Sin señal en la calle — IMPLEMENTADO (Claude Code, 2026-11-03), sin commit
 
-Cola en el celular para marcación, viajes, paradas y material; se manda sola al volver la señal, en orden, con la hora real (acotada y marcada "sin señal"); la app abre sin señal (service worker). Detalle: `docs/LOOP_4_DISENO.md` §6. **Falta probarlo en celulares reales.** Sigue pendiente L4.E3 (fotos: almacenamiento).
+Cola en el celular para marcación, viajes, paradas y material; se manda sola al volver la señal, en orden, con la hora real (acotada y marcada "sin señal"); la app abre sin señal (service worker). Detalle: `docs/LOOP_4_DISENO.md` §6. **Falta probarlo en celulares reales.**
+
+### Loop 4 (L4.E3): Fotos y archivos — IMPLEMENTADO (Claude Code, 2026-11-09), sin commit
+
+Migración `0018_archivos.sql`: tabla `archivo` (inmutable salvo `PENDIENTE → SUBIDO`) y bucket **privado** `afull-archivos` en Supabase Storage (lo crea la migración). La foto va del celular directo a Storage con URL firmada; la API confirma mirando el tamaño y tipo reales (CA-4.7). Cuatro usos: **odómetro obligatorio** al iniciar y cerrar el viaje + evidencias de montaje por parada, muestras de impresión por tarea, comprobante de permiso (foto o PDF) y fotos del pedido desde el portal. Sin señal, las fotos quedan en el celular (IndexedDB) y suben solas después de las acciones. **Requiere `SUPABASE_SECRET_KEY` en Vercel** (sin ella: 503). Detalle y supuestos: `docs/LOOP_4_DISENO.md` §7.
 
 ### Loop 9: Portal del cliente — COMPLETO (en main, `ae180f8`)
 
@@ -233,7 +238,7 @@ Se adelantó por decisión del usuario. Enlace de Drive por versión, verificaci
 
 ### Loop 4: Campo y flota — BASE, API Y PANTALLAS (Claude Code, 2026-11-03); pantallas sin commit
 
-L4.E1 (`0009` + fórmulas geo) y L4.E2 (API de flota, hojas de ruta, campo y asistencia) con pruebas `tests/loop4/` (CA-4.1 a CA-4.6). **Faltan** L4.E3 (fotos de odómetro y evidencias en Supabase Storage con URLs firmadas: requiere crear el bucket privado en el proyecto real) y L4.E4 (pantallas móviles de coordinación, "Hoy en la calle", marcación, y cola offline Dexie). Supuestos a confirmar en `docs/LOOP_4_DISENO.md` §0.
+L4.E1 (`0009` + fórmulas geo) y L4.E2 (API de flota, hojas de ruta, campo y asistencia) con pruebas `tests/loop4/` (CA-4.1 a CA-4.6). L4.E3 y L4.E4 implementadas después (ver arriba). Supuestos a confirmar en `docs/LOOP_4_DISENO.md` §0.
 
 ### Loop 3: Comercial — IMPLEMENTADO (Claude Code, 2026-11-03), pendiente de commit y confirmación
 
@@ -265,7 +270,8 @@ Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "C
 - [x] Que Supabase permita `CREATE ROLE afull_api` y cómo se escribe el usuario en el pooler: **VERIFICADO**. Supabase permite `CREATE ROLE` sin error y el usuario en el transaction pooler 6543 es `afull_api.<ref-proyecto>`.
 - [x] Que el rol funcione con RLS como se espera (políticas por rol): **VERIFICADO**. 16 tests de Loop 0 en verde contra Supabase `dev`.
 - [x] Si `pg_dump` conecta desde runners de GitHub (IPv4): **VERIFICADO en corrida #2 de GitHub Actions (`cbd4a7c`)**. Conecta al Session Pooler puerto 5432 sin errores.
-- [ ] Rutas y respuestas de la API de Storage en `backup-storage.mjs` (**pospuesto al Loop 4**, cuando la app suba archivos a Storage).
+- [ ] Rutas y respuestas de la API de Storage en `backup-storage.mjs`. **Desde L4.E3 la app sube archivos**: el respaldo de Storage pasa a ser necesario antes de producción (sigue sin probar).
+- [ ] L4.E3 contra Supabase real: rutas REST de Storage (`/object/upload/sign`, `/object/info`, `/object/sign`) verificadas contra el código de `storage-js` y con fetch simulado, **no contra el proyecto**. Lo confirma `scripts/prueba-fotos.cjs` contra Vercel.
 - [ ] Cuota de almacenamiento de artifacts de GitHub en cuenta gratuita.
 - [ ] Que el proyecto Supabase no se pause en un feriado largo (el backup diario debería bastar; confirmar o agregar un `SELECT 1` programado).
 - [ ] Limitar el esquema expuesto de la API de datos de Supabase (la app no usa PostgREST): tercera barrera, ver dónde está la opción en el panel.
@@ -311,6 +317,9 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 | `DATABASE_URL_API` | Tests (rol `afull_api`) |
 | `APP_ORIGIN` | Verificación de `Origin` (CSRF) |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | Test de la `anon key` y cliente Realtime |
+| `SUPABASE_SECRET_KEY` | (L4.E3) Fotos y archivos: firmar subidas y descargas en Storage. **Solo en Vercel** (servidor); nunca en el frontend ni en el chat. Sin ella, `/api/archivos` responde 503 |
+| `STORAGE_BUCKET` | Opcional (por defecto `afull-archivos`) |
+| `ALMACENAMIENTO` | Solo local: `memoria` imita Storage para probar sin Supabase. Ignorada en producción |
 | `TEST_ENV` | Debe ser `dev` para que corran los tests |
 | GitHub Secrets | `DEV_*`, `PROD_DATABASE_URL_BACKUP`, `BACKUP_PASSPHRASE`, `PROD_SUPABASE_URL`, `PROD_SUPABASE_SERVICE_KEY`, `RCLONE_CONF` |
 
@@ -336,9 +345,10 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al bloqueo (2026-11-03, decisión del usuario):** se importa el catálogo real de insumos en `afull-dev` (solo dev). `afull-prod` y el resto de los datos reales siguen bloqueados.
 
+0. **L4.E3 (fotos y archivos, 2026-11-09):** commit, `pnpm db:migrate` en `afull-dev` (aplica `0018` y crea el bucket), cargar `SUPABASE_SECRET_KEY` en Vercel **sin pegarla en el chat**, y correr `scripts/prueba-fotos.cjs` contra Vercel. Ver `MESA_CLAUDE.md` (entrega del 2026-11-09).
 1. **Commit del Loop 3 completo** (L3.E1-fix, L3.E2, L3.E3, L3.E4; archivos de Claude Code en el disco, ver `MESA_CLAUDE.md`) y aplicar `0008` en `afull-dev` con `pnpm db:migrate`. Correr `node scripts/prueba-loop3.cjs` contra Vercel.
 2. **Confirmación del usuario** del cierre del Loop 3 (CA-3.1 a CA-3.10) y del supuesto de **IVA incluido**.
-3. **Loop 4:** confirmar los supuestos de `docs/LOOP_4_DISENO.md` §0 (geocerca disuasiva por sede, odómetro con 1 decimal, alerta de desvío al 30 %, permisos). Cargar la sede real (fábrica) y los vehículos. Después: L4.E3 (Storage; crear bucket privado `campo-evidencias` en `afull-dev`) y L4.E4 (pantallas móviles + offline). Mantener bloqueo sobre producción y datos reales hasta el cierre de (a) y (b).
+3. **Loop 4:** confirmar los supuestos de `docs/LOOP_4_DISENO.md` §0 (geocerca disuasiva por sede, odómetro con 1 decimal, alerta de desvío al 30 %, permisos). Cargar la sede real (fábrica) y los vehículos. L4.E3 y L4.E4 ya están implementadas (el bucket se llama `afull-archivos` y lo crea la migración `0018`). Mantener bloqueo sobre producción y datos reales hasta el cierre de (a) y (b).
 
 ---
 

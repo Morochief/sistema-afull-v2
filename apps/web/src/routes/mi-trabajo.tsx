@@ -7,6 +7,7 @@ import { ModalPausarTarea } from '../components/modals/ModalPausarTarea.js';
 import { ModalFinalizarTarea } from '../components/modals/ModalFinalizarTarea.js';
 import { TarjetaTareaActiva, TarjetaTareaAsignada } from '../components/cronometro/TarjetasTrabajo.js';
 import { Button } from '../components/ui/button.js';
+import { FotosPorSubir } from '../components/campo/FotosPorSubir.js';
 import { AlertTriangle } from 'lucide-react';
 import type { MotivoCierreIntervalo, MiTrabajoTarea } from '@afull/shared';
 
@@ -170,6 +171,7 @@ export function MiTrabajoPage() {
           <span className="text-sm font-semibold text-[#ea580c]">{data?.minutos_hoy_total || 0} min</span>
         </div>
       </div>
+      <FotosPorSubir />
 
       {mensajeAutoPausa && (
         <div className="mb-4 p-3 rounded-md border border-[#ea580c]/50 bg-[#ea580c]/10 text-xs text-neutral-200">

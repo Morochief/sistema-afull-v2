@@ -7,6 +7,7 @@
  */
 const { chromium } = require('playwright');
 const postgres = require('postgres');
+const { FOTO_JPEG } = require('./foto-prueba.cjs');
 const { config } = require('dotenv');
 
 config({ path: ['.env', '.env.test'] });
@@ -86,6 +87,8 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
     });
     await paso('inicia el viaje con 1000 km', async () => {
       await page.locator('#kmOdometro').fill('1000');
+      await page.getByLabel('Foto del odómetro').setInputFiles(FOTO_JPEG); // obligatoria desde L4.E3
+      await page.getByTestId('foto-odometro-lista').waitFor();
       await page.getByRole('button', { name: /Iniciar viaje/ }).click();
       await page.getByText(/Viaje en curso/).waitFor();
     });
@@ -95,6 +98,8 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
     });
     await paso('cierra el viaje con 1030 km', async () => {
       await page.locator('#kmOdometro').fill('1030');
+      await page.getByLabel('Foto del odómetro').setInputFiles(FOTO_JPEG);
+      await page.getByTestId('foto-odometro-lista').waitFor();
       await page.getByRole('button', { name: /Cerrar viaje/ }).click();
       await page.getByText(/Viaje cerrado: 30 km/).waitFor();
     });

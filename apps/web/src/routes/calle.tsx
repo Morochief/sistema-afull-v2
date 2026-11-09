@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { miDiaCampoConRespaldo } from '../lib/api-campo.js';
 import { EstadoConexion } from '../components/campo/EstadoConexion.js';
+import { FotosPorSubir } from '../components/campo/FotosPorSubir.js';
 import { formatearFechaHora } from '../lib/fechas.js';
 import { mensajeDeError, type ErrorApi } from '../lib/api.js';
 import { Skeleton } from '../components/ui/skeleton.js';
@@ -31,6 +32,7 @@ export function CallePage() {
         <p className="text-xs text-neutral-400">{dia.persona.nombre} · hoy {dia.fecha.split('-').reverse().join('/')}</p>
       </div>
       <EstadoConexion alEnviar={recargar} />
+      <FotosPorSubir />
       {dia.sin_conexion && <p className="text-[11px] text-amber-300">Sin señal: mostrando lo bajado el {formatearFechaHora(dia.sin_conexion)}.</p>}
       <MarcacionCard ultima={dia.ultima_marcacion} onMarcado={recargar} />
       <ViajeCard key={dia.viaje_abierto?.id ?? 'sin-viaje'} dia={dia} onCambio={recargar} />

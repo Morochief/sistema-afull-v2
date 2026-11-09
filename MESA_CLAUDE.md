@@ -35,6 +35,33 @@
 
 ---
 
+## Loop 4 (L4.E3): fotos y archivos — Claude Code, 2026-11-09 09:20
+
+**Decisiones del usuario (hoy):** fotos sin señal se guardan en el celular y suben solas; foto del odómetro **obligatoria** al iniciar y cerrar; entran los 4 usos (odómetro y montaje, muestras de impresión, comprobante de permiso, foto del pedido del portal).
+
+**Diseño:** `docs/LOOP_4_DISENO.md` §7.
+
+**En el disco, sin commit:**
+- `migrations/0018_archivos.sql` + `meta/_journal.json` (tabla `archivo` + bucket privado `afull-archivos`).
+- Shared: `schemas/archivos.ts` (+ export en `index.ts`).
+- API: **nuevo** `lib/almacenamiento.ts` (Storage por REST, sin SDK; memoria para tests/local), **nuevo** `modules/archivos/{referencias,service,routes}.ts`; `index.ts` (monta `/api/archivos`; `/api/archivos-falso` solo con `ALMACENAMIENTO=memoria` fuera de producción); `lib/errores.ts` (503); `portal/cliente.routes.ts` (subir/ver fotos del pedido) y `portal/comercial.service.ts` (cantidad de fotos); `hojas-ruta/service.ts` (viajes de la hoja con fotos); `permisos/consultas.service.ts` (cantidad de comprobantes).
+- Web: **nuevos** `lib/{api-archivos,fotos-pendientes,imagen}.ts` (+ tests), `hooks/useFotosPendientes.ts`, `components/archivos/{BotonFoto,GaleriaArchivos,SeccionArchivos}.tsx`, `components/campo/{FotoMontaje,FotosPorSubir}.tsx`, `components/campo/ViajeCard.test.tsx`, `components/hojas-ruta/FotosHoja.tsx`, `components/ots/MuestrasTarea.tsx`, `components/portal/FotosPedidoPortal.tsx`; cambios en `ViajeCard`, `ParadasHoja`, `TarjetasTrabajo`, `SeccionTareasOT`, `FormPedido`, `ListasPortal`, `ModalPedido`, `routes/{calle,mi-trabajo,portal,hojas-ruta/detalle,permisos/detalle}.tsx`, `lib/{api-campo,api-permisos,api-portal,cola-offline}.ts`, `hooks/useSesion.ts`, `main.tsx`.
+- Pruebas: `tests/loop4/{archivos-api,archivos-usos,almacenamiento}.test.ts`; **nuevo** `scripts/prueba-fotos.cjs` y `scripts/foto-prueba.cjs`; `scripts/prueba-loop4.cjs` y `scripts/prueba-sin-senal.cjs` **actualizados** (ahora sacan la foto del odómetro, que es obligatoria).
+- Docs: `docs/LOOP_4_DISENO.md` §7, `docs/MAPA_REQUISITOS.md`, `TRASPASO.md` (§5, §6, §7, §10, §12), `.env.example`.
+
+**Verificado (base nueva `0001`–`0018`, PostgreSQL 16 local, Storage en memoria):** backend **164/164** (152 + 12 nuevos), web **155/155** (141 + 14 nuevos), lint 0, tipos 0, build OK. Recorridos en navegador: fotos **8/8** (las imágenes **cargan**: odómetro y montaje en la hoja de ruta, muestra en la OT, PDF en el permiso, foto del pedido en el portal y en Comercial), Loop 4 **7/7**, sin señal **5/5** (la foto del odómetro guardada sin señal sube sola después del inicio del viaje). Bloque del bucket de `0018` probado con un esquema `storage` simulado: sin Storage se saltea; con Storage crea el bucket privado (y pasa a privado uno previo público); sin la columna avisa y no falla.
+**No verificado:** contra Supabase real (rutas REST tomadas del código de `storage-js` y probadas con fetch simulado). Lo confirma el paso 5.
+
+### Mensaje para Antigravity
+1. `git status`: `Documentos/` NO debe aparecer. Confirmar que entran los archivos nuevos de la lista (en especial `apps/api/src/modules/archivos/`, `apps/web/src/components/archivos/` y `migrations/0018_archivos.sql`).
+2. `pnpm lint && pnpm typecheck && pnpm test && pnpm --filter @afull/web test && pnpm build`. Commit: `feat(loop4): fotos y archivos — odómetro obligatorio, montaje, muestras, comprobantes y fotos del portal en Storage privado (Claude Code)`; push.
+3. `pnpm db:migrate` en `afull-dev` (aplica `0018`). Pegá la salida, incluidos los `NOTICE`. Después, en el editor SQL: `SELECT id, public, file_size_limit, allowed_mime_types FROM storage.buckets WHERE id = 'afull-archivos';` → tiene que dar `public = false`, `10485760` y los 4 tipos. Si la migración avisó que no pudo crearlo, crealo desde el panel (Storage → New bucket) con esos mismos datos y **privado**.
+4. **El usuario** (o vos, sin pegarla en ningún chat ni archivo): en Supabase `afull-dev` → Settings → API Keys, crear/copiar una **secret key** (`sb_secret_…`) y cargarla en Vercel como `SUPABASE_SECRET_KEY` (entorno del deploy de dev). Redeploy. **No** cargar `ALMACENAMIENTO` en Vercel.
+5. Contra Vercel (con `BASE_URL`): `node scripts/prueba-fotos.cjs`, `node scripts/prueba-loop4.cjs` y `node scripts/prueba-sin-senal.cjs`. Pegá las salidas. Si `prueba-fotos` falla en un paso de imágenes, pegá además la respuesta de `GET /api/archivos?viajeId=…` (sin la cookie) y el log de Vercel con `[almacenamiento]`.
+6. Hash, CI y salidas en tu mesa; fila en la bitácora §13.
+
+---
+
 ## Loop 4 (L4.E4): sin señal en la calle — Claude Code, 2026-11-03 21:30
 
 **Antes, una corrección a tu mesa (Loop 9):** describiste los estados del pedido como `PENDIENTE, CONVERTIDO_OT, CONVERTIDO_PRESUPUESTO`; los reales son `NUEVO`, `CONVERTIDO` (con OT **o** presupuesto) y `DESCARTADO`, y el límite de 30 pedidos/día está en la API, no en un trigger. Corregilo en `MESA_DE_TRABAJO.md`.

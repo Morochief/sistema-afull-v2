@@ -5,6 +5,7 @@ import { formatearTiempoTranscurrido } from '../../lib/reloj.js';
 import type { MiTrabajoTarea } from '@afull/shared';
 import { BotonSubirDiseno } from '../disenos/BotonSubirDiseno.js';
 import { AccionesMaterial } from '../insumos/AccionesMaterial.js';
+import { MuestrasTarea } from '../ots/MuestrasTarea.js';
 
 export function TarjetaTareaActiva({
   tarea,
@@ -56,6 +57,7 @@ export function TarjetaTareaActiva({
         </Button>
       </div>
       {tarea.tipo === 'DISENO' ? <BotonSubirDiseno otId={tarea.orden_trabajo_id} /> : <AccionesMaterial tarea={tarea} />}
+      {tarea.tipo !== 'DISENO' && <MuestrasTarea tareaId={tarea.id} descripcion={tarea.descripcion} />}
     </div>
   );
 }

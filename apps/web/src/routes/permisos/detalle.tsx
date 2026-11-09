@@ -13,6 +13,7 @@ import { Badge } from '../../components/ui/badge.js';
 import { Input } from '../../components/ui/input.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
 import { ESTADO_PERMISO, periodo } from '../../components/permisos/etiquetas.js';
+import { SeccionArchivos } from '../../components/archivos/SeccionArchivos.js';
 
 const FIRMA: Record<EstadoPermiso, string> = {
   PENDIENTE: 'Solicitó', AUTORIZADA: 'Autorizó (jefe inmediato)', REGISTRADA: 'Registró (RR.HH.)', RECHAZADA: 'Rechazó', ANULADA: 'Anuló',
@@ -74,9 +75,23 @@ export function PermisoDetallePage() {
         <div>
           <span className="text-neutral-400">Comprobante:</span>{' '}
           {s.comprobante_url ? (
-            <a href={s.comprobante_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[#ea580c] hover:underline">Abrir <ExternalLink className="h-3 w-3" /></a>
-          ) : TIPOS_PERMISO[s.tipo].requiereComprobante ? <span className="text-amber-400">falta (este tipo lo requiere)</span> : <span className="text-neutral-500">—</span>}
+            <a href={s.comprobante_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[#ea580c] hover:underline">Abrir enlace <ExternalLink className="h-3 w-3" /></a>
+          ) : s.comprobantes > 0 ? <span className="text-neutral-300">adjunto abajo</span>
+            : TIPOS_PERMISO[s.tipo].requiereComprobante ? <span className="text-amber-400">falta (este tipo lo requiere)</span> : <span className="text-neutral-500">—</span>}
         </div>
+      </div>
+      <div className="rounded-md border border-[#1f2937] bg-[#111318] p-4">
+        {/* L4.E3: el comprobante se adjunta (foto o PDF); el enlace queda para lo cargado antes. */}
+        <SeccionArchivos
+          titulo="Comprobantes adjuntos"
+          tipo="COMPROBANTE_PERMISO"
+          refArchivo={{ solicitudId: s.id }}
+          etiqueta={`Comprobante ${s.numero}`}
+          boton="Adjuntar foto o PDF"
+          permitirPdf
+          puedeSubir={s.estado !== 'ANULADA' && (s.es_propia || esRrhh)}
+          vacio="Sin comprobantes adjuntos."
+        />
       </div>
       {acciones.length > 0 && (
         <div className="space-y-2 rounded-md border border-[#1f2937] bg-[#111318] p-4" data-testid="acciones-permiso">

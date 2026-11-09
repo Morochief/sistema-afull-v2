@@ -41,14 +41,23 @@ export async function obtenerHojaRuta(id: string) {
   const paradas = await sql`
     SELECT pa.id, pa.orden_secuencia, pa.tipo, pa.motivo_extra, pa.estado, pa.motivo_omision, pa.hora_estimada::text AS hora_estimada,
            pa.completada_at, o.id AS orden_trabajo_id, o.codigo_ot, o.titulo, c.nombre AS cliente_nombre,
-           s.nombre AS sucursal_nombre, s.direccion, s.gps_lat::float8 AS gps_lat, s.gps_lng::float8 AS gps_lng
+           s.nombre AS sucursal_nombre, s.direccion, s.gps_lat::float8 AS gps_lat, s.gps_lng::float8 AS gps_lng,
+           (SELECT count(*)::int FROM archivo ar WHERE ar.parada_id = pa.id AND ar.estado = 'SUBIDO') AS fotos
     FROM hoja_ruta_parada pa
     JOIN orden_trabajo o ON o.id = pa.orden_trabajo_id
     JOIN cliente c ON c.id = o.cliente_id
     LEFT JOIN sucursal s ON s.id = o.sucursal_id
     WHERE pa.hoja_ruta_id = ${id} ORDER BY pa.orden_secuencia
   `;
-  return { ...h, personas: [...personas], paradas: [...paradas] };
+  // Viajes de la hoja con sus fotos de odómetro (L4.E3): Comercial controla los km contra la foto.
+  const viajes = await sql`
+    SELECT vi.id, p.nombre AS conductor, vi.km_inicio::float8 AS km_inicio, vi.km_fin::float8 AS km_fin, vi.hora_inicio, vi.hora_fin,
+           vi.alerta_desvio, vi.motivo_desvio, vi.km_estimado_ruta::float8 AS km_estimado,
+           (SELECT count(*)::int FROM archivo ar WHERE ar.viaje_id = vi.id AND ar.estado = 'SUBIDO') AS fotos
+    FROM viaje vi JOIN persona p ON p.id = vi.conductor_persona_id
+    WHERE vi.hoja_ruta_id = ${id} ORDER BY vi.hora_inicio
+  `;
+  return { ...h, personas: [...personas], paradas: [...paradas], viajes: [...viajes] };
 }
 
 export function crearHojaRuta(ctx: Ctx, d: { fecha: string; descripcion?: string; vehiculoId?: string }) {

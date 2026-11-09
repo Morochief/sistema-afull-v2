@@ -8,6 +8,7 @@
  */
 const { chromium } = require('playwright');
 const postgres = require('postgres');
+const { FOTO_JPEG } = require('./foto-prueba.cjs');
 const { config } = require('dotenv');
 
 config({ path: ['.env', '.env.test'] });
@@ -76,6 +77,8 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
       await page.getByRole('button', { name: /Marcar entrada/ }).click();
       await page.getByText(/Entrada guardada sin señal/).waitFor();
       await page.locator('#kmOdometro').fill('2000');
+      await page.getByLabel('Foto del odómetro').setInputFiles(FOTO_JPEG); // L4.E3: queda en el celular
+      await page.getByTestId('foto-odometro-lista').waitFor();
       await page.getByRole('button', { name: /Iniciar viaje/ }).click();
       await page.getByText(/inicio del viaje está guardado sin señal/).waitFor();
       await page.getByRole('button', { name: /Hecha/ }).click();
@@ -98,6 +101,15 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
       if (!v?.inicio_sin_senal || v.km !== 2000) throw new Error('Viaje inesperado: ' + JSON.stringify(v));
       if (pa?.estado !== 'COMPLETADA' || !pa.cierre_sin_senal) throw new Error('Parada inesperada: ' + JSON.stringify(pa));
       await page.getByText(/Viaje en curso/).waitFor();
+    });
+
+    await paso('la foto del odómetro, guardada sin señal, sube sola después del inicio del viaje (L4.E3)', async () => {
+      for (let i = 0; i < 40; i++) {
+        const [f] = await sql`SELECT a.estado FROM archivo a JOIN viaje v ON v.id = a.viaje_id WHERE v.conductor_persona_id = ${personaId} AND a.tipo = 'ODOMETRO_INICIO'`;
+        if (f?.estado === 'SUBIDO') return;
+        await page.waitForTimeout(500);
+      }
+      throw new Error('La foto del odómetro no subió');
     });
 
     if (errores.length) throw new Error(errores.join(' | '));

@@ -15,7 +15,12 @@ export type ParadaHoja = {
 };
 export type HojaRutaDetalle = Omit<HojaRutaFila, 'paradas' | 'personas'> & {
   personas: { id: string; persona_id: string; nombre: string; rol: string; activo: boolean }[];
-  paradas: ParadaHoja[];
+  paradas: (ParadaHoja & { fotos: number })[];
+  viajes: ViajeHoja[];
+};
+export type ViajeHoja = {
+  id: string; conductor: string; km_inicio: number; km_fin: number | null; hora_inicio: string; hora_fin: string | null;
+  alerta_desvio: boolean; motivo_desvio: string | null; km_estimado: number | null; fotos: number;
 };
 export type ParadaHoy = {
   id: string; orden: number; tipo: string; estado: string; hora_estimada: string | null; orden_trabajo_id: string; codigo_ot: string; titulo: string;

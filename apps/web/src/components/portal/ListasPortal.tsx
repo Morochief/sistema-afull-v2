@@ -2,6 +2,7 @@ import { ESTADO_OT_CLIENTE } from '@afull/shared';
 import type { PortalOT, PortalPedido } from '../../lib/api-portal.js';
 import { formatearDia } from '../../lib/fechas.js';
 import { Badge, type BadgeVariant } from '../ui/badge.js';
+import { FotosPedidoPortal } from './FotosPedidoPortal.js';
 
 const colorOT = (e: string): BadgeVariant => (e === 'TERMINADO' ? 'success' : e === 'CANCELADO' ? 'danger' : e === 'PENDIENTE' ? 'neutral' : 'warning');
 
@@ -29,7 +30,7 @@ function estadoPedido(p: PortalPedido): { texto: string; variant: BadgeVariant }
   return { texto: 'Recibido', variant: 'neutral' };
 }
 
-export function ListaPedidos({ pedidos }: { pedidos: PortalPedido[] }) {
+export function ListaPedidos({ pedidos, token, onCambio }: { pedidos: PortalPedido[]; token: string; onCambio: () => void }) {
   if (pedidos.length === 0) return <p className="text-sm text-neutral-500">Todavía no hiciste pedidos.</p>;
   return (
     <ul className="space-y-2" data-testid="portal-pedidos">
@@ -44,6 +45,7 @@ export function ListaPedidos({ pedidos }: { pedidos: PortalPedido[] }) {
             <p className="whitespace-pre-wrap text-neutral-200">{p.descripcion}</p>
             {p.codigo_ot && <p className="text-xs text-neutral-400">Trabajo {p.codigo_ot}</p>}
             {p.motivo_descarte && <p className="text-xs text-neutral-400">Motivo: {p.motivo_descarte}</p>}
+            <FotosPedidoPortal token={token} pedido={p} onCambio={onCambio} />
           </li>
         );
       })}

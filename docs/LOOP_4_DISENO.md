@@ -1,6 +1,6 @@
 # Loop 4 — Campo y flota (diseño de Claude Code)
 
-> **Estado (2026-11-03):** L4.E1 y L4.E2 (base y API) en `main`. **L4.E4 pantallas** IMPLEMENTADAS por Claude Code, sin commit: "En la calle" (marcación con GPS, odómetro con motivo cuando el servidor lo pide, paradas con "Ir" a Google Maps, Hecha u Omitida), "Hojas de ruta" (coordinación) y "Flota y sedes" (admin). Recorrido `scripts/prueba-loop4.cjs` 7/7 en local. **Cola sin señal (L4.E4) IMPLEMENTADA** por Claude Code el 2026-11-03 (§6), sin commit. **Pendiente:** L4.E3 (fotos en Storage: necesita crear el bucket privado y la clave de servicio en Vercel). Supuesto §0.1 (geocerca que registra y avisa) **confirmado por el usuario**.
+> **Estado (2026-11-09):** **L4.E3 (fotos y archivos) IMPLEMENTADA por Claude Code, sin commit** (§7). Estado anterior (2026-11-03): L4.E1 y L4.E2 (base y API) en `main`. **L4.E4 pantallas** IMPLEMENTADAS por Claude Code, sin commit: "En la calle" (marcación con GPS, odómetro con motivo cuando el servidor lo pide, paradas con "Ir" a Google Maps, Hecha u Omitida), "Hojas de ruta" (coordinación) y "Flota y sedes" (admin). Recorrido `scripts/prueba-loop4.cjs` 7/7 en local. **Cola sin señal (L4.E4) IMPLEMENTADA** por Claude Code el 2026-11-03 (§6), sin commit. **Pendiente:** L4.E3 (fotos en Storage: necesita crear el bucket privado y la clave de servicio en Vercel). Supuesto §0.1 (geocerca que registra y avisa) **confirmado por el usuario**.
 > **Fuentes:** `ARQUITECTURA_V3.md` §5–7 (`vehiculo`, `hoja_ruta*`, `viaje`, `marcacion_asistencia`), `TRASPASO.md` §3 (auditoría de flota informativa, geocerca disuasiva) y §8, `docs/MAPA_REQUISITOS.md`.
 
 ## 0. Supuestos (el usuario no estaba disponible: confirmar o corregir)
@@ -8,7 +8,7 @@
 2. **Odómetro en km enteros con 1 decimal** (`NUMERIC(9,1)`). Un viaje no puede empezar con menos km que el último cierre del vehículo (400: casi siempre es un error de tipeo); si de verdad el tablero se cambió, se registra con `motivo` obligatorio.
 3. **Alerta de desvío informativa** cuando el odómetro supera en más de **30 %** la distancia estimada (paradas planificadas, Haversine × 1,35). Nunca bloquea; pide motivo en la pantalla.
 4. **Coordinación de hojas de ruta = capacidad `comercial`**; **vehículos y sedes = `admin`**; la cuadrilla usa `montaje` (o `taller` si sale a la calle).
-5. Fotos de odómetro: columnas `foto_*_path` **opcionales** hasta L4.E3. Cuando exista el bucket, pasan a obligatorias en el servicio.
+5. Fotos de odómetro: columnas `foto_*_path` **opcionales** hasta L4.E3. **Resuelto en L4.E3 (§7):** la foto es obligatoria **en la app**; las columnas `foto_*_path` de `viaje` quedan sin uso (las fotos van en `archivo`).
 
 ## 1. Modelo — migración `0009_campo_flota.sql`
 | Tabla | Reglas duras |
@@ -59,3 +59,25 @@ Sin `DELETE` para `afull_api`; RLS + `GRANT` mínimo + política `api_acceso` (a
 - **Abrir la app sin señal:** service worker mínimo (`apps/web/public/sw.js`): páginas primero de la red y si no, la copia guardada; `/assets/*` de la caché; `/api/*` **nunca** se cachea. "En la calle" muestra lo último que se bajó ("Sin señal: mostrando lo bajado el …") y la sesión usa el último usuario conocido (la API igual valida la cookie al mandar).
 - Pruebas: `tests/loop4/sin-senal.test.ts` (CA-4.7: hora real y marca; límites), `apps/web/src/lib/cola-offline.test.ts` (orden, rechazos, 401, celular compartido, regresión de la cola trabada), `scripts/prueba-sin-senal.cjs` 4/4 (sin señal → vuelve → llega todo con la hora real) y `scripts/prueba-sin-senal-recarga.cjs` (sitio compilado: recargar sin señal abre la app).
 - **Probar en un celular real** (Android/Chrome e iPhone/Safari): modo avión, marcar, volver a encender.
+
+## 7. Fotos y archivos (L4.E3, Claude Code 2026-11-09) — migración `0018_archivos.sql`
+**Decisiones del usuario (2026-11-09):** las fotos sin señal se guardan en el celular y suben solas; la foto del odómetro es **obligatoria** al iniciar y al cerrar el viaje; entran los cuatro usos (odómetro y montaje, muestras de impresión, comprobante de permiso, foto del pedido del portal).
+
+- **Dónde:** Supabase Storage, bucket **privado** `afull-archivos` (tope 10 MB, solo JPEG/PNG/WebP/PDF). Lo crea la migración por SQL (`storage.buckets`); en una base sin Storage se saltea, y si el rol no tiene permiso avisa sin fallar → crearlo desde el panel con esos mismos datos.
+- **Flujo (la foto no pasa por Vercel):** `POST /api/archivos/solicitar` registra el archivo `PENDIENTE` (idempotente por clave) y devuelve una URL firmada de subida (2 h) → el celular sube con `PUT` directo a Storage → `POST /api/archivos/:id/confirmar`: la API mira el **tamaño y tipo reales** en Storage; si se pasa del tope (5 MB foto, 10 MB PDF) o el tipo no coincide, lo **borra** y responde 400 (CA-4.7). Ver: `GET /api/archivos?{viajeId|paradaId|tareaId|solicitudId|pedidoId}` con enlaces temporales de 10 min.
+- **Clave:** `SUPABASE_SECRET_KEY` (la `sb_secret_…` nueva va solo en el header `apikey`; la `service_role` vieja, también como Bearer). Solo en el servidor (Vercel); nunca en el navegador ni en el chat. Sin clave, la API responde **503** antes de registrar nada. `ALMACENAMIENTO=memoria` (nunca en producción) imita Storage para probar en local.
+- **`archivo`:** cada tipo cuelga de una sola cosa (`CHECK`): `ODOMETRO_INICIO`/`ODOMETRO_FIN` → viaje; `EVIDENCIA_PARADA` → parada; `MUESTRA_TAREA` → tarea; `COMPROBANTE_PERMISO` → solicitud (único que admite PDF); `FOTO_PEDIDO` → pedido (único que sube el portal). Solo cambia una vez (`PENDIENTE → SUBIDO`); sin `DELETE`/`TRUNCATE`. Una sola foto de odómetro por viaje y momento. Ruta sin datos personales: `tipo/AAAA-MM/uuid.ext`. Hora en que se sacó (`tomada_at`, acotada como en §6) y marca `sin_senal`.
+- **Quién sube / ve** (`modules/archivos/referencias.ts`; lo que no se puede ver responde 404):
+  | Tipo | Sube | Ve |
+  | :--- | :--- | :--- |
+  | Odómetro | el conductor del viaje | el conductor, comercial, admin |
+  | Montaje | la cuadrilla de la hoja | la cuadrilla, comercial, admin |
+  | Muestra | quien tiene asignada la tarea, taller, comercial | ídem |
+  | Comprobante | el solicitante (o quien la cargó), RR.HH. | ídem |
+  | Pedido | el cliente por su enlace, solo pedidos `NUEVO` | el cliente, comercial |
+  Topes por cosa: 1 por momento de odómetro, 10 por parada y por tarea, 3 por comprobante y por pedido.
+- **En el celular:** las fotos se achican a 1600 px en JPEG (~200-400 KB). Cola propia en IndexedDB (`lib/fotos-pendientes.ts`): sube sola y en orden, **después** de la cola de acciones; la del odómetro va atada a la **clave** con que se inició el viaje, así espera (404) si el inicio sigue sin enviarse. Un rechazo queda a la vista con "reintentar/descartar"; celular compartido como §6.
+- **Pantallas:** "En la calle" (foto del odómetro obligatoria; "Foto del montaje" por parada; aviso de fotos por subir), hoja de ruta (viajes con km y fotos; aviso si falta la del odómetro), OT y "Mi trabajo" (muestras por tarea), detalle del permiso (adjuntar foto o PDF), portal (hasta 3 fotos al pedir, y agregar después) y modal del pedido en Comercial.
+- **Supuestos a confirmar:** (1) la foto del odómetro es obligatoria **en la app**, no en el servidor (sin señal la foto llega después del viaje); la hoja de ruta avisa si falta; (2) una foto sacada sin señal hace más de 72 h se rechaza como las acciones de §6; (3) los comprobantes por enlace siguen valiendo para lo ya cargado.
+- **Espacio:** el plan gratis trae **1 GB** (≈ 3000-5000 fotos achicadas). `GET /api/archivos/uso` (admin) da lo usado. Respaldo de Storage: `backup-storage.mjs` sigue **sin probar** (TRASPASO §7).
+- Pruebas: `tests/loop4/archivos-api.test.ts`, `archivos-usos.test.ts`, `almacenamiento.test.ts` (cliente REST con fetch simulado); web: `lib/api-archivos.test.ts`, `lib/fotos-pendientes.test.ts`, `lib/imagen.test.ts`, `components/campo/ViajeCard.test.tsx`; recorrido `scripts/prueba-fotos.cjs` 8/8 (verifica que las imágenes **cargan**).
