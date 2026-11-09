@@ -9,26 +9,26 @@ describe('rutas: redirección inicial según capacidades', () => {
     expect(rutaInicialSegunCapacidades(['diseno'])).toBe('/mi-trabajo');
   });
 
-  it('comercial va a /clientes', () => {
-    expect(rutaInicialSegunCapacidades(['comercial'])).toBe('/clientes');
+  it('comercial va a /inicio', () => {
+    expect(rutaInicialSegunCapacidades(['comercial'])).toBe('/inicio');
   });
 
-  it('usuario con comercial y taller va a /clientes', () => {
-    expect(rutaInicialSegunCapacidades(['comercial', 'taller'])).toBe('/clientes');
+  it('usuario con comercial y taller va a /inicio', () => {
+    expect(rutaInicialSegunCapacidades(['comercial', 'taller'])).toBe('/inicio');
   });
 
   it('rrhh sin comercial va a /personas', () => {
     expect(rutaInicialSegunCapacidades(['rrhh'])).toBe('/personas');
   });
 
-  it('admin va a /clientes', () => {
-    expect(rutaInicialSegunCapacidades(['admin'])).toBe('/clientes');
+  it('admin va a /inicio', () => {
+    expect(rutaInicialSegunCapacidades(['admin'])).toBe('/inicio');
   });
 
   it('sanitizarDestinoVolver respeta volver seguro o aplica regla de capacidades', () => {
     expect(sanitizarDestinoVolver('/ots/123', ['taller'])).toBe('/ots/123');
     expect(sanitizarDestinoVolver('//evil.com', ['taller'])).toBe('/mi-trabajo');
     expect(sanitizarDestinoVolver(undefined, ['taller'])).toBe('/mi-trabajo');
-    expect(sanitizarDestinoVolver(undefined, ['comercial'])).toBe('/clientes');
+    expect(sanitizarDestinoVolver(undefined, ['comercial'])).toBe('/inicio');
   });
 });

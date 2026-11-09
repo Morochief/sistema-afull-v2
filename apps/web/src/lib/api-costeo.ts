@@ -23,7 +23,7 @@ export type RentabilidadFila = {
   horas: number; mano_obra_gs: number; material_gs: number; km_gs: number; total_gs: number;
   monto_presupuestado_gs: number | null; margen_pct: number | null;
 };
-export type PaginaRentabilidad = Pagina<RentabilidadFila> & { resumen: { costo_gs: number; venta_gs: number; margen_pct: number | null } };
+export type PaginaRentabilidad = Pagina<RentabilidadFila> & { resumen: { costo_gs: number; venta_gs: number; costo_sin_venta_gs?: number; margen_pct: number | null } };
 
 export const costeoDeOT = (id: string) => apiFetch<CosteoOT>(`/api/costeo/ot/${id}`);
 export const costeoDeProyecto = (id: string) => apiFetch<CosteoProyecto>(`/api/costeo/proyecto/${id}`);

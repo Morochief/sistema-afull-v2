@@ -83,7 +83,9 @@ export async function listarCosteos(f: FiltroCosteo) {
   return {
     ...armarPagina([...items], t.total, f.pagina),
     resumen: {
-      costo_gs: Number(t.costo), venta_gs: venta,
+      // Costo de las OTs con venta (el que se compara contra lo vendido) y aparte el de las OTs sin monto.
+      costo_gs: Number(t.costo_con_venta), venta_gs: venta,
+      costo_sin_venta_gs: Number(t.costo) - Number(t.costo_con_venta),
       // El margen global solo considera OTs con venta (una OT sin monto no tiene margen).
       margen_pct: margenSobreVenta(venta, Number(t.costo_con_venta)),
     },

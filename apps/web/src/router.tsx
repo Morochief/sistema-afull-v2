@@ -33,6 +33,7 @@ import { PermisoDetallePage } from './routes/permisos/detalle.js';
 import { AsistenciaPage } from './routes/asistencia.js';
 import { PedidosListaPage } from './routes/pedidos/lista.js';
 import { PortalPage } from './routes/portal.js';
+import { InicioPage } from './routes/inicio.js';
 import { useSesion } from './hooks/useSesion.js';
 import { rutaInicialSegunCapacidades } from './lib/rutas.js';
 
@@ -95,6 +96,7 @@ const otsRoute = createRoute({
 });
 
 const otsDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/ots/$id', component: OTsDetallePage });
+const inicioRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/inicio', component: InicioPage });
 const miTrabajoRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/mi-trabajo', component: MiTrabajoPage });
 const enVivoRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/en-vivo', component: EnVivoPage });
 const personasRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/personas', component: PersonasPage });
@@ -153,6 +155,7 @@ const routeTree = rootRoute.addChildren([
   presupuestoImprimirRoute,
   appLayoutRoute.addChildren([
     indexRoute,
+    inicioRoute,
     clientesRoute,
     clientesDetalleRoute,
     otsRoute,
@@ -188,7 +191,7 @@ function PaginaNoEncontrada() {
         <h2 className="mb-2 font-semibold text-base text-white">Página no encontrada</h2>
         <p className="mb-5 text-xs text-neutral-400">La ruta solicitada no existe o fue movida.</p>
         <a
-          href="/clientes"
+          href="/"
           className="inline-flex h-9 w-full items-center justify-center rounded-md bg-[#ea580c] text-xs font-semibold text-white hover:bg-[#c2410c] transition-colors"
         >
           Volver al inicio

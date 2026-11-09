@@ -13,7 +13,7 @@ export function rutaInicialSegunCapacidades(capacidades?: string[]): string {
   if (todas.includes('rrhh') && !todas.includes('comercial') && !esAdmin) {
     return '/personas';
   }
-  return '/clientes';
+  return '/inicio';
 }
 
 export function sanitizarDestinoVolver(volver?: string, capacidades?: string[]): string {
