@@ -42,10 +42,10 @@ export function PortalPage() {
             {pestana === 'pedidos' ? (
               <div className="space-y-4">
                 <FormPedido token={token!} yo={yo.data} onEnviado={() => void pedidos.refetch()} />
-                <ListaPedidos pedidos={pedidos.data?.items ?? []} token={token!} onCambio={() => void pedidos.refetch()} />
+                {pedidos.isLoading ? <p className="text-sm text-neutral-500">Cargando tus pedidos…</p> : <ListaPedidos pedidos={pedidos.data?.items ?? []} token={token!} onCambio={() => void pedidos.refetch()} />}
               </div>
             ) : (
-              <ListaTrabajos ots={ots.data?.items ?? []} />
+              {ots.isLoading ? <p className="text-sm text-neutral-500">Cargando tus trabajos…</p> : <ListaTrabajos ots={ots.data?.items ?? []} />}
             )}
             <p className="text-center text-[11px] text-neutral-500">Enlace para {yo.data.para}. No lo compartas: quien lo tenga puede ver tus trabajos y hacer pedidos.</p>
           </>
