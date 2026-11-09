@@ -19,7 +19,9 @@ require('dotenv').config({ path: ['.env', '.env.test'] });
   await sql`INSERT INTO permiso_capacidad (usuario_id, capacidad) VALUES (${u.id}, 'montaje')`;
   const [p] = await sql`INSERT INTO persona (nombre, ci) VALUES (${'zz_test_SW ' + s}, ${'CSW' + s}) RETURNING id`;
   await sql`UPDATE usuario SET persona_id = ${p.id} WHERE id = ${u.id}`;
+  // La limpieza va en `finally`: si un paso falla, el usuario de prueba no queda activo (pasó el 2026-11-03).
   const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+  try {
   const ctx = await b.newContext({ geolocation: { latitude: -25.32, longitude: -57.62 }, permissions: ['geolocation'] });
   const page = await ctx.newPage();
   await page.goto(B + '/login');
@@ -37,8 +39,10 @@ require('dotenv').config({ path: ['.env', '.env.test'] });
   await page.getByText(/Sin señal: mostrando lo bajado/).waitFor({ timeout: 15000 });
   await page.getByRole('button', { name: /Marcar entrada/ }).waitFor();
   console.log('\n>>> RECARGA SIN SEÑAL EN VERDE: la app abrió y mostró lo último bajado <<<\n');
-  await b.close();
-  await sql`UPDATE usuario SET activo = false WHERE id = ${u.id}`;
-  await sql`UPDATE persona SET activo = false WHERE id = ${p.id}`;
-  await sql.end();
+  } finally {
+    await b.close();
+    await sql`UPDATE usuario SET activo = false WHERE id = ${u.id}`;
+    await sql`UPDATE persona SET activo = false WHERE id = ${p.id}`;
+    await sql.end({ timeout: 3 });
+  }
 })().catch((e) => { console.log('FALLA', e.message.split('\n')[0]); process.exit(1); });

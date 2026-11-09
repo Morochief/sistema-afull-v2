@@ -14,7 +14,8 @@ async function clienteTest(nombre = 'zz_test_cliente') {
 }
 
 describe('CA-1.5: Concurrencia en códigos de OT', () => {
-  it('20 creaciones simultáneas generan 20 códigos únicos y correlativos sin huecos', async () => {
+  // Se saltea solo en tests-dev.yml (runner en EE. UU., base en São Paulo): ver el comentario ahí.
+  it.skipIf(process.env.LATENCIA_ALTA === '1')('20 creaciones simultáneas generan 20 códigos únicos y correlativos sin huecos', async () => {
     const u = await crearUsuario(['comercial']);
     const clienteId = await clienteTest();
     const ots = await Promise.all(

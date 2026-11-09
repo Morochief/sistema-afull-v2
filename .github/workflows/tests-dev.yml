@@ -20,6 +20,11 @@ jobs:
       DATABASE_URL: ${{ secrets.DEV_DATABASE_URL_API }}
       SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.DEV_SUPABASE_ANON_KEY }}
+      # El runner está en EE. UU. y la base en São Paulo: más tiempo por test, y las dos pruebas de
+      # concurrencia masiva (CA-0.3, CA-1.5) se saltean acá porque la latencia las lleva al statement_timeout
+      # de 15 s. Siguen corriendo en ci.yml (base local) y CA-0.10 se verificó en Vercel gru1.
+      TEST_TIMEOUT_MS: '120000'
+      LATENCIA_ALTA: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
