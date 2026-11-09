@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
-import { Outlet, Link, Navigate, useNavigate, useRouterState } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
+import { Outlet, Navigate, useNavigate, useRouterState } from '@tanstack/react-router';
 import { rutaInicialSegunCapacidades } from '../lib/rutas.js';
 import { useSesion } from '../hooks/useSesion.js';
-import { Users, FileText, LogOut, Clock, Radio, UserCheck, Calculator, FolderKanban, Palette, Truck, Route, MapPinned, ListChecks, Package, TrendingUp, CalendarCheck, FileSignature, Inbox } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
+import { itemsDeMenu } from '../components/layout/menu.js';
+import { MenuLateral } from '../components/layout/MenuLateral.js';
 import { Button } from '../components/ui/button.js';
 import { Badge } from '../components/ui/badge.js';
 
@@ -10,6 +12,10 @@ export function AppLayout() {
   const { usuario, cargando, error, refetch, tieneCapacidad, logout } = useSesion();
   const navigate = useNavigate();
   const routerState = useRouterState();
+  // Celular: el menú es un panel que se abre con ☰. Se cierra solo al cambiar de pantalla.
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const rutaActual = routerState.location.pathname;
+  useEffect(() => setMenuAbierto(false), [rutaActual]);
 
   useEffect(() => {
     if (!cargando && !usuario && !error) {
@@ -57,101 +63,7 @@ export function AppLayout() {
     return null;
   }
 
-  const todosLosItems = [
-    {
-      titulo: 'Mi Trabajo',
-      ruta: '/mi-trabajo',
-      icono: Clock,
-      visible: tieneCapacidad('taller') || tieneCapacidad('montaje') || tieneCapacidad('diseno') || tieneCapacidad('comercial'),
-    },
-    {
-      titulo: 'En la calle',
-      ruta: '/calle',
-      icono: MapPinned,
-      visible: tieneCapacidad('montaje') || tieneCapacidad('taller'),
-    },
-    {
-      titulo: 'Clientes',
-      ruta: '/clientes',
-      icono: Users,
-      visible: tieneCapacidad('comercial'),
-    },
-    {
-      titulo: 'Órdenes de Trabajo',
-      ruta: '/ots',
-      icono: FileText,
-      visible: tieneCapacidad('comercial'),
-    },
-    {
-      titulo: 'Presupuestos',
-      ruta: '/presupuestos',
-      icono: Calculator,
-      visible: tieneCapacidad('comercial'),
-    },
-    {
-      titulo: 'Proyectos',
-      ruta: '/proyectos',
-      icono: FolderKanban,
-      visible: tieneCapacidad('comercial'),
-    },
-    {
-      titulo: 'Diseños',
-      ruta: '/disenos',
-      icono: Palette,
-      visible: tieneCapacidad('comercial') || tieneCapacidad('taller'),
-    },
-    { titulo: 'Pedidos', ruta: '/pedidos', icono: Inbox, visible: tieneCapacidad('comercial') },
-    {
-      titulo: 'Rentabilidad',
-      ruta: '/rentabilidad',
-      icono: TrendingUp,
-      visible: tieneCapacidad('comercial'),
-    },
-    {
-      titulo: 'Hojas de ruta',
-      ruta: '/hojas-ruta',
-      icono: Route,
-      visible: tieneCapacidad('comercial'),
-    },
-    {
-      titulo: 'Flota y sedes',
-      ruta: '/flota',
-      icono: Truck,
-      visible: tieneCapacidad('admin'),
-    },
-    {
-      titulo: 'Insumos',
-      ruta: '/insumos',
-      icono: Package,
-      visible: tieneCapacidad('admin'),
-    },
-    {
-      titulo: 'Procesos',
-      ruta: '/procesos',
-      icono: ListChecks,
-      visible: tieneCapacidad('admin'),
-    },
-    {
-      titulo: 'Control en Vivo',
-      ruta: '/en-vivo',
-      icono: Radio,
-      visible: tieneCapacidad('comercial'),
-    },
-    {
-      titulo: 'Asistencia',
-      ruta: '/asistencia',
-      icono: CalendarCheck,
-      visible: tieneCapacidad('rrhh'),
-    },
-    // Todos piden permisos (cada uno ve los suyos; RR.HH. y el jefe, todos).
-    { titulo: 'Permisos', ruta: '/permisos', icono: FileSignature, visible: true },
-    {
-      titulo: 'Personas',
-      ruta: '/personas',
-      icono: UserCheck,
-      visible: tieneCapacidad('rrhh'),
-    },
-  ];
+  const todosLosItems = itemsDeMenu(tieneCapacidad);
   const itemsNavegacion = todosLosItems.filter((item) => item.visible);
 
   // URL escrita a mano hacia una sección sin capacidad: la API igual responde 403,
@@ -175,48 +87,25 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-[#090a0f] text-neutral-100">
-      {/* Barra lateral */}
-      <aside className="w-60 border-r border-[#1f2937] bg-[#111318] flex flex-col shrink-0">
-        <div className="flex h-14 items-center gap-2.5 border-b border-[#1f2937] px-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-[#ea580c] text-white font-bold text-sm">
-            aF
-          </div>
-          <span className="font-semibold text-sm tracking-tight text-white">Sistema aFull</span>
-        </div>
-
-        <nav className="flex-1 space-y-1 p-3">
-          {itemsNavegacion.map((item) => {
-            const Icono = item.icono;
-            const activo = routerState.location.pathname.startsWith(item.ruta);
-            return (
-              <Link
-                key={item.ruta}
-                to={item.ruta}
-                className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
-                  activo
-                    ? 'bg-[#ea580c]/15 text-[#ea580c]'
-                    : 'text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-200'
-                }`}
-              >
-                <Icono className="h-4 w-4" />
-                <span>{item.titulo}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="border-t border-[#1f2937] p-3 text-xs text-neutral-500">
-          v3.0 · aFull Cartelería
-        </div>
-      </aside>
+      <MenuLateral items={itemsNavegacion} ruta={routerState.location.pathname} abierto={menuAbierto} onCerrar={() => setMenuAbierto(false)} />
 
       {/* Contenido Principal */}
       <div className="flex flex-1 flex-col min-w-0">
-        <header className="flex h-14 items-center justify-between border-b border-[#1f2937] bg-[#111318] px-6">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-neutral-400">Usuario:</span>
-            <span className="text-xs font-semibold text-white">{usuario.username}</span>
-            <div className="flex gap-1 ml-2">
+        <header className="flex h-14 items-center justify-between gap-2 border-b border-[#1f2937] bg-[#111318] px-3 md:px-6">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMenuAbierto(true)}
+              aria-label="Abrir menú"
+              aria-expanded={menuAbierto}
+              aria-controls="menu-lateral"
+              className="rounded p-2 text-neutral-300 hover:bg-[#1f2937] hover:text-white md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <span className="hidden text-xs font-medium text-neutral-400 sm:inline">Usuario:</span>
+            <span className="truncate text-xs font-semibold text-white">{usuario.username}</span>
+            <div className="ml-2 hidden gap-1 sm:flex">
               {usuario.capacidades.map((cap) => (
                 <Badge key={cap} variant={cap === 'admin' ? 'default' : 'neutral'}>
                   {cap}
@@ -231,7 +120,7 @@ export function AppLayout() {
           </Button>
         </header>
 
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 overflow-auto p-3 md:p-6">
           <Outlet />
         </main>
       </div>
