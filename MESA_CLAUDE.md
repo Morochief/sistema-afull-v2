@@ -570,3 +570,18 @@ Rutas exactas de la API (de `apps/api/src/modules/clientes/routes.ts`; **respeta
 
 ### Criterios para cerrar el Loop 1B
 CA-1.11 a CA-1.16 (diseño §8) con evidencia. Después, actualizar `TRASPASO.md`: §0, §6 (Loop 1B cerrado), §13 bitácora y "Siguiente paso".
+
+---
+
+## 2026-11-09 — Demo: datos, tablero de Inicio y recorrido (Claude, ciclo completo)
+
+- **Base:** Vercel → `afull-demo` (`gjjtmjmxgoylcwpkkjwf`). Login `juan` en Vercel → 200; `/api/auth/yo` → admin.
+- **Datos de demo por la API** (navegador integrado, origen Vercel): 4 clientes / 7 locales; PRE-2026-0001 aprobado → PRY-2026-0001 con OT-2026-0001..0003; presupuesto borrador y enviado; OT-0004 (diseño observado + v2), OT-0005 (terminada, sin presupuesto), OT-0006 (pendiente), OT-0007 (cancelada con motivo), OT-0008 (presupuesto aprobado, terminada). Hoja de ruta 09/11 con 2 paradas; 2 pedidos del portal (201/201); 3 permisos; consumos y merma; Edu con cronómetro abierto en OT-0002.
+- **Excepción:** 8 intervalos cerrados (02–06/11) insertados por SQL en `tarea_intervalo` para horas realistas. Los triggers de inmutabilidad (`trg_tarea_intervalo_update`, `trg_ot_costeo_inmutable`) siguen intactos.
+- **Costeo OT-2026-0008 (literal):** `horas 12, mano_obra_gs 380064, material_gs 1622200, total_gs 2002264, monto_presupuestado_gs 3914286, margen_pct 48.85, alertas []`.
+- **Correcciones encontradas al recorrer:**
+  1. Rentabilidad mostraba costo de todas las OTs junto al margen de solo las vendidas (3.914.286 vs 3.422.237 con margen 48,85 %): el resumen usa ahora `costo_con_venta` y muestra aparte el costo de OTs sin presupuesto.
+  2. `/` llevaba a Clientes: nuevo tablero `/inicio` (`GET /api/inicio`, test `tests/loop9/inicio-api.test.ts`).
+  3. En 375 px los montos del Inicio y Rentabilidad se cortaban: una columna en el celular.
+  4. Portal: decía "Todavía no hiciste pedidos" mientras cargaba: ahora "Cargando…".
+- **Verificación:** lint 0, tsc 0, build web 0, web 155/155, API (inicio + costeo) en verde; anon.test.ts solo corre con Supabase (CI dev). Recorrido de 24 rutas en Vercel sin errores; celular: Inicio, Mi trabajo (Gerardo), En la calle, Portal.
