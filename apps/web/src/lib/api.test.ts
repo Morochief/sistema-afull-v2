@@ -157,10 +157,10 @@ describe('apiFetch', () => {
     expect(sanitizarDestinoVolver('/clientes?pagina=2')).toBe('/clientes?pagina=2');
     expect(sanitizarDestinoVolver('/ots/123')).toBe('/ots/123');
     // Vectores maliciosos
-    expect(sanitizarDestinoVolver('//sitio-ajeno.com')).toBe('/clientes');
-    expect(sanitizarDestinoVolver('/\\sitio-ajeno.com')).toBe('/clientes');
-    expect(sanitizarDestinoVolver('https://sitio-ajeno.com')).toBe('/clientes');
-    expect(sanitizarDestinoVolver('')).toBe('/clientes');
-    expect(sanitizarDestinoVolver(undefined)).toBe('/clientes');
+    expect(sanitizarDestinoVolver('//sitio-ajeno.com')).toBe('/inicio');
+    expect(sanitizarDestinoVolver('/\\sitio-ajeno.com')).toBe('/inicio');
+    expect(sanitizarDestinoVolver('https://sitio-ajeno.com')).toBe('/inicio');
+    expect(sanitizarDestinoVolver('')).toBe('/inicio');
+    expect(sanitizarDestinoVolver(undefined)).toBe('/inicio');
   });
 });
