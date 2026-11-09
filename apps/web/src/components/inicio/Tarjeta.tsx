@@ -8,7 +8,7 @@ export function Indicador({ titulo, valor, detalle, a, tono = 'normal' }: { titu
   const cuerpo = (
     <div className="h-full rounded-md border border-[#1f2937] bg-[#111318] p-3 transition-colors hover:border-[#ea580c]/60">
       <div className="text-[11px] uppercase tracking-wide text-neutral-500">{titulo}</div>
-      <div className={`mt-1 font-mono text-2xl font-semibold ${TONOS[tono]}`}>{valor}</div>
+      <div className={`mt-1 break-words font-mono text-xl font-semibold sm:text-2xl ${TONOS[tono]}`}>{valor}</div>
       {detalle && <div className="mt-0.5 text-[11px] text-neutral-400">{detalle}</div>}
     </div>
   );

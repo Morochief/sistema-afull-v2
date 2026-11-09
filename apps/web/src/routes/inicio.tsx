@@ -38,7 +38,7 @@ export function InicioPage() {
       </div>
 
       {t.mes && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Indicador titulo="Vendido (OTs cerradas del mes)" valor={formatearGs(t.mes.vendido_gs)} a="/rentabilidad" detalle={`${t.mes.ots} OT(s) con presupuesto`} />
           <Indicador titulo="Costo real" valor={formatearGs(t.mes.costo_gs)} a="/rentabilidad" />
           <Indicador titulo="Margen del mes" valor={margen(t.mes.vendido_gs, t.mes.costo_gs)} a="/rentabilidad" tono="ok" />

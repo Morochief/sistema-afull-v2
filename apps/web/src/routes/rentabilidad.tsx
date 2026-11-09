@@ -44,7 +44,7 @@ export function RentabilidadPage() {
         <p className="text-xs text-neutral-400">OTs cerradas: costo real (mano de obra + material + vehículo) contra lo vendido sin IVA. El costo se congela al cerrar la OT.</p>
       </div>
       {r && (
-        <div className="grid grid-cols-3 gap-2 text-xs" data-testid="resumen-rentabilidad">
+        <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3" data-testid="resumen-rentabilidad">
           <div className="rounded border border-[#1f2937] bg-[#111318] p-3"><div className="text-neutral-500">Vendido</div><div className="font-mono text-white">{formatearGs(r.venta_gs)}</div></div>
           <div className="rounded border border-[#1f2937] bg-[#111318] p-3"><div className="text-neutral-500">Costo real</div><div className="font-mono text-white">{formatearGs(r.costo_gs)}</div>{(r.costo_sin_venta_gs ?? 0) > 0 && <div className="mt-1 text-[11px] text-amber-400" title="OTs cerradas sin monto presupuestado: no entran en el margen">+ {formatearGs(r.costo_sin_venta_gs ?? 0)} en OTs sin presupuesto</div>}</div>
           <div className="rounded border border-[#1f2937] bg-[#111318] p-3"><div className="text-neutral-500">Margen real</div><div className={`font-mono font-semibold ${claseMargen(r.margen_pct)}`}>{textoMargen(r.margen_pct)}</div></div>
