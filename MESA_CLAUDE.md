@@ -604,3 +604,17 @@ La primera versión del Inicio salió sin diseño previo y con un test superfici
 - Web: `routes/inicio.test.tsx` 6/6 (con `pedidos_nuevos.length` en vez del total → falla), `routes/portal.test.tsx` 2/2 (sin el estado de carga → falla), `routes/rentabilidad.test.tsx` 2/2.
 - `scripts/prueba-inicio.cjs` (Playwright, local): **6/6 OK**. Con la grilla vieja de montos: `FALLA 5 celular 375 px … montos cortados: Gs. 8.000.000, Gs. 2.000.000`.
 - Totales: API 173/174 (falla solo `anon.test.ts`, necesita Supabase; corre en tests-dev), web 165/165, lint 0, tsc 0, build 0, archivos ≤ 250 líneas.
+
+---
+
+## 2026-11-09 — L9.E2: el cliente sigue su pedido hasta el final
+
+**Error encontrado** (al explicarle el portal al usuario): un pedido convertido en **presupuesto** mostraba "Presupuestando" para siempre, aunque el presupuesto se aprobara y naciera la OT, se rechazara o pasara a v2. El camino **pedido → OT directa** funcionaba y se cubrió con test para no romperlo.
+
+**Diseño:** `docs/LOOP_9_DISENO.md` §6 (CA-9.5 a CA-9.10). **Arreglo:** `apps/api/src/modules/portal/seguimiento.ts` (versión vigente del presupuesto; OT directa o la generada por el presupuesto aprobado: la del local del pedido, si no la menos avanzada), usado por el portal y la bandeja interna; `estadoPedidoCliente` en `@afull/shared` como regla única del texto.
+
+**Evidencia (local):**
+- `tests/loop9/seguimiento-pedido.test.ts`: antes del arreglo **4 fallas** (CA-9.6 `expected null to be 'OT-2026-0591'`, CA-9.7, CA-9.8, CA-9.9/10) y CA-9.5 (OT directa) en verde; después **11/11**.
+- `ListasPortal.test.tsx` 4/4 (con la pantalla vieja falla "rechazado").
+- `scripts/prueba-loop9.cjs` 7/7 (sin regresión) y `scripts/prueba-seguimiento-pedido.cjs` **6/6**; con la API vieja: `FALLA 4 … el cliente ve la OT "Recibido", ya no "Presupuestando"`.
+- Totales: API 184/185 (solo `anon.test.ts`, necesita Supabase), web 169/169, lint 0, tsc 0, build 0.

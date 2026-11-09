@@ -33,3 +33,24 @@ El cliente (por ejemplo, el encargado de una cadena) entra con **un enlace, sin 
 1. Vigencia de **180 días** y **30 pedidos por día** por enlace.
 2. El cliente ve **todas** sus OTs (también las que no nacieron de un pedido), sin montos.
 3. Antes de dar enlaces a clientes reales: **producción** (bloqueo de TRASPASO §12) y revisar el plan de Vercel (uso comercial).
+
+## 6. L9.E2 — Seguimiento del pedido hasta el final (2026-11-09)
+**Problema encontrado:** un pedido convertido en **presupuesto** quedaba atado al presupuesto: aunque se aprobara y naciera la OT, el cliente seguía viendo "Presupuestando" (y también si se rechazaba o se reemplazaba por otra versión). El camino **pedido → OT directa** (sin presupuesto, como pasa con muchos trabajos) ya funcionaba y no cambia.
+
+**Regla: qué OT sigue un pedido**
+1. Convertido en **OT directa** → esa OT.
+2. Convertido en **presupuesto** → se mira la **versión vigente** de ese presupuesto (la última con el mismo número; así una v2 reemplaza a la v1). Si está **aprobada**, el pedido sigue la OT que generó: la del **mismo local** del pedido; si no hay local o no coincide, la **menos avanzada** de esas OTs (el cliente ve "Terminado" recién cuando terminó todo). Las canceladas solo cuentan si no queda otra.
+
+**Qué ve el cliente** (`estadoPedidoCliente` en `@afull/shared`, una sola regla para la API, la web y los tests):
+| Situación | Texto |
+| :--- | :--- |
+| Sin resolver | Recibido |
+| Descartado | No se realizará (con el motivo que escribió Sofi) |
+| Presupuesto vigente en borrador o enviado | Presupuestando |
+| Presupuesto vigente **rechazado o anulado** | No se realizará (sin el comentario interno) |
+| Sigue una OT | El estado de la OT en palabras de cliente (Recibido, En diseño, En producción, En instalación, Terminado, Cancelado) |
+
+La bandeja interna de Pedidos muestra lo mismo: la OT que sigue el pedido (aunque haya nacido de un presupuesto) o el presupuesto vigente.
+
+**Criterios:** CA-9.5 OT directa sigue los cambios de estado · CA-9.6 presupuesto aprobado → sigue la OT generada · CA-9.7 versión nueva → sigue la vigente · CA-9.8 rechazado → "No se realizará" · CA-9.9 multi-local → la OT del local del pedido · CA-9.10 la bandeja interna muestra la OT.
+**Pruebas:** `tests/loop9/seguimiento-pedido.test.ts` (11), `apps/web/src/components/portal/ListasPortal.test.tsx` (4), `scripts/prueba-seguimiento-pedido.cjs` (6/6). **Estado:** CERRADO el 2026-11-09.

@@ -43,11 +43,11 @@ export async function otConVenta(juan: Sesion, cli: { clienteId: string; sucursa
 }
 
 /** Pedido hecho por el cliente desde el portal (Authorization: Portal <token>). */
-export async function pedidoPortal(token: string, descripcion: string) {
+export async function pedidoPortal(token: string, descripcion: string, sucursalId?: string) {
   const res = await app.request('/api/portal/pedidos', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Portal ${token}` },
-    body: JSON.stringify({ descripcion, claveIdempotencia: crypto.randomUUID() }),
+    body: JSON.stringify({ descripcion, sucursalId, claveIdempotencia: crypto.randomUUID() }),
   });
   if (res.status !== 201) throw new Error(`pedido portal → ${res.status} ${await res.text()}`);
 }

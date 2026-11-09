@@ -55,7 +55,7 @@ export function ModalPedido({ pedido, onCerrar, onResuelto }: { pedido: PedidoFi
           </>
         ) : (
           <p className="text-xs text-neutral-400">
-            {p.estado === 'DESCARTADO' ? `Descartado: ${p.motivo_descarte}` : p.codigo_ot ? `Convertido en ${p.codigo_ot}` : `Convertido en ${p.presupuesto_numero}`}
+            {p.estado === 'DESCARTADO' ? `Descartado: ${p.motivo_descarte}` : p.presupuesto_numero ? `Convertido en ${p.presupuesto_numero}${p.codigo_ot ? ` → ${p.codigo_ot}` : ''}` : `Convertido en ${p.codigo_ot}`}
           </p>
         )}
       </div>

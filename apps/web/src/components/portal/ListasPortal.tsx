@@ -1,4 +1,4 @@
-import { ESTADO_OT_CLIENTE } from '@afull/shared';
+import { ESTADO_OT_CLIENTE, estadoPedidoCliente } from '@afull/shared';
 import type { PortalOT, PortalPedido } from '../../lib/api-portal.js';
 import { formatearDia } from '../../lib/fechas.js';
 import { Badge, type BadgeVariant } from '../ui/badge.js';
@@ -23,24 +23,17 @@ export function ListaTrabajos({ ots }: { ots: PortalOT[] }) {
   );
 }
 
-function estadoPedido(p: PortalPedido): { texto: string; variant: BadgeVariant } {
-  if (p.estado === 'DESCARTADO') return { texto: 'No se realizará', variant: 'danger' };
-  if (p.codigo_ot) return { texto: ESTADO_OT_CLIENTE[p.estado_ot ?? ''] ?? 'En curso', variant: colorOT(p.estado_ot ?? '') };
-  if (p.presupuesto_numero) return { texto: 'Presupuestando', variant: 'warning' };
-  return { texto: 'Recibido', variant: 'neutral' };
-}
-
 export function ListaPedidos({ pedidos, token, onCambio }: { pedidos: PortalPedido[]; token: string; onCambio: () => void }) {
   if (pedidos.length === 0) return <p className="text-sm text-neutral-500">Todavía no hiciste pedidos.</p>;
   return (
     <ul className="space-y-2" data-testid="portal-pedidos">
       {pedidos.map((p) => {
-        const e = estadoPedido(p);
+        const e = estadoPedidoCliente(p);
         return (
           <li key={p.id} className="space-y-1 rounded-md border border-[#1f2937] bg-[#111318] p-3 text-sm">
             <div className="flex items-start justify-between gap-3">
               <span className="font-mono text-xs text-neutral-400">{p.numero}{p.sucursal && ` · ${p.sucursal}`} · {formatearDia(p.created_at)}</span>
-              <Badge variant={e.variant}>{e.texto}</Badge>
+              <Badge variant={e.tono}>{e.texto}</Badge>
             </div>
             <p className="whitespace-pre-wrap text-neutral-200">{p.descripcion}</p>
             {p.codigo_ot && <p className="text-xs text-neutral-400">Trabajo {p.codigo_ot}</p>}

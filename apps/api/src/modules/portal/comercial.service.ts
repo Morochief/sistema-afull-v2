@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { SEGUIMIENTO_PEDIDO } from './seguimiento.js';
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
@@ -48,12 +49,12 @@ export async function revocarAcceso(ctx: Ctx, id: string) {
 
 const COLUMNAS = sql`
   pe.id, pe.numero, pe.cliente_id, c.nombre AS cliente_nombre, pe.sucursal_id, s.nombre AS sucursal_nombre, pe.descripcion, pe.foto_url,
-  pe.estado, pe.motivo_descarte, pe.created_at, pe.resuelto_at, pe.orden_trabajo_id, o.codigo_ot, pe.presupuesto_id, pr.numero AS presupuesto_numero,
+  pe.estado, pe.motivo_descarte, pe.created_at, pe.resuelto_at, pe.orden_trabajo_id, o.id AS ot_seguida_id, o.codigo_ot, o.estado AS estado_ot, pe.presupuesto_id, pr.numero AS presupuesto_numero, pr.estado AS presupuesto_estado,
   a.descripcion AS cargado_por_contacto,
   (SELECT count(*)::int FROM archivo ar WHERE ar.pedido_id = pe.id AND ar.estado = 'SUBIDO') AS fotos`;
 const DESDE = sql`
   FROM pedido pe JOIN cliente c ON c.id = pe.cliente_id LEFT JOIN sucursal s ON s.id = pe.sucursal_id
-  LEFT JOIN orden_trabajo o ON o.id = pe.orden_trabajo_id LEFT JOIN presupuesto pr ON pr.id = pe.presupuesto_id
+  ${SEGUIMIENTO_PEDIDO}
   LEFT JOIN portal_acceso a ON a.id = pe.portal_acceso_id`;
 
 export async function listarPedidos(f: { q?: string; estado?: string; desde?: string; hasta?: string; pagina: number }) {

@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { nuevoPedidoPortalSchema, solicitarArchivoSchema } from '@afull/shared';
 import { solicitarSubida, confirmarSubida, listarArchivos } from '../archivos/service.js';
 import type { Actor } from '../archivos/referencias.js';
+import { SEGUIMIENTO_PEDIDO } from './seguimiento.js';
 import { sql } from '../../db/client.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import { TAM_PAGINA, desplazamiento, armarPagina } from '../../lib/paginacion.js';
@@ -66,9 +67,9 @@ export const portalClienteRoutes = new Hono<{ Variables: Variables }>()
     const items = await sql`
       SELECT pe.id, pe.numero, s.nombre AS sucursal, pe.descripcion, pe.foto_url, pe.estado, pe.motivo_descarte, pe.created_at,
              (SELECT count(*)::int FROM archivo ar WHERE ar.pedido_id = pe.id AND ar.estado = 'SUBIDO') AS fotos,
-             o.codigo_ot, o.estado AS estado_ot, pr.numero AS presupuesto_numero
+             o.codigo_ot, o.estado AS estado_ot, pr.numero AS presupuesto_numero, pr.estado AS presupuesto_estado
       FROM pedido pe LEFT JOIN sucursal s ON s.id = pe.sucursal_id
-      LEFT JOIN orden_trabajo o ON o.id = pe.orden_trabajo_id LEFT JOIN presupuesto pr ON pr.id = pe.presupuesto_id
+      ${SEGUIMIENTO_PEDIDO}
       WHERE pe.cliente_id = ${clienteId} ORDER BY pe.created_at DESC, pe.id LIMIT ${TAM_PAGINA} OFFSET ${desplazamiento(p)}
     `;
     return c.json(armarPagina([...items], total, p));

@@ -36,3 +36,23 @@ export const descartarPedidoSchema = z.object({ motivo: z.string().trim().min(3,
 export const ESTADO_OT_CLIENTE: Record<string, string> = {
   PENDIENTE: 'Recibido', EN_DISENO: 'En diseño', EN_TALLER: 'En producción', EN_MONTAJE: 'En instalación', TERMINADO: 'Terminado', CANCELADO: 'Cancelado',
 };
+
+export type TonoEstadoPedido = 'neutral' | 'warning' | 'success' | 'danger';
+export type SeguimientoPedido = {
+  estado: string; motivo_descarte?: string | null;
+  codigo_ot: string | null; estado_ot: string | null;
+  presupuesto_numero: string | null; presupuesto_estado: string | null;
+};
+const tonoOT = (e: string | null): TonoEstadoPedido => (e === 'TERMINADO' ? 'success' : e === 'CANCELADO' ? 'danger' : e === 'PENDIENTE' ? 'neutral' : 'warning');
+
+/**
+ * Texto que ve el cliente para su pedido (docs/LOOP_9_DISENO.md §6). La API ya resuelve qué OT sigue el pedido
+ * (directa o nacida del presupuesto vigente) y en qué estado está el presupuesto vigente.
+ */
+export function estadoPedidoCliente(p: SeguimientoPedido): { texto: string; tono: TonoEstadoPedido } {
+  if (p.estado === 'DESCARTADO') return { texto: 'No se realizará', tono: 'danger' };
+  if (p.codigo_ot) return { texto: ESTADO_OT_CLIENTE[p.estado_ot ?? ''] ?? 'En curso', tono: tonoOT(p.estado_ot) };
+  if (p.presupuesto_estado === 'RECHAZADO' || p.presupuesto_estado === 'ANULADO') return { texto: 'No se realizará', tono: 'danger' };
+  if (p.presupuesto_numero) return { texto: 'Presupuestando', tono: 'warning' };
+  return { texto: 'Recibido', tono: 'neutral' };
+}
