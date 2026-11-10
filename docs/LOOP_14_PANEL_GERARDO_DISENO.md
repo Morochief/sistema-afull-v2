@@ -34,6 +34,7 @@ El viejo dejaba que Gerardo **iniciara** el reloj de otro. Choca con la decisió
 - **CA-14.6** Taller y montaje → 403 en `/api/panel`; la respuesta no trae montos.
 - **CA-14.7** Recorrido Playwright: operario marca entrada → aparece "sin tarea" → Gerardo le asigna → el operario la inicia → pasa a "Trabajando".
 
-## 7. Supuestos a confirmar
+## 7. Supuestos (confirmados por el usuario 2026-11-10)
+> Decisión: Gerardo solo asigna; no inicia el reloj de otro.
 - "Vino" = marcó entrada hoy (cualquier sede o remota del Loop 16).
 - Iniciar el reloj por otro queda afuera hasta que el usuario lo decida.

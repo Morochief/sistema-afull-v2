@@ -40,6 +40,7 @@ Las horas son **eventos inmutables** (`tarea_intervalo`). No se edita un tramo: 
 - **CA-13.5** `intervalo_correccion` no se modifica ni se borra (triggers); `afull_api` sin DELETE.
 - **CA-13.6** Recorrido Playwright: Gerardo cierra con hora el reloj olvidado de un operario y carga 2 h a mano; la OT muestra el costo corregido.
 
-## 8. Supuestos a confirmar
+## 8. Supuestos (confirmados por el usuario 2026-11-10)
+> Decisión: Juan, Gerardo y Sofi corrigen; los operarios no se cargan horas.
 - Quién corrige: admin y RR.HH. (no los operarios).
 - El operario **no** se carga horas a mano él mismo (evita que se carguen horas de más).

@@ -38,6 +38,7 @@ Antes de **Hecha**, un bloque **Entrega**:
 - **CA-17.5** El portal muestra fecha y quién recibió, nunca la foto ni montos.
 - **CA-17.6** Recorrido Playwright en celular: Carlos completa la parada con remisión y receptor; Sofi lo ve en la OT; el cliente lo ve en su portal.
 
-## 8. Supuestos a confirmar
+## 8. Supuestos (confirmados por el usuario 2026-11-10)
+> Decisión: Remisión obligatoria por defecto, desmarcable por OT.
 - La remisión es obligatoria por defecto (se puede desmarcar por OT).
 - El portal muestra quién recibió (nombre y cargo).

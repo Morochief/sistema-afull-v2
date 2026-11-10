@@ -36,6 +36,7 @@
 - **CA-16.6** Sin señal: se encola y se manda al volver (como hoy), sin duplicar.
 - **CA-16.7** Recorrido Playwright: Carlos (conductor) marca la entrada de la cuadrilla; Gerardo los ve "Sin tarea en marcha" en el Panel (Loop 14).
 
-## 7. Supuestos a confirmar
+## 7. Supuestos (confirmados por el usuario 2026-11-10)
+> Decisión: Solo el conductor marca por la cuadrilla.
 - Solo el **conductor** marca por los demás (no cualquier miembro).
 - El motivo remoto es texto libre (con 3 sugerencias rápidas).
