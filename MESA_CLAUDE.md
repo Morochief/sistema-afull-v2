@@ -645,3 +645,17 @@ La primera versión del Inicio salió sin diseño previo y con un test superfici
 - `TarjetasTrabajo.test.tsx` 3/3.
 - `scripts/prueba-reloj-acumulado.cjs` (celular 375 px): con el código viejo `FALLA 4 reanuda … volvió a cero: marca 1 s`; con el nuevo **5/5**.
 - Totales: API 191/192 (solo `anon.test.ts`, necesita Supabase), web 176/176, lint 0, `pnpm typecheck` 0 (incluye `tests/tsconfig.json`; el primer push falló en CI por un cast en el test, corregido), build 0.
+
+---
+
+## 2026-11-10 — Loop 11: la hoja de ruta de Gerardo vuelve a la OT
+
+**Pedido del usuario:** en el sistema viejo el flujo estaba claro: Gerardo arma la **hoja de ruta de cada OT** (qué hace cada operario) y la manda por WhatsApp. En el nuevo eso estaba disperso. **Decisiones:** cada tarea tiene su día (el operario ve primero lo de hoy); la hoja nace en **Borrador** y los operarios no la ven hasta que se activa o se manda por WhatsApp; la pantalla de la camioneta pasa a llamarse **Salidas** (la ruta `/hojas-ruta` no cambia).
+
+**Diseño:** `docs/LOOP_11_HOJA_RUTA_DISENO.md` (CA-11.1 a CA-11.7). **Migración `0019_hoja_ruta_ot`:** `orden_trabajo.hoja_estado` (BORRADOR|ACTIVA|CERRADA, default ACTIVA para las OTs que ya existen), `hoja_notas`, `hoja_activada_at`, `hoja_whatsapp_at`, `hoja_cerrada_at`; `tarea.fecha_trabajo`, `cantidad`, `unidad`, `minutos_estimados`. **API:** `POST/PATCH /api/ots/:id/hoja` (activar, cerrar con 409 si hay tareas sin terminar, reabrir; notas) y `POST /api/ots/:id/hoja/whatsapp` (texto con el formato viejo `*Hoja de Ruta — cliente*` / `⛔operario⛔` / `(Cant: n u)`; activa el borrador). OT nueva y OT de presupuesto aprobado nacen en Borrador ("Urgente: activar la hoja de ruta ya" la activa). `mi-trabajo` no muestra tareas de hojas en borrador y no deja iniciarlas (409). **Web:** sección "Hoja de ruta" en el detalle de la OT (tareas agrupadas por operario, estado, Activar, Enviar por WhatsApp, Cerrar/Reabrir, notas); "Mi trabajo" agrupado en Atrasadas / Para hoy / Próximas / Sin día con cantidad, día y tiempo estimado.
+
+**Evidencia (local):**
+- `tests/loop11/hoja-ruta-ot.test.ts` **4/4**; `SeccionHojaRuta.test.tsx` 6/6; `plan-tarea.test.ts` 4/4. Ajustes esperados por el cambio de comportamiento: `contrato-tipos` (claves nuevas), `inicio-api` (la OT de taller se crea con `activarHoja: true`), `inicio.test.tsx` ("No hay salidas para hoy.").
+- `scripts/prueba-hoja-ruta-ot.cjs` **7/7** (Gerardo en escritorio y Edu en celular: borrador → Edu no la ve → WhatsApp con ⛔Edu⛔ y "(Cant: 3 m2)" → Activa → Edu la ve en "Para hoy" con "3 m2" → Cerrar rechazado, sigue Activa). Con el código viejo no existe la sección (falla en el paso 2).
+- Recorridos previos re-corridos: loop2 9/9 (ahora marca "Urgente" al crear la OT), loop3 9/9 y prueba-ui 15/15 (el login del comercial va a `/inicio` desde el Loop 10), loop4 7/7 (link "Salidas", "¡Salida terminada!"), inicio 6/6, reloj acumulado 5/5, hoja + proyecto 4/4.
+- Totales: API 195/196 (solo `anon.test.ts`, necesita Supabase), web 186/186, lint 0, `pnpm typecheck` 0, build 0.

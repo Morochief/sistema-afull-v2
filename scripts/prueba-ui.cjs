@@ -40,6 +40,8 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
   const launchOptions = {};
   if (process.platform === 'win32') {
     launchOptions.channel = 'chrome';
+  } else if (process.env.CHROMIUM_PATH) {
+    launchOptions.executablePath = process.env.CHROMIUM_PATH;
   }
   const browser = await chromium.launch(launchOptions);
   const page = await browser.newPage();

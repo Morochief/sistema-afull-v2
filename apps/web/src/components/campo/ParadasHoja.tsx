@@ -14,7 +14,7 @@ import { FotoMontaje } from './FotoMontaje.js';
 
 type Hoja = MiDiaCampo['hojas'][number];
 
-/** Paradas de una hoja de ruta de hoy: cómo llegar, completar u omitir (con motivo). */
+/** Paradas de una salida de hoy: cómo llegar, completar u omitir (con motivo). */
 export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => void }) {
   const [omitiendo, setOmitiendo] = useState<string | null>(null);
   const [motivo, setMotivo] = useState('');
@@ -30,7 +30,7 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
         ? await enviarOEncolar<{ hoja_finalizada?: boolean }>(etiqueta, `/api/campo/paradas/${id}/completar`)
         : await enviarOEncolar<{ hoja_finalizada?: boolean }>(etiqueta, `/api/campo/paradas/${id}/omitir`, { motivo: motivo.trim() });
       if (envio.encolada) toast.info('Guardado sin señal: se envía solo cuando vuelva.');
-      else if (envio.respuesta.hoja_finalizada) toast.success('¡Hoja de ruta terminada!');
+      else if (envio.respuesta.hoja_finalizada) toast.success('¡Salida terminada!');
       setOmitiendo(null);
       setMotivo('');
       onCambio();
@@ -42,7 +42,7 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
   return (
     <section className="space-y-2 rounded-md border border-[#1f2937] bg-[#111318] p-4">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-semibold text-white">{hoja.descripcion || 'Hoja de ruta'}{hoja.chapa && ` · ${hoja.chapa}`}</span>
+        <span className="font-semibold text-white">{hoja.descripcion || 'Salida'}{hoja.chapa && ` · ${hoja.chapa}`}</span>
         <Badge variant={hoja.estado === 'FINALIZADA' ? 'success' : 'warning'}>{hoja.estado === 'EN_CURSO' ? 'En curso' : hoja.estado === 'FINALIZADA' ? 'Terminada' : 'Planificada'}</Badge>
       </div>
       {hoja.paradas.map((p) => {

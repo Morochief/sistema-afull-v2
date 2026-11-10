@@ -59,9 +59,9 @@ export function aprobarPresupuesto(ctx: Ctx, id: string, desde: EstadoPresupuest
       const titulo = proyecto ? `${cab.titulo} · ${nombreSucursal.get(r.sucursalId) ?? 'Sin sucursal'}` : cab.titulo;
       const [ot] = await tx<OTGenerada[]>`
         INSERT INTO orden_trabajo
-          (codigo_ot, cliente_id, sucursal_id, titulo, creado_por, presupuesto_id, proyecto_id, monto_presupuestado_gs)
+          (codigo_ot, cliente_id, sucursal_id, titulo, creado_por, presupuesto_id, proyecto_id, monto_presupuestado_gs, hoja_estado)
         VALUES (${cod}, ${p.cliente_id}, ${r.sucursalId}, ${titulo.slice(0, 255)}, ${ctx.usuarioId}, ${id},
-                ${proyecto?.id ?? null}, ${r.montoOtGs})
+                ${proyecto?.id ?? null}, ${r.montoOtGs}, ${'BORRADOR'})
         RETURNING id, codigo_ot, sucursal_id, monto_presupuestado_gs::float8 AS monto_presupuestado_gs
       `;
       await tx`

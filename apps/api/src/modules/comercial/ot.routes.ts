@@ -4,7 +4,8 @@ import { requireSesion, requireCapacidad } from '../auth/middleware.js';
 import { listarOTs, obtenerDetalleOT, crearOT, editarOT, transicionar } from './ot.service.js';
 import { listarTareasOT, agregarTareaOT } from './tareas.service.js';
 import { asociarProyectoOT } from '../proyectos/service.js';
-import { nuevaOTSchema, patchOTSchema, transicionSchema, filtroOTSchema, nuevaTareaSchema } from '@afull/shared';
+import { nuevaOTSchema, patchOTSchema, transicionSchema, filtroOTSchema, nuevaTareaSchema, accionHojaSchema, notasHojaSchema } from '@afull/shared';
+import { accionHoja, notasHoja, whatsappHoja } from './hoja.service.js';
 import { paginaSchema } from '../../lib/paginacion.js';
 import { ipDe } from '../../lib/ip.js';
 import type { Ctx } from '../clientes/service.js';
@@ -51,4 +52,14 @@ export const otRoutes = new Hono()
     const id = z.string().uuid().parse(c.req.param('id'));
     const body = nuevaTareaSchema.parse(await c.req.json().catch(() => null));
     return c.json(await agregarTareaOT(ctxDe(c), id, body), 201);
-  });
+  })
+  // Hoja de ruta de la OT (Loop 11): Borrador → Activa → Cerrada, notas para el equipo y WhatsApp.
+  .post('/:id/hoja', async (c) => {
+    const id = z.string().uuid().parse(c.req.param('id'));
+    return c.json(await accionHoja(ctxDe(c), id, accionHojaSchema.parse(await c.req.json().catch(() => null))));
+  })
+  .patch('/:id/hoja', async (c) => {
+    const id = z.string().uuid().parse(c.req.param('id'));
+    return c.json(await notasHoja(ctxDe(c), id, notasHojaSchema.parse(await c.req.json().catch(() => null)).notas));
+  })
+  .post('/:id/hoja/whatsapp', async (c) => c.json(await whatsappHoja(ctxDe(c), z.string().uuid().parse(c.req.param('id')))));

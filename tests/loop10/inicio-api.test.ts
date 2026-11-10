@@ -49,7 +49,7 @@ describe('Loop 10 — Tablero de inicio (GET /api/inicio)', () => {
 
     // Un operario con el cronómetro en marcha en una OT en taller.
     const op = await operario(juan, ['taller', 'montaje'], tag);
-    const tal = await nuevaOT(juan, cli, `zz_test taller ${tag}`, { tareas: [{ tipo: 'TALLER_IMPRESION', descripcion: 'zz_test', personaAsignadaId: op.personaId }] });
+    const tal = await nuevaOT(juan, cli, `zz_test taller ${tag}`, { activarHoja: true, tareas: [{ tipo: 'TALLER_IMPRESION', descripcion: 'zz_test', personaAsignadaId: op.personaId }] });
     await llevarA(juan, tal.id, ['PENDIENTE', 'EN_TALLER']);
     const [tarea] = (await ok(juan, 'GET', `/api/comercial/ot/${tal.id}/tareas`)) as unknown as { id: string }[];
     await ok(op.s, 'POST', `/api/mi-trabajo/tareas/${tarea.id}/iniciar`, { claveIdempotencia: crypto.randomUUID() });

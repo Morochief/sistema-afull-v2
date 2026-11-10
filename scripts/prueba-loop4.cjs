@@ -64,7 +64,7 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
     });
     await paso('coordinación crea la hoja de hoy con el vehículo', async () => {
       await entrar(`zz_test_coord_${s}`);
-      await page.getByRole('link', { name: /Hojas de ruta/ }).click();
+      await page.getByRole('link', { name: /Salidas/ }).click();
       await page.locator('#hDesc').fill('zz_test Montajes ' + s);
       await page.locator('#hVehiculo').selectOption({ label: 'ZZ4' + s.toUpperCase() });
       await page.getByRole('button', { name: /Nueva hoja/ }).click();
@@ -94,7 +94,7 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
     });
     await paso('completa la parada → la hoja queda terminada', async () => {
       await page.getByRole('button', { name: /Hecha/ }).click();
-      await page.getByText(/Hoja de ruta terminada/).waitFor();
+      await page.getByText(/Salida terminada/).waitFor();
     });
     await paso('cierra el viaje con 1030 km', async () => {
       await page.locator('#kmOdometro').fill('1030');

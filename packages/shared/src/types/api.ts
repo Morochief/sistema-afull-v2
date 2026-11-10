@@ -98,6 +98,12 @@ export type OTDetalle = OTFila & {
   presupuesto_id: string | null; presupuesto_numero: string | null; presupuesto_version: number | null;
   proyecto_id: string | null; proyecto_codigo: string | null;
   monto_presupuestado_gs: number | null;
+  /** Hoja de ruta de la OT (Loop 11). */
+  hoja_estado: 'BORRADOR' | 'ACTIVA' | 'CERRADA';
+  hoja_notas: string | null;
+  hoja_activada_at: string | null;
+  hoja_whatsapp_at: string | null;
+  hoja_cerrada_at: string | null;
   eventos: OTEvento[];
 };
 
@@ -127,7 +133,8 @@ export const CLAVES_OT_FILA = [
 
 export const CLAVES_OT_DETALLE = [
   ...CLAVES_OT_FILA, 'creado_por', 'creado_por_nombre', 'presupuesto_id', 'presupuesto_numero',
-  'presupuesto_version', 'proyecto_id', 'proyecto_codigo', 'monto_presupuestado_gs', 'eventos'
+  'presupuesto_version', 'proyecto_id', 'proyecto_codigo', 'monto_presupuestado_gs', 'eventos',
+  'hoja_estado', 'hoja_notas', 'hoja_activada_at', 'hoja_whatsapp_at', 'hoja_cerrada_at',
 ] as const;
 
 export const CLAVES_OT_EVENTO = [
@@ -185,6 +192,10 @@ export type TareaFila = {
   orden_secuencia: number;
   estado: EstadoTarea;
   minutos_trabajados: number;
+  fecha_trabajo: string | null;
+  cantidad: number | null;
+  unidad: string | null;
+  minutos_estimados: number | null;
   creado_por: string;
   created_at: string;
   updated_at: string;
@@ -210,6 +221,10 @@ export type MiTrabajoTarea = {
   descripcion: string;
   estado: EstadoTarea;
   minutos_trabajados_hoy: number;
+  fecha_trabajo: string | null;
+  cantidad: number | null;
+  unidad: string | null;
+  minutos_estimados: number | null;
   /** Segundos de los tramos CERRADOS de esta persona en esta tarea, de todos los días (L2.E5). */
   segundos_acumulados: number;
   intervalo_abierto: {
@@ -244,6 +259,10 @@ export const CLAVES_TAREA_FILA = [
   'orden_secuencia',
   'estado',
   'minutos_trabajados',
+  'fecha_trabajo',
+  'cantidad',
+  'unidad',
+  'minutos_estimados',
   'creado_por',
   'created_at',
   'updated_at',

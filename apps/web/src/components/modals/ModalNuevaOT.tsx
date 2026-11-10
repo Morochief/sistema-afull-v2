@@ -27,6 +27,7 @@ export type ModalNuevaOTProps = {
 };
 
 export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNuevaOTProps) {
+  const [activarHoja, setActivarHoja] = useState(false);
   const { mutateAsync: crear, isPending } = useCrearOT();
 
   const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteFila | null>(null);
@@ -89,6 +90,7 @@ export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNueva
         titulo: datos.titulo.trim(),
         descripcion: datos.descripcion?.trim() || undefined,
         fechaPrometida: datos.fechaPrometida || undefined,
+        activarHoja: activarHoja || undefined,
         tareas:
           tareas.length > 0
             ? tareas
@@ -185,6 +187,11 @@ export function ModalNuevaOT({ abierto, onCerrar, clienteInicialId }: ModalNueva
         </div>
 
         <SelectorTareasOT tareas={tareas} onChange={setTareas} />
+
+        <label className="flex items-start gap-2 text-xs text-neutral-300">
+          <input type="checkbox" checked={activarHoja} onChange={(e) => setActivarHoja(e.target.checked)} className="mt-0.5" />
+          <span><strong className="text-white">Urgente: activar la hoja de ruta ya.</strong> Los operarios ven sus tareas enseguida. Si no, queda en borrador para que Gerardo la arme y la mande.</span>
+        </label>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleCerrar} disabled={isPending}>

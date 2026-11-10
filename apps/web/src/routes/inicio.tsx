@@ -55,10 +55,10 @@ export function InicioPage() {
           ))}
         </Bloque>
 
-        <Bloque titulo={`Salidas de hoy (${t.hojas_hoy.length})`} hayDatos={t.hojas_hoy.length > 0} vacio="No hay hojas de ruta para hoy." accion={<Link to="/hojas-ruta" className="text-[11px] text-[#ea580c] hover:underline">Hojas de ruta →</Link>}>
+        <Bloque titulo={`Salidas de hoy (${t.hojas_hoy.length})`} hayDatos={t.hojas_hoy.length > 0} vacio="No hay salidas para hoy." accion={<Link to="/hojas-ruta" className="text-[11px] text-[#ea580c] hover:underline">Salidas →</Link>}>
           {t.hojas_hoy.map((h) => (
             <Link key={h.id} to="/hojas-ruta/$id" params={{ id: h.id }} className="block px-3 py-2 text-xs hover:bg-white/5">
-              <div className="flex justify-between gap-2"><b className="text-white">{h.descripcion ?? 'Hoja de ruta'}</b><span className="text-neutral-400">{h.resueltas}/{h.paradas} paradas</span></div>
+              <div className="flex justify-between gap-2"><b className="text-white">{h.descripcion ?? 'Salida'}</b><span className="text-neutral-400">{h.resueltas}/{h.paradas} paradas</span></div>
               <div className="text-neutral-400">{h.chapa ?? 'Sin vehículo'} · {h.cuadrilla ?? 'Sin cuadrilla'}</div>
             </Link>
           ))}

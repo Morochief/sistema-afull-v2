@@ -83,6 +83,7 @@ export async function obtenerDetalleOT(id: string): Promise<OTDetalle> {
         o.creado_por, u.username AS creado_por_nombre,
         o.presupuesto_id, pr.numero AS presupuesto_numero, pr.version AS presupuesto_version,
         o.proyecto_id, py.codigo AS proyecto_codigo, o.monto_presupuestado_gs::float8 AS monto_presupuestado_gs,
+        o.hoja_estado, o.hoja_notas, o.hoja_activada_at, o.hoja_whatsapp_at, o.hoja_cerrada_at,
         o.created_at,
         o.updated_at
       FROM orden_trabajo o
@@ -114,6 +115,7 @@ export type NuevaOT = {
   descripcion?: string;
   fechaPrometida?: string;
   tareas?: ItemTareaInput[];
+  activarHoja?: boolean;
 };
 
 export async function crearOT(ctx: Ctx, d: NuevaOT) {
@@ -139,8 +141,9 @@ export async function crearOTEnTx(tx: TransactionSql, ctx: Ctx, d: NuevaOT) {
   const codigo = `OT-${anio}-${String(v).padStart(4, '0')}`;
 
   const [ot] = await tx`
-    INSERT INTO orden_trabajo (codigo_ot, cliente_id, sucursal_id, titulo, descripcion, fecha_prometida, creado_por)
-    VALUES (${codigo}, ${d.clienteId}, ${d.sucursalId ?? null}, ${d.titulo}, ${d.descripcion ?? null}, ${d.fechaPrometida ?? null}, ${ctx.usuarioId})
+    INSERT INTO orden_trabajo (codigo_ot, cliente_id, sucursal_id, titulo, descripcion, fecha_prometida, creado_por, hoja_estado, hoja_activada_at)
+    VALUES (${codigo}, ${d.clienteId}, ${d.sucursalId ?? null}, ${d.titulo}, ${d.descripcion ?? null}, ${d.fechaPrometida ?? null}, ${ctx.usuarioId},
+            ${d.activarHoja ? 'ACTIVA' : 'BORRADOR'}, ${d.activarHoja ? new Date() : null})
     RETURNING *
   `;
   await tx`

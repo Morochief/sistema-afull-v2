@@ -35,3 +35,12 @@ export async function cancelarTarea(tareaId: string, datos: CancelarTarea): Prom
     body: JSON.stringify(datos),
   });
 }
+
+// Hoja de ruta de la OT (Loop 11)
+export type EstadoHoja = 'BORRADOR' | 'ACTIVA' | 'CERRADA';
+export const accionHojaOT = (otId: string, accion: 'ACTIVAR' | 'CERRAR' | 'REABRIR', desde: EstadoHoja) =>
+  apiFetch<{ hoja_estado: EstadoHoja }>(`/api/comercial/ot/${otId}/hoja`, { method: 'POST', body: JSON.stringify({ accion, desde }) });
+export const notasHojaOT = (otId: string, notas: string | null) =>
+  apiFetch<{ hoja_notas: string | null }>(`/api/comercial/ot/${otId}/hoja`, { method: 'PATCH', body: JSON.stringify({ notas }) });
+export const whatsappHojaOT = (otId: string) =>
+  apiFetch<{ mensaje: string; estado: EstadoHoja }>(`/api/comercial/ot/${otId}/hoja/whatsapp`, { method: 'POST' });

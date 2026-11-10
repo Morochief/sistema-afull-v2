@@ -5,7 +5,7 @@ import { BotonFoto } from '../archivos/BotonFoto.js';
 
 /**
  * Evidencia del montaje en una parada (REQ-03). Se pueden sacar varias, antes o después de marcarla hecha.
- * Sin señal quedan en el celular y suben solas; la galería la ve Comercial en la hoja de ruta.
+ * Sin señal quedan en el celular y suben solas; la galería la ve Comercial en la salida.
  */
 export function FotoMontaje({ paradaId, codigoOt }: { paradaId: string; codigoOt: string }) {
   const { porSubir } = useFotosPendientes({ paradaId });

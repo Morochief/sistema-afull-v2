@@ -9,12 +9,18 @@ import {
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
 import type { Sql, TransactionSql } from 'postgres';
+import { COLUMNAS_PLAN_TAREA } from './tareas.mutaciones.service.js';
 
 export type ItemTareaInput = {
   tipo: TipoTarea;
   descripcion: string;
   personaAsignadaId?: string;
+  fechaTrabajo?: string;
+  cantidad?: number;
+  unidad?: string;
+  minutosEstimados?: number;
 };
+const plan = (t: ItemTareaInput) => [t.fechaTrabajo ?? null, t.cantidad ?? null, t.unidad ?? null, t.minutosEstimados ?? null] as const;
 
 /** El proceso tiene que existir en el catálogo y estar activo (el FK solo garantiza que exista). */
 export async function exigirProcesoActivo(tx: TransactionSql | Sql, tipo: string) {
@@ -37,8 +43,9 @@ export async function insertarTareasIniciales(
     }
 
     const [tarea] = await tx<{ id: string }[]>`
-      INSERT INTO tarea (orden_trabajo_id, persona_asignada_id, tipo, descripcion, orden_secuencia, estado, creado_por)
-      VALUES (${otId}, ${t.personaAsignadaId ?? null}, ${t.tipo}, ${t.descripcion}, ${i + 1}, 'PENDIENTE', ${ctx.usuarioId})
+      INSERT INTO tarea (orden_trabajo_id, persona_asignada_id, tipo, descripcion, orden_secuencia, estado, creado_por,
+                         fecha_trabajo, cantidad, unidad, minutos_estimados)
+      VALUES (${otId}, ${t.personaAsignadaId ?? null}, ${t.tipo}, ${t.descripcion}, ${i + 1}, 'PENDIENTE', ${ctx.usuarioId}, ${plan(t)[0]}, ${plan(t)[1]}, ${plan(t)[2]}, ${plan(t)[3]})
       RETURNING id
     `;
 
@@ -81,6 +88,7 @@ export async function listarTareasOT(otId: string): Promise<TareaFila[]> {
           ),
           0
         ) AS minutos_trabajados,
+        t.fecha_trabajo::text AS fecha_trabajo, t.cantidad::float8 AS cantidad, t.unidad, t.minutos_estimados,
         t.creado_por,
         t.created_at,
         t.updated_at
@@ -98,11 +106,12 @@ export async function listarTareasOT(otId: string): Promise<TareaFila[]> {
 export async function agregarTareaOT(ctx: Ctx, otId: string, d: ItemTareaInput) {
   try {
     return await sql.begin(async (tx) => {
-      const [ot] = await tx<{ estado: string }[]>`SELECT estado FROM orden_trabajo WHERE id = ${otId}`;
+      const [ot] = await tx<{ estado: string; hoja_estado: string }[]>`SELECT estado, hoja_estado FROM orden_trabajo WHERE id = ${otId}`;
       if (!ot) throw new ErrorApp(404, 'OT no encontrada');
       if (esEstadoFinal(ot.estado as EstadoOT)) {
         throw new ErrorApp(400, 'No se pueden agregar tareas a una OT en estado final');
       }
+      if (ot.hoja_estado === 'CERRADA') throw new ErrorApp(400, 'La hoja de ruta está cerrada: reabrila para agregar tareas');
 
       if (d.personaAsignadaId) {
         const [p] = await tx<{ activo: boolean }[]>`SELECT activo FROM persona WHERE id = ${d.personaAsignadaId}`;
@@ -115,10 +124,13 @@ export async function agregarTareaOT(ctx: Ctx, otId: string, d: ItemTareaInput) 
 
       await exigirProcesoActivo(tx, d.tipo);
       const [tarea] = await tx<TareaFila[]>`
-        INSERT INTO tarea (orden_trabajo_id, persona_asignada_id, tipo, descripcion, orden_secuencia, estado, creado_por)
-        VALUES (${otId}, ${d.personaAsignadaId ?? null}, ${d.tipo}, ${d.descripcion}, ${sig}, 'PENDIENTE', ${ctx.usuarioId})
+        INSERT INTO tarea (orden_trabajo_id, persona_asignada_id, tipo, descripcion, orden_secuencia, estado, creado_por,
+                           fecha_trabajo, cantidad, unidad, minutos_estimados)
+        VALUES (${otId}, ${d.personaAsignadaId ?? null}, ${d.tipo}, ${d.descripcion}, ${sig}, 'PENDIENTE', ${ctx.usuarioId},
+                ${plan(d)[0]}, ${plan(d)[1]}, ${plan(d)[2]}, ${plan(d)[3]})
         RETURNING id, orden_trabajo_id, persona_asignada_id, NULL::varchar AS persona_asignada_nombre,
-                  tipo, descripcion, orden_secuencia, estado, 0 AS minutos_trabajados, creado_por, created_at, updated_at
+                  tipo, descripcion, orden_secuencia, estado, 0 AS minutos_trabajados, ${COLUMNAS_PLAN_TAREA},
+                  creado_por, created_at, updated_at
       `;
 
       await tx`

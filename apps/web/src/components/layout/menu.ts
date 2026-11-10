@@ -57,7 +57,7 @@ export function itemsDeMenu(tieneCapacidad: (c: string) => boolean): ItemMenu[] 
       visible: tieneCapacidad('comercial'),
     },
     {
-      titulo: 'Hojas de ruta',
+      titulo: 'Salidas',
       ruta: '/hojas-ruta',
       icono: Route,
       visible: tieneCapacidad('comercial'),

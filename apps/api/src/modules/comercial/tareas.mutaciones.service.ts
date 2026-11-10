@@ -9,8 +9,16 @@ import type { Ctx } from '../clientes/service.js';
 export type PatchTareaInput = {
   descripcion?: string;
   personaAsignadaId?: string | null;
+  fechaTrabajo?: string | null;
+  cantidad?: number | null;
+  unidad?: string | null;
+  minutosEstimados?: number | null;
   updatedAt: string;
 };
+
+/** Columnas de una tarea como las devuelve la API (Loop 11: con día, cantidad, unidad y tiempo estimado). */
+export const COLUMNAS_PLAN_TAREA = sql`fecha_trabajo::text AS fecha_trabajo, cantidad::float8 AS cantidad, unidad, minutos_estimados`;
+const siViene = (v: string | number | null | undefined, col: string) => (v !== undefined ? sql`${v}` : sql(col));
 
 export async function editarTarea(ctx: Ctx, tareaId: string, d: PatchTareaInput) {
   await esperarAvanceReloj(d.updatedAt);
@@ -44,10 +52,15 @@ export async function editarTarea(ctx: Ctx, tareaId: string, d: PatchTareaInput)
         SET
           descripcion = coalesce(${d.descripcion ?? null}, descripcion),
           persona_asignada_id = ${d.personaAsignadaId !== undefined ? d.personaAsignadaId : sql`persona_asignada_id`},
+          fecha_trabajo = ${siViene(d.fechaTrabajo, 'fecha_trabajo')},
+          cantidad = ${siViene(d.cantidad, 'cantidad')},
+          unidad = ${siViene(d.unidad, 'unidad')},
+          minutos_estimados = ${siViene(d.minutosEstimados, 'minutos_estimados')},
           updated_at = now()
         WHERE id = ${tareaId}
         RETURNING id, orden_trabajo_id, persona_asignada_id, NULL::varchar AS persona_asignada_nombre,
-                  tipo, descripcion, orden_secuencia, estado, 0 AS minutos_trabajados, creado_por, created_at, updated_at
+                  tipo, descripcion, orden_secuencia, estado, 0 AS minutos_trabajados, ${COLUMNAS_PLAN_TAREA},
+                  creado_por, created_at, updated_at
       `;
 
       await auditar(
@@ -57,7 +70,7 @@ export async function editarTarea(ctx: Ctx, tareaId: string, d: PatchTareaInput)
           recurso: 'tarea',
           recursoId: tareaId,
           ip: ctx.ip,
-          metadata: { descripcion: d.descripcion, personaAsignadaId: d.personaAsignadaId },
+          metadata: { descripcion: d.descripcion, personaAsignadaId: d.personaAsignadaId, fechaTrabajo: d.fechaTrabajo, cantidad: d.cantidad, unidad: d.unidad, minutosEstimados: d.minutosEstimados },
         },
         tx
       );

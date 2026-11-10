@@ -86,6 +86,8 @@ export const nuevaOTSchema = z.object({
   descripcion: z.string().trim().max(5000).optional(),
   fechaPrometida: fechaISO.optional(),
   tareas: z.array(itemTareaEnOTSchema).max(30).optional(),
+  /** Urgencias: la hoja de ruta nace activa y los operarios ven las tareas enseguida (Loop 11). */
+  activarHoja: z.boolean().optional(),
 });
 
 export const transicionSchema = z.object({

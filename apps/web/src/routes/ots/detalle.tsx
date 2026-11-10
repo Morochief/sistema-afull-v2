@@ -11,7 +11,7 @@ import { Badge, type BadgeVariant } from '../../components/ui/badge.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
 import { ModalEditarOT } from '../../components/modals/ModalEditarOT.js';
 import { ModalTransicionOT } from '../../components/modals/ModalTransicionOT.js';
-import { SeccionTareasOT } from '../../components/ots/SeccionTareasOT.js';
+import { SeccionHojaRuta } from '../../components/ots/SeccionHojaRuta.js';
 import { SeccionDisenoOT } from '../../components/disenos/SeccionDisenoOT.js';
 import { SeccionMaterialOT } from '../../components/insumos/SeccionMaterialOT.js';
 import { SeccionCosteoOT } from '../../components/costeo/SeccionCosteoOT.js';
@@ -152,9 +152,9 @@ export function OTsDetallePage() {
         </div>
       </div>
 
-      <SeccionDisenoOT otId={ot.id} otFinalizada={final} />
+      <SeccionHojaRuta ot={ot} otFinalizada={final} onCambioOT={() => void refetch()} />
 
-      <SeccionTareasOT otId={ot.id} otFinalizada={final} />
+      <SeccionDisenoOT otId={ot.id} otFinalizada={final} />
 
       <SeccionMaterialOT otId={ot.id} otFinalizada={final} />
 

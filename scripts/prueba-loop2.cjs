@@ -44,6 +44,8 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
   const launchOptions = {};
   if (process.platform === 'win32') {
     launchOptions.channel = 'chrome';
+  } else if (process.env.CHROMIUM_PATH) {
+    launchOptions.executablePath = process.env.CHROMIUM_PATH;
   }
   const browser = await chromium.launch(launchOptions);
   const page = await browser.newPage();
@@ -116,7 +118,7 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
       await page.getByPlaceholder('Nombre de usuario').fill(usernameComercial);
       await page.locator('input[type=password]').fill(password);
       await page.getByRole('button', { name: /Iniciar sesión/ }).click();
-      await page.waitForURL(/\/clientes/);
+      await page.waitForURL(/\/inicio/);
     });
 
     // 2. Comercial crea OT con 2 tareas asignadas al operario
@@ -144,6 +146,9 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
       await page.getByPlaceholder('Descripción de la tarea (obligatoria)...').nth(1).fill(descTareaB);
       const selectOperarioB = page.locator('div.space-y-2 select').nth(3);
       await selectOperarioB.selectOption({ label: nombreOperario });
+
+      // Urgente: la hoja de ruta nace activa para que el operario vea las tareas (Loop 11)
+      await page.getByText('Urgente: activar la hoja de ruta ya.').click();
 
       // Guardar OT
       await page.getByRole('button', { name: /Crear OT/ }).click();
@@ -210,7 +215,7 @@ const dbUrl = process.env.DATABASE_URL_ADMIN;
       await page.getByPlaceholder('Nombre de usuario').fill(usernameComercial);
       await page.locator('input[type=password]').fill(password);
       await page.getByRole('button', { name: /Iniciar sesión/ }).click();
-      await page.waitForURL(/\/clientes/);
+      await page.waitForURL(/\/inicio/);
 
       // Ir a /en-vivo
       await page.goto(B + '/en-vivo');

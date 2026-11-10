@@ -77,6 +77,7 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
           FROM tarea_intervalo i
           WHERE i.tarea_id = t.id AND i.persona_id = ${persona.id} AND i.hora_fin IS NULL
         ) AS intervalo_abierto,
+        t.fecha_trabajo::text AS fecha_trabajo, t.cantidad::float8 AS cantidad, t.unidad, t.minutos_estimados,
         t.updated_at
       FROM tarea t
       JOIN orden_trabajo ot ON ot.id = t.orden_trabajo_id
@@ -84,8 +85,10 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
       WHERE t.persona_asignada_id = ${persona.id}
         AND t.estado NOT IN ('LISTO', 'CANCELADA')
         AND (t.estado = 'EN_CURSO' OR ot.estado NOT IN ('TERMINADO', 'CANCELADO'))
+        AND (t.estado = 'EN_CURSO' OR ot.hoja_estado <> 'BORRADOR')
       ORDER BY
         CASE WHEN t.estado = 'EN_CURSO' THEN 0 ELSE 1 END,
+        t.fecha_trabajo NULLS LAST,
         t.updated_at DESC
     `;
 
@@ -130,8 +133,8 @@ export async function iniciarTarea(ctx: Ctx, tareaId: string, claveIdempotencia:
 
       // FOR SHARE sobre la OT: serializa contra transicionar() (que la toma FOR UPDATE),
       // así no se puede abrir un cronómetro en una OT que se está terminando o cancelando.
-      const [tarea] = await tx<{ id: string; persona_asignada_id: string | null; estado: string; ot_estado: string }[]>`
-        SELECT t.id, t.persona_asignada_id, t.estado, ot.estado AS ot_estado
+      const [tarea] = await tx<{ id: string; persona_asignada_id: string | null; estado: string; ot_estado: string; hoja_estado: string }[]>`
+        SELECT t.id, t.persona_asignada_id, t.estado, ot.estado AS ot_estado, ot.hoja_estado
         FROM tarea t JOIN orden_trabajo ot ON ot.id = t.orden_trabajo_id
         WHERE t.id = ${tareaId}
         FOR UPDATE OF t FOR SHARE OF ot
@@ -139,6 +142,9 @@ export async function iniciarTarea(ctx: Ctx, tareaId: string, claveIdempotencia:
       if (!tarea) throw new ErrorApp(404, 'Tarea no encontrada');
       if (tarea.persona_asignada_id !== persona.id) {
         throw new ErrorApp(403, 'Solo puedes operar tareas asignadas a tu persona');
+      }
+      if (tarea.hoja_estado === 'BORRADOR') {
+        throw new ErrorApp(409, 'La hoja de ruta de esta OT todavía está en borrador');
       }
       if (esEstadoFinal(tarea.ot_estado as EstadoOT)) {
         throw new ErrorApp(409, `La OT ya está ${tarea.ot_estado}: no se puede iniciar trabajo en ella`);

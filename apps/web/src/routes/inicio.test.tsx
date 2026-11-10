@@ -70,7 +70,7 @@ describe('InicioPage (CA-10.7)', () => {
     estado.actual = { data: { ...base, trabajando_ahora: [], hojas_hoy: [], atrasadas: [], atrasadas_total: 0, pedidos_nuevos: [], pedidos_nuevos_total: 0 }, isLoading: false, error: null };
     render(<InicioPage />);
     expect(screen.getByText('Nadie tiene el cronómetro en marcha.')).toBeTruthy();
-    expect(screen.getByText('No hay hojas de ruta para hoy.')).toBeTruthy();
+    expect(screen.getByText('No hay salidas para hoy.')).toBeTruthy();
     expect(screen.getByText('Ninguna OT pasó su fecha prometida.')).toBeTruthy();
     expect(screen.getByText('No hay pedidos sin atender.')).toBeTruthy();
   });

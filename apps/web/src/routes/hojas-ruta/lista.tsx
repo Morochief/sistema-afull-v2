@@ -19,7 +19,7 @@ const ESTADO: Record<string, { t: string; v: 'neutral' | 'warning' | 'success' }
   FINALIZADA: { t: 'Terminada', v: 'success' },
 };
 
-/** Coordinación: hojas de ruta de la última semana y el próximo mes; alta rápida. */
+/** Coordinación de salidas (antes "hojas de ruta") de la última semana y el próximo mes; alta rápida. */
 export function HojasRutaListaPage() {
   const navigate = useNavigate();
   const { data: hojas, isLoading, refetch } = useQuery({ queryKey: ['hojas-ruta'], queryFn: () => listarHojasRuta() });
@@ -37,7 +37,7 @@ export function HojasRutaListaPage() {
       void refetch();
       navigate({ to: '/hojas-ruta/$id', params: { id: h.id } });
     } catch (er) {
-      toast.error(mensajeDeError(er, 'No se pudo crear la hoja de ruta'));
+      toast.error(mensajeDeError(er, 'No se pudo crear la salida'));
     } finally {
       setCreando(false);
     }
@@ -46,7 +46,7 @@ export function HojasRutaListaPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold tracking-tight text-white">Hojas de ruta</h1>
+        <h1 className="text-xl font-bold tracking-tight text-white">Salidas</h1>
         <p className="text-xs text-neutral-400">Qué cuadrilla sale, en qué vehículo y a qué OTs. La cuadrilla lo ve en "En la calle".</p>
       </div>
       <form onSubmit={crear} className="grid grid-cols-1 gap-3 rounded-md border border-[#1f2937] bg-[#111318] p-4 sm:grid-cols-4 sm:items-end">
@@ -63,7 +63,7 @@ export function HojasRutaListaPage() {
       </form>
       <div className="rounded-md border border-[#1f2937] bg-[#111318]">
         {isLoading ? <Skeleton className="h-32 w-full" /> : (hojas ?? []).length === 0 ? (
-          <p className="p-6 text-center text-xs text-neutral-500">No hay hojas de ruta en este período.</p>
+          <p className="p-6 text-center text-xs text-neutral-500">No hay salidas en este período.</p>
         ) : (
           (hojas ?? []).map((h) => (
             <button key={h.id} type="button" onClick={() => navigate({ to: '/hojas-ruta/$id', params: { id: h.id } })} className="flex w-full items-center justify-between border-b border-[#1f2937] px-4 py-3 text-left text-xs last:border-0 hover:bg-[#161922]">

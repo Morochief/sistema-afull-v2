@@ -56,7 +56,7 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
       await page.getByPlaceholder('Nombre de usuario').fill(usuario);
       await page.locator('input[type=password]').fill(password);
       await page.getByRole('button', { name: /Iniciar sesión/ }).click();
-      await page.waitForURL(/\/clientes/);
+      await page.waitForURL(/\/inicio/);
     });
 
     await paso('crear presupuesto desde el menú', async () => {

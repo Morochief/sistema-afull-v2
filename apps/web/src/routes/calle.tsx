@@ -37,7 +37,7 @@ export function CallePage() {
       <MarcacionCard ultima={dia.ultima_marcacion} onMarcado={recargar} />
       <ViajeCard key={dia.viaje_abierto?.id ?? 'sin-viaje'} dia={dia} onCambio={recargar} />
       {dia.hojas.length === 0 ? (
-        <p className="rounded-md border border-[#1f2937] bg-[#111318] p-4 text-center text-xs text-neutral-500">No tenés hoja de ruta para hoy.</p>
+        <p className="rounded-md border border-[#1f2937] bg-[#111318] p-4 text-center text-xs text-neutral-500">No tenés salidas para hoy.</p>
       ) : (
         dia.hojas.map((h) => <ParadasHoja key={h.id} hoja={h} onCambio={recargar} />)
       )}

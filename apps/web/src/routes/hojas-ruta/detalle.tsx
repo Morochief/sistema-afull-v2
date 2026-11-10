@@ -30,7 +30,7 @@ export function HojaRutaDetallePage() {
   const [motivoExtra, setMotivoExtra] = useState('');
 
   if (isLoading) return <Skeleton className="h-64 w-full" />;
-  if (error || !h) return <p className="text-xs text-red-300">{mensajeDeError(error as ErrorApi, 'Hoja de ruta inexistente')}</p>;
+  if (error || !h) return <p className="text-xs text-red-300">{mensajeDeError(error as ErrorApi, 'Salida inexistente')}</p>;
   const editable = h.estado !== 'FINALIZADA';
   const extra = h.estado === 'EN_CURSO';
 
@@ -48,7 +48,7 @@ export function HojaRutaDetallePage() {
     <div className="space-y-4">
       <div className="flex items-center gap-3 border-b border-[#1f2937] pb-3">
         <Link to="/hojas-ruta" className="rounded p-1.5 text-neutral-400 hover:bg-[#1f2937] hover:text-white"><ArrowLeft className="h-4 w-4" /></Link>
-        <h1 className="text-lg font-bold text-white">{h.descripcion || 'Hoja de ruta'} · {h.fecha.split('-').reverse().join('/')}</h1>
+        <h1 className="text-lg font-bold text-white">{h.descripcion || 'Salida'} · {h.fecha.split('-').reverse().join('/')}</h1>
         <Badge variant={h.estado === 'FINALIZADA' ? 'success' : h.estado === 'EN_CURSO' ? 'warning' : 'neutral'}>{h.estado}</Badge>
         <span className="text-xs text-neutral-400">{h.chapa ?? 'sin vehículo'}</span>
       </div>

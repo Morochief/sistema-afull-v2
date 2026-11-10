@@ -5,6 +5,7 @@ import { iniciarTarea, pausarTarea, finalizarTarea } from '../lib/api-cronometro
 import { crearSincronizadorReloj } from '../lib/reloj.js';
 import { ModalPausarTarea } from '../components/modals/ModalPausarTarea.js';
 import { ModalFinalizarTarea } from '../components/modals/ModalFinalizarTarea.js';
+import { agruparPorDia, hoyAsuncion } from '../lib/plan-tarea.js';
 import { TarjetaTareaActiva, TarjetaTareaAsignada } from '../components/cronometro/TarjetasTrabajo.js';
 import { Button } from '../components/ui/button.js';
 import { FotosPorSubir } from '../components/campo/FotosPorSubir.js';
@@ -196,7 +197,7 @@ export function MiTrabajoPage() {
       )}
 
       <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-3">
-        Tareas Asignadas ({tareasRestantes.length})
+        Mis tareas ({tareasRestantes.length})
       </h3>
 
       {tareasRestantes.length === 0 && !tareaEnCurso && (
@@ -205,14 +206,21 @@ export function MiTrabajoPage() {
         </div>
       )}
 
-      <div className="space-y-3">
-        {tareasRestantes.map((tarea) => (
-          <TarjetaTareaAsignada
-            key={tarea.id}
-            tarea={tarea}
-            cargando={cargandoAccion}
-            onIniciar={() => void handleIniciar(tarea)}
-          />
+      <div className="space-y-4">
+        {agruparPorDia(tareasRestantes, hoyAsuncion()).map((g) => (
+          <section key={g.grupo} className="space-y-2" aria-label={g.grupo}>
+            <h4 className={`text-[11px] font-semibold uppercase tracking-wider ${g.grupo === 'Atrasadas' ? 'text-amber-400' : g.grupo === 'Para hoy' ? 'text-[#ea580c]' : 'text-neutral-500'}`}>
+              {g.grupo} ({g.items.length})
+            </h4>
+            {g.items.map((tarea) => (
+              <TarjetaTareaAsignada
+                key={tarea.id}
+                tarea={tarea}
+                cargando={cargandoAccion}
+                onIniciar={() => void handleIniciar(tarea)}
+              />
+            ))}
+          </section>
         ))}
       </div>
 
