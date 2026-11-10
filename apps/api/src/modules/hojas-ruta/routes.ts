@@ -1,10 +1,11 @@
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
-import { nuevaHojaRutaSchema, personaHojaRutaSchema, paradaSchema } from '@afull/shared';
+import { nuevaHojaRutaSchema, personaHojaRutaSchema, paradaSchema, paradasProyectoSchema } from '@afull/shared';
 import { requireSesion, requireCapacidad } from '../auth/middleware.js';
 import { ipDe } from '../../lib/ip.js';
 import type { Ctx } from '../clientes/service.js';
 import { listarHojasRuta, obtenerHojaRuta, crearHojaRuta, agregarPersona, agregarParada } from './service.js';
+import { agregarProyecto } from './proyecto.service.js';
 
 const ctxDe = (c: Context): Ctx => ({ usuarioId: c.get('usuario').id, ip: ipDe(c) });
 const idDe = (c: Context) => z.string().uuid().parse(c.req.param('id'));
@@ -18,4 +19,5 @@ export const hojasRutaRoutes = new Hono()
   .post('/', async (c) => c.json(await crearHojaRuta(ctxDe(c), nuevaHojaRutaSchema.parse(await cuerpo(c))), 201))
   .get('/:id', async (c) => c.json(await obtenerHojaRuta(idDe(c))))
   .post('/:id/personas', async (c) => c.json(await agregarPersona(ctxDe(c), idDe(c), personaHojaRutaSchema.parse(await cuerpo(c))), 201))
-  .post('/:id/paradas', async (c) => c.json(await agregarParada(ctxDe(c), idDe(c), paradaSchema.parse(await cuerpo(c))), 201));
+  .post('/:id/paradas', async (c) => c.json(await agregarParada(ctxDe(c), idDe(c), paradaSchema.parse(await cuerpo(c))), 201))
+  .post('/:id/paradas-proyecto', async (c) => c.json(await agregarProyecto(ctxDe(c), idDe(c), paradasProyectoSchema.parse(await cuerpo(c))), 201));

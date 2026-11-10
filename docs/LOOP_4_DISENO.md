@@ -81,3 +81,17 @@ Sin `DELETE` para `afull_api`; RLS + `GRANT` mínimo + política `api_acceso` (a
 - **Supuestos a confirmar:** (1) la foto del odómetro es obligatoria **en la app**, no en el servidor (sin señal la foto llega después del viaje); la hoja de ruta avisa si falta; (2) una foto sacada sin señal hace más de 72 h se rechaza como las acciones de §6; (3) los comprobantes por enlace siguen valiendo para lo ya cargado.
 - **Espacio:** el plan gratis trae **1 GB** (≈ 3000-5000 fotos achicadas). `GET /api/archivos/uso` (admin) da lo usado. Respaldo de Storage: `backup-storage.mjs` sigue **sin probar** (TRASPASO §7).
 - Pruebas: `tests/loop4/archivos-api.test.ts`, `archivos-usos.test.ts`, `almacenamiento.test.ts` (cliente REST con fetch simulado); web: `lib/api-archivos.test.ts`, `lib/fotos-pendientes.test.ts`, `lib/imagen.test.ts`, `components/campo/ViajeCard.test.tsx`; recorrido `scripts/prueba-fotos.cjs` 8/8 (verifica que las imágenes **cargan**).
+
+## 8. L4.E5 — Agregar un proyecto entero a la hoja de ruta (2026-11-10)
+**Pedido del usuario:** cuando el trabajo es un proyecto (una OT por local), Gerardo arma la salida agregando local por local. Se pide agregar **todas las OTs del proyecto de una vez**. (Mismo día: Gerardo pasa a ser `admin` en la demo, porque es quien asigna las tareas y arma las hojas.)
+
+**Regla** — `POST /api/hojas-ruta/:id/paradas-proyecto` `{ proyectoId, motivoExtra? }` (capacidad `comercial`, admin pasa), en **una sola transacción**:
+- Entran las OTs del proyecto que estén **abiertas** (no `TERMINADO` ni `CANCELADO`) y que **no estén ya** en esa hoja, como paradas al final, en orden de código de OT (el orden de los locales del presupuesto). Después se reordenan o se omiten como cualquier parada.
+- Con la hoja **en curso**, son paradas `EXTRA` y el motivo es obligatorio (la misma regla que una parada suelta). Hoja **finalizada** → 409.
+- Proyecto inexistente → 400. Proyecto sin OTs para agregar (todas cerradas o ya están) → 400 con un mensaje claro; no se agrega nada.
+- Respuesta: `{ agregadas: [{ id, codigo_ot }], salteadas: [{ codigo_ot, motivo: 'cerrada' | 'ya_esta' }] }` y una fila de auditoría.
+
+**Pantalla** (`/hojas-ruta/:id`): debajo del buscador de OTs, un selector **"Agregar proyecto completo…"** con los proyectos abiertos y el botón **Agregar proyecto**; avisa cuántas paradas agregó y cuáles salteó.
+
+**Criterios:** CA-4.20 agrega las abiertas en orden y saltea cerradas y repetidas · CA-4.21 hoja en curso exige motivo y las marca EXTRA · CA-4.22 hoja finalizada 409, proyecto sin nada para agregar 400 sin cambios · CA-4.23 taller 403.
+**Pruebas:** `tests/loop4/hoja-proyecto.test.ts`, `apps/web/src/components/hojas-ruta/AgregarProyecto.test.tsx`, `scripts/prueba-hoja-proyecto.cjs`.

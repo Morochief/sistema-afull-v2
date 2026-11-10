@@ -5,7 +5,7 @@ import { auditar } from '../auditoria/service.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
 
-async function enTx<T>(fn: (tx: TransactionSql) => Promise<T>): Promise<T> {
+export async function enTx<T>(fn: (tx: TransactionSql) => Promise<T>): Promise<T> {
   try {
     return (await sql.begin(fn)) as T;
   } catch (e) {
@@ -75,7 +75,7 @@ export function crearHojaRuta(ctx: Ctx, d: { fecha: string; descripcion?: string
   });
 }
 
-async function hojaEditable(tx: TransactionSql, id: string) {
+export async function hojaEditable(tx: TransactionSql, id: string) {
   const [h] = await tx`SELECT estado FROM hoja_ruta WHERE id = ${id} FOR UPDATE`;
   if (!h) throw new ErrorApp(404, 'Hoja de ruta no encontrada');
   if (h.estado === 'FINALIZADA') throw new ErrorApp(409, 'La hoja de ruta está finalizada');

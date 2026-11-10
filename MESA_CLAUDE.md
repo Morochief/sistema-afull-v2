@@ -618,3 +618,16 @@ La primera versión del Inicio salió sin diseño previo y con un test superfici
 - `ListasPortal.test.tsx` 4/4 (con la pantalla vieja falla "rechazado").
 - `scripts/prueba-loop9.cjs` 7/7 (sin regresión) y `scripts/prueba-seguimiento-pedido.cjs` **6/6**; con la API vieja: `FALLA 4 … el cliente ve la OT "Recibido", ya no "Presupuestando"`.
 - Totales: API 184/185 (solo `anon.test.ts`, necesita Supabase), web 169/169, lint 0, tsc 0, build 0.
+
+---
+
+## 2026-11-10 — L4.E5: agregar un proyecto entero a la hoja de ruta + Gerardo admin
+
+**Pedido del usuario:** Gerardo (hermano de Juan) es admin: asigna las tareas y arma las hojas de ruta; cuando el trabajo es un proyecto, quiere agregar todas sus OTs de una vez. **Hecho en `afull-demo`:** el usuario `gerardo` pasa de `montaje` a `admin` (PATCH /api/usuarios, auditado) y su persona se llama "Gerardo (admin)".
+
+**Diseño:** `docs/LOOP_4_DISENO.md` §8 (CA-4.20 a CA-4.23). **Código:** `POST /api/hojas-ruta/:id/paradas-proyecto` (`proyecto.service.ts`, una transacción, auditado), `paradasProyectoSchema`, `AgregarProyecto.tsx` en `/hojas-ruta/:id`.
+
+**Evidencia (local):**
+- `tests/loop4/hoja-proyecto.test.ts`: antes del código 3 fallas (`→ 404`); después **4/4** (abiertas en orden al final, salteando cerrada y repetida; en curso exige motivo y marca EXTRA; finalizada 409; nada para agregar o proyecto inexistente 400 sin cambios; taller 403).
+- `AgregarProyecto.test.tsx` 4/4. `scripts/prueba-hoja-proyecto.cjs` **4/4** (admin arma hoja sin vehículo, agrega proyecto de 3 locales → "Se agregaron 3 paradas." y 1., 2., 3. en orden; repetir → aviso, sigue en 3).
+- Totales: API 188/189 (solo `anon.test.ts`, necesita Supabase), web 173/173, lint 0, tsc 0, build 0.

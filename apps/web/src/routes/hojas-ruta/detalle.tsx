@@ -13,6 +13,7 @@ import { Badge } from '../../components/ui/badge.js';
 import { Input } from '../../components/ui/input.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
 import { FotosHoja } from '../../components/hojas-ruta/FotosHoja.js';
+import { AgregarProyecto } from '../../components/hojas-ruta/AgregarProyecto.js';
 
 const selectCls = 'h-9 rounded-md border border-[#1f2937] bg-[#111318] px-2 text-sm text-neutral-100';
 
@@ -81,6 +82,7 @@ export function HojaRutaDetallePage() {
           <div className="space-y-2 border-t border-[#1f2937] pt-2">
             <Input value={buscarOT} onChange={(e) => setBuscarOT(e.target.value)} placeholder="Buscar OT por código, trabajo o cliente para agregar…" />
             {extra && <Input value={motivoExtra} onChange={(e) => setMotivoExtra(e.target.value)} placeholder="La hoja ya salió: motivo de la parada extra" />}
+            <AgregarProyecto hojaId={h.id} motivoExtra={motivoExtra} onAgregado={() => void refetch()} />
             {(ots?.items ?? []).filter((o) => o.estado !== 'TERMINADO' && o.estado !== 'CANCELADO').map((o) => (
               <button key={o.id} type="button" className="block w-full rounded px-2 py-1 text-left hover:bg-[#161922]"
                 onClick={() => void hacer(() => agregarParadaHoja(h.id, { ordenTrabajoId: o.id, motivoExtra: motivoExtra.trim() || undefined }), `Parada ${o.codigo_ot} agregada.`)}>

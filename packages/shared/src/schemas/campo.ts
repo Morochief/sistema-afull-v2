@@ -49,6 +49,12 @@ export const paradaSchema = z.object({
   motivoExtra: z.string().trim().max(1000).optional(),
 });
 
+/** Todas las OTs abiertas de un proyecto como paradas (L4.E5, docs/LOOP_4_DISENO.md §8). */
+export const paradasProyectoSchema = z.object({
+  proyectoId: z.string().uuid(),
+  motivoExtra: z.string().trim().max(1000).optional(),
+});
+
 /** Hora real de una acción cargada sin señal (la pone la cola del celular). La API la acota. */
 const ocurridaAt = z.string().datetime({ offset: true }).optional();
 

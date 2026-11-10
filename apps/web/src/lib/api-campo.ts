@@ -92,3 +92,8 @@ export const omitirParada = (id: string, motivo: string) =>
   apiFetch<{ hoja_finalizada?: boolean }>(`/api/campo/paradas/${id}/omitir`, { method: 'POST', ...json({ motivo }) });
 export const marcarAsistencia = (d: { tipo: 'ENTRADA' | 'SALIDA'; gpsLat: number; gpsLng: number; precisionM?: number; dispositivoHash: string; claveIdempotencia: string }) =>
   apiFetch<{ dentro_geocerca: boolean; distancia_m: number | null; sede: string | null }>('/api/asistencia/marcar', { method: 'POST', ...json(d) });
+
+export type ResultadoProyectoHoja = { agregadas: { id: string; codigo_ot: string }[]; salteadas: { codigo_ot: string; motivo: 'cerrada' | 'ya_esta' }[] };
+/** Todas las OTs abiertas de un proyecto como paradas (L4.E5). */
+export const agregarProyectoHoja = (id: string, d: { proyectoId: string; motivoExtra?: string }) =>
+  apiFetch<ResultadoProyectoHoja>(`/api/hojas-ruta/${id}/paradas-proyecto`, { method: 'POST', ...json(d) });
