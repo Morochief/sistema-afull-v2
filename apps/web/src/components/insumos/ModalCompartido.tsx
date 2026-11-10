@@ -54,8 +54,11 @@ export function ModalCompartido({ onCerrar }: { onCerrar: () => void }) {
         {ots.length === 0 && <p className="text-neutral-500">No tenés OTs asignadas.</p>}
         {ots.map((t) => (
           <div key={t.orden_trabajo_id} className="flex items-center gap-2">
-            <span className="flex-1 truncate text-neutral-200">{t.codigo_ot} · {t.cliente_nombre}</span>
-            <Input aria-label={`m² ${t.codigo_ot}`} inputMode="decimal" className="w-24" value={m2[t.orden_trabajo_id] ?? ''} onChange={(e) => setM2({ ...m2, [t.orden_trabajo_id]: e.target.value })} />
+            <span className="min-w-0 flex-1 truncate text-neutral-200">{t.codigo_ot} · {t.cliente_nombre}</span>
+            {/* Input se envuelve en un div w-full: sin este contenedor fijo, aplasta el nombre de la OT a 0 px. */}
+            <div className="w-24 shrink-0">
+              <Input aria-label={`m² ${t.codigo_ot}`} inputMode="decimal" placeholder="m²" value={m2[t.orden_trabajo_id] ?? ''} onChange={(e) => setM2({ ...m2, [t.orden_trabajo_id]: e.target.value })} />
+            </div>
           </div>
         ))}
         <DialogFooter>

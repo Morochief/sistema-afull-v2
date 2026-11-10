@@ -659,3 +659,11 @@ La primera versión del Inicio salió sin diseño previo y con un test superfici
 - `scripts/prueba-hoja-ruta-ot.cjs` **7/7** (Gerardo en escritorio y Edu en celular: borrador → Edu no la ve → WhatsApp con ⛔Edu⛔ y "(Cant: 3 m2)" → Activa → Edu la ve en "Para hoy" con "3 m2" → Cerrar rechazado, sigue Activa). Con el código viejo no existe la sección (falla en el paso 2).
 - Recorridos previos re-corridos: loop2 9/9 (ahora marca "Urgente" al crear la OT), loop3 9/9 y prueba-ui 15/15 (el login del comercial va a `/inicio` desde el Loop 10), loop4 7/7 (link "Salidas", "¡Salida terminada!"), inicio 6/6, reloj acumulado 5/5, hoja + proyecto 4/4.
 - Totales: API 195/196 (solo `anon.test.ts`, necesita Supabase), web 186/186, lint 0, `pnpm typecheck` 0, build 0.
+
+---
+
+## 2026-11-10 — L5.E3: en "Compartido" no se veía a qué OT era cada casillero
+
+**Error reportado por el usuario** (captura de Edu en el celular): la ventana "Material compartido entre OTs" mostraba los casilleros de m² sin el código de OT ni el cliente. Causa: `Input` va envuelto en un `div` `w-full`, que en la fila flex aplastaba el nombre a 0 px. Arreglo: el casillero va en un contenedor fijo (`w-24 shrink-0`) y el nombre con `min-w-0`; placeholder "m²".
+
+**Evidencia (local):** `scripts/prueba-compartido.cjs` (celular 375 px): con el código viejo `FALLA 2 Compartido muestra cada OT con su cliente…` (el nombre no es visible); con el arreglo **4/4** (cada OT con su cliente visible, reparte 5 m² en 2,857 / 2,143, la base suma 5). Web 186/186, lint 0, `pnpm typecheck` 0, build 0.
