@@ -40,7 +40,7 @@ const tramo = (tareaId: string, personaId: string, ini: string, fin: string | nu
   INSERT INTO tarea_intervalo (tarea_id, persona_id, hora_inicio, hora_fin, motivo_cierre, clave_idempotencia)
   VALUES (${tareaId}, ${personaId}, ${ini}::timestamptz, ${fin}::timestamptz, ${fin ? 'PAUSA' : null}, gen_random_uuid())`;
 const miTrabajo = async (cookie: string) =>
-  ((await (await req('GET', '/api/mi-trabajo', cookie)).json()) as { tareas: { id: string; segundos_acumulados: number }[] }).tareas;
+  ((await (await req('GET', '/api/mi-trabajo', cookie)).json()) as { tareas: { id: string; segundos_acumulados: number; intervalo_abierto: unknown }[] }).tareas;
 
 describe('L2.E5 — el reloj de la tarea suma lo acumulado', () => {
   it('CA-2.20: suma exacta de los tramos cerrados de esa persona en esa tarea, de cualquier día', async () => {
@@ -59,7 +59,7 @@ describe('L2.E5 — el reloj de la tarea suma lo acumulado', () => {
     await tramo(e.t1, e.yo.personaId, '2026-01-06 09:00:00-03', '2026-01-06 09:05:00-03');
     const r = await req('POST', `/api/mi-trabajo/tareas/${e.t1}/iniciar`, e.yo.cookie, { claveIdempotencia: crypto.randomUUID() });
     expect(r.status).toBe(201);
-    const t = (await miTrabajo(e.yo.cookie)).find((x) => x.id === e.t1)! as { segundos_acumulados: number; intervalo_abierto: unknown };
+    const t = (await miTrabajo(e.yo.cookie)).find((x) => x.id === e.t1)!;
     expect(t.segundos_acumulados).toBe(300);
     expect(t.intervalo_abierto).not.toBeNull();
   });

@@ -644,4 +644,4 @@ La primera versión del Inicio salió sin diseño previo y con un test superfici
 - `tests/loop2/reloj-acumulado.test.ts`: antes del arreglo 3 fallas (`expected undefined to be 725`); después **3/3** (600 + 125 s de dos días = 725; otra tarea y otra persona no suman; el tramo abierto no entra).
 - `TarjetasTrabajo.test.tsx` 3/3.
 - `scripts/prueba-reloj-acumulado.cjs` (celular 375 px): con el código viejo `FALLA 4 reanuda … volvió a cero: marca 1 s`; con el nuevo **5/5**.
-- Totales: API 191/192 (solo `anon.test.ts`, necesita Supabase), web 176/176, lint 0, tsc 0, build 0.
+- Totales: API 191/192 (solo `anon.test.ts`, necesita Supabase), web 176/176, lint 0, `pnpm typecheck` 0 (incluye `tests/tsconfig.json`; el primer push falló en CI por un cast en el test, corregido), build 0.
