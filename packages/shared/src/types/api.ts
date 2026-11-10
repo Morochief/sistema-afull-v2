@@ -210,6 +210,8 @@ export type MiTrabajoTarea = {
   descripcion: string;
   estado: EstadoTarea;
   minutos_trabajados_hoy: number;
+  /** Segundos de los tramos CERRADOS de esta persona en esta tarea, de todos los días (L2.E5). */
+  segundos_acumulados: number;
   intervalo_abierto: {
     id: string;
     hora_inicio: string;

@@ -359,6 +359,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 | Fecha | Commit | Resumen | Verificación |
 | :--- | :--- | :--- | :--- |
+| 2026-11-10 | L2.E5 | El reloj de la tarea suma lo acumulado al reanudar (antes volvía a cero en pantalla; las horas no se perdían). `segundos_acumulados` en `/api/mi-trabajo`. | API 3/3, web 3/3, recorrido 5/5 (con el código viejo falla en "volvió a cero"); totales API 191/192 (anon), web 176/176 |
 | 2026-11-10 | L4.E5 | Agregar un proyecto entero a la hoja de ruta (`POST /api/hojas-ruta/:id/paradas-proyecto`); en `afull-demo`, `gerardo` pasa a admin (asigna tareas y arma hojas). | API 4/4, web 4/4, recorrido 4/4; totales API 188/189 (anon), web 173/173 |
 | 2026-11-09 | `97effd4`…`0d52b5f` | Usuarios y "Mi clave"; menú plegable en el celular; tablero de Inicio (`/api/inicio`); rentabilidad coherente; ajustes de celular y portal. Vercel pasa a `afull-demo` con datos de demo. | Vitest API (inicio 1/1, costeo), web 155/155, lint y tipos en verde; recorrido en Vercel escritorio y celular |
 | 2026-11-02 | `2352a53` | Seed idempotente del primer admin (`scripts/seed-admin.ts`, `seed.ts`, `seed.test.ts`) y bloqueo real `42501` en `anon.test.ts`. | 25/25 tests en `dev`, CI Run `#4` green |

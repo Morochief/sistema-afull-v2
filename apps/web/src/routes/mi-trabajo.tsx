@@ -33,7 +33,7 @@ export function MiTrabajoPage() {
     return crearSincronizadorReloj(data.servidor_ahora, horaRecibidoMs.current);
   }, [data?.servidor_ahora]);
 
-  const [segundosActivos, setSegundosActivos] = useState(0);
+  const [segundosTramo, setSegundosTramo] = useState(0);
 
   const tareaEnCurso = useMemo(() => {
     if (!data?.tareas) return null;
@@ -42,11 +42,11 @@ export function MiTrabajoPage() {
 
   useEffect(() => {
     if (!tareaEnCurso?.intervalo_abierto?.hora_inicio || !sincReloj) {
-      setSegundosActivos(0);
+      setSegundosTramo(0);
       return;
     }
     const tick = () => {
-      setSegundosActivos(
+      setSegundosTramo(
         sincReloj.segundosTranscurridos(tareaEnCurso.intervalo_abierto!.hora_inicio)
       );
     };
@@ -188,7 +188,7 @@ export function MiTrabajoPage() {
       {tareaEnCurso && (
         <TarjetaTareaActiva
           tarea={tareaEnCurso}
-          segundosActivos={segundosActivos}
+          segundosTramo={segundosTramo}
           cargando={cargandoAccion}
           onPausar={() => setTareaPausarId(tareaEnCurso.id)}
           onFinalizar={() => setTareaFinalizarId(tareaEnCurso.id)}

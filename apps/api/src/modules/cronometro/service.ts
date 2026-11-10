@@ -68,6 +68,11 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
           0
         ) AS minutos_trabajados_hoy,
         (
+          SELECT coalesce(floor(sum(EXTRACT(EPOCH FROM (i.hora_fin - i.hora_inicio)))), 0)::int
+          FROM tarea_intervalo i
+          WHERE i.tarea_id = t.id AND i.persona_id = ${persona.id} AND i.hora_fin IS NOT NULL
+        ) AS segundos_acumulados,
+        (
           SELECT json_build_object('id', i.id, 'hora_inicio', i.hora_inicio)
           FROM tarea_intervalo i
           WHERE i.tarea_id = t.id AND i.persona_id = ${persona.id} AND i.hora_fin IS NULL

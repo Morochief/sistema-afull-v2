@@ -631,3 +631,17 @@ La primera versión del Inicio salió sin diseño previo y con un test superfici
 - `tests/loop4/hoja-proyecto.test.ts`: antes del código 3 fallas (`→ 404`); después **4/4** (abiertas en orden al final, salteando cerrada y repetida; en curso exige motivo y marca EXTRA; finalizada 409; nada para agregar o proyecto inexistente 400 sin cambios; taller 403).
 - `AgregarProyecto.test.tsx` 4/4. `scripts/prueba-hoja-proyecto.cjs` **4/4** (admin arma hoja sin vehículo, agrega proyecto de 3 locales → "Se agregaron 3 paradas." y 1., 2., 3. en orden; repetir → aviso, sigue en 3).
 - Totales: API 188/189 (solo `anon.test.ts`, necesita Supabase), web 173/173, lint 0, tsc 0, build 0.
+
+---
+
+## 2026-11-10 — L2.E5: el reloj de la tarea suma lo acumulado
+
+**Error reportado por el usuario** (preparando la demo de Edu): al poner "Pausa breve" y reanudar, el reloj volvía a cero. Causa: la tarjeta mostraba solo el tramo abierto. Las horas no se perdían (cada tramo queda en `tarea_intervalo` y suma al costo).
+
+**Diseño:** `docs/LOOP_2_DISENO.md` §9 (CA-2.20 a CA-2.22). **Arreglo:** `GET /api/mi-trabajo` devuelve `segundos_acumulados` por tarea (tramos cerrados de esa persona, todos los días, sin redondear); la tarjeta en curso muestra "Total en esta tarea" (acumulado + tramo) y "Este tramo"; la pausada, "Llevás …".
+
+**Evidencia (local):**
+- `tests/loop2/reloj-acumulado.test.ts`: antes del arreglo 3 fallas (`expected undefined to be 725`); después **3/3** (600 + 125 s de dos días = 725; otra tarea y otra persona no suman; el tramo abierto no entra).
+- `TarjetasTrabajo.test.tsx` 3/3.
+- `scripts/prueba-reloj-acumulado.cjs` (celular 375 px): con el código viejo `FALLA 4 reanuda … volvió a cero: marca 1 s`; con el nuevo **5/5**.
+- Totales: API 191/192 (solo `anon.test.ts`, necesita Supabase), web 176/176, lint 0, tsc 0, build 0.

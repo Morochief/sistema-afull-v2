@@ -116,3 +116,14 @@ La persona actora es siempre la del usuario de la sesión. Si el usuario no tien
 2. **L2.E2:** tareas en OT + cronómetro + `GET /api/mi-trabajo` + tests de CA-0.3, 2.1, 2.2, 2.3 y 2.5.
 3. **L2.E3:** módulo `live` (servidor y `lib/live.ts`) + `GET /api/live/estado` + CA-2.6, más las verificaciones de §5.
 4. **L2.E4:** frontend (Mi trabajo, tareas en OT, En vivo, Personas) + CA-2.7 + deploy + **CA-2.9 en Vercel**. Después, actualizar `TRASPASO.md` (el cierre lo confirma el usuario).
+
+## 9. L2.E5 — El reloj de la tarea suma lo acumulado (2026-11-10)
+**Error reportado por el usuario:** al pausar y reanudar, el reloj de la tarea vuelve a cero. Las horas no se perdían (cada tramo queda en `tarea_intervalo` y suma al costo), pero la pantalla mostraba solo el tramo abierto.
+
+**Regla:** `GET /api/mi-trabajo` devuelve por tarea `segundos_acumulados` = suma exacta (en segundos) de los tramos **cerrados** de esa persona en esa tarea, **de todos los días** (una tarea puede durar varios días). El tramo abierto no entra: lo suma el navegador.
+- Tarjeta en curso: muestra `segundos_acumulados + (ahora_corregido − hora_inicio del tramo abierto)` como **"Total en esta tarea"**, y debajo, el tramo actual.
+- Tarjeta pausada o pendiente con tiempo: **"Llevás hh:mm:ss"**.
+- El "Hoy N min" de arriba no cambia (sigue siendo lo trabajado hoy en todas las tareas).
+
+**Criterios:** CA-2.20 la API suma solo los tramos cerrados de esa persona en esa tarea, de cualquier día, sin redondear · CA-2.21 al reanudar, el reloj arranca desde lo acumulado, no desde cero · CA-2.22 la tarjeta pausada muestra lo que lleva.
+**Pruebas:** `tests/loop2/reloj-acumulado.test.ts`, `apps/web/src/components/cronometro/TarjetasTrabajo.test.tsx`, `scripts/prueba-reloj-acumulado.cjs`.

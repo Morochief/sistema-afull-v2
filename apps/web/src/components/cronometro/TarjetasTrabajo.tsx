@@ -7,19 +7,21 @@ import { BotonSubirDiseno } from '../disenos/BotonSubirDiseno.js';
 import { AccionesMaterial } from '../insumos/AccionesMaterial.js';
 import { MuestrasTarea } from '../ots/MuestrasTarea.js';
 
+/** Reloj de la tarea (L2.E5): lo acumulado en tramos cerrados más el tramo abierto, que corre en el navegador. */
 export function TarjetaTareaActiva({
   tarea,
-  segundosActivos,
+  segundosTramo,
   cargando,
   onPausar,
   onFinalizar,
 }: {
   tarea: MiTrabajoTarea;
-  segundosActivos: number;
+  segundosTramo: number;
   cargando: boolean;
   onPausar: () => void;
   onFinalizar: () => void;
 }) {
+  const acumulado = tarea.segundos_acumulados ?? 0;
   return (
     <div className="mb-6 p-4 rounded-md border border-[#ea580c] bg-[#ea580c]/5 shadow-lg">
       <div className="flex items-center justify-between mb-2">
@@ -29,11 +31,13 @@ export function TarjetaTareaActiva({
       <h2 className="text-sm font-bold text-white mb-1">{tarea.ot_titulo}</h2>
       <p className="text-xs text-neutral-300 mb-3">{tarea.descripcion}</p>
 
-      <div className="flex items-center justify-center gap-2 py-4 my-2 rounded bg-[#090a0f] border border-[#1f2937]">
-        <Clock className="h-5 w-5 text-[#ea580c] animate-pulse" />
-        <span className="font-mono text-2xl font-bold text-white">
-          {formatearTiempoTranscurrido(segundosActivos)}
-        </span>
+      <div className="flex flex-col items-center py-3 my-2 rounded bg-[#090a0f] border border-[#1f2937]">
+        <span className="text-[11px] uppercase tracking-wider text-neutral-500">Total en esta tarea</span>
+        <div className="flex items-center gap-2">
+          <Clock className="h-5 w-5 text-[#ea580c] animate-pulse" />
+          <span className="font-mono text-2xl font-bold text-white">{formatearTiempoTranscurrido(acumulado + segundosTramo)}</span>
+        </div>
+        {acumulado > 0 && <span className="text-[11px] text-neutral-400">Este tramo: {formatearTiempoTranscurrido(segundosTramo)}</span>}
       </div>
 
       <div className="grid grid-cols-2 gap-3 mt-4">
@@ -83,6 +87,11 @@ export function TarjetaTareaAsignada({
       </div>
       <h4 className="text-xs font-semibold text-white mb-1">{tarea.ot_titulo}</h4>
       <p className="text-xs text-neutral-300 mb-3 line-clamp-2">{tarea.descripcion}</p>
+      {(tarea.segundos_acumulados ?? 0) > 0 && (
+        <p className="mb-2 flex items-center gap-1.5 text-xs text-amber-300">
+          <Clock className="h-3.5 w-3.5" /> Llevás {formatearTiempoTranscurrido(tarea.segundos_acumulados)}
+        </p>
+      )}
 
       <Button
         type="button"
