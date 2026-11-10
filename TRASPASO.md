@@ -186,6 +186,8 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 
 | `0019_hoja_ruta_ot` | (Loop 11) Hoja de ruta por OT: `orden_trabajo.hoja_estado` (BORRADOR/ACTIVA/CERRADA, default ACTIVA para lo existente), `hoja_notas`, `hoja_activada_at`, `hoja_whatsapp_at`, `hoja_cerrada_at`; plan de la tarea: `fecha_trabajo`, `cantidad` (> 0), `unidad`, `minutos_estimados` (1–10000); índice por persona y día. |
 
+| `0020_tanda_compartida` | (Loop 12) `tanda` y `tanda_tarea` (inmutables), `tarea_intervalo.tanda_id` (inmutable por trigger) y vista `v_mano_obra` (`security_invoker`): mano de obra por tramo cerrado y tarea, repartida por m² en las tandas. Toda consulta de costo de mano de obra lee de la vista. |
+
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
 ---
@@ -351,6 +353,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al bloqueo (2026-11-03, decisión del usuario):** se importa el catálogo real de insumos en `afull-dev` (solo dev). `afull-prod` y el resto de los datos reales siguen bloqueados.
 
+0. **Loop 12 (tanda compartida) en `main` con `0020`.** Siguen 13 a 17.
 0. **Loops 12 a 17 diseñados (2026-11-10, decisión del usuario, en este orden):** 12 horas de máquina compartidas (`docs/LOOP_12_HORAS_COMPARTIDAS_DISENO.md`), 13 corregir y cargar horas a mano, 14 panel de Gerardo, 15 historial de terminadas del operario, 16 asistencia de cuadrilla y marcación remota, 17 constancia de entrega. Cada diseño tiene sus supuestos a confirmar. Después: reportes exportables (planilla de horas para pagar y pre-factura). Loop 11 y `0019` ya en `afull-dev` y `afull-demo`.
 0. **Después de la demo (2026-11-09):** `search_path` fijo en las 14 funciones de trigger; prueba en celulares reales; backup de `afull-demo` si se sigue usando; Vercel Pro y Supabase Pro antes de operar con datos reales; sincronizar `D:\sistema-afull`.
 0. **L4.E3 cerrada en `afull-dev` (2026-11-09):** commit `6ad91b3`, CI verde, `0018` aplicada, `SUPABASE_SECRET_KEY` cargada en Vercel por el usuario, subida real verificada. Siguen: menú lateral plegable en el celular; `search_path` fijo en las funciones de trigger (aviso del linter de Supabase, 14 funciones); prueba en celulares reales.
@@ -364,6 +367,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 | Fecha | Commit | Resumen | Verificación |
 | :--- | :--- | :--- | :--- |
+| 2026-11-10 | Loop 12 | Tanda compartida: un reloj para varias OTs; el tiempo de máquina se reparte por m² (`v_mano_obra`). Migración `0020`. | API 7/7, web 4/4, recorrido 6/6; totales API 202/203 (anon), web 190/190 |
 | 2026-11-10 | Loop 11 | Hoja de ruta de Gerardo en cada OT: Borrador → Activa (o por WhatsApp) → Cerrada; tareas con día, cantidad y tiempo; "Mi trabajo" por día; "Hojas de ruta" de la camioneta pasa a "Salidas". Migración `0019`. | API 4/4, web 10/10, recorrido 7/7; totales API 195/196 (anon), web 186/186 |
 | 2026-11-10 | L2.E5 | El reloj de la tarea suma lo acumulado al reanudar (antes volvía a cero en pantalla; las horas no se perdían). `segundos_acumulados` en `/api/mi-trabajo`. | API 3/3, web 3/3, recorrido 5/5 (con el código viejo falla en "volvió a cero"); totales API 191/192 (anon), web 176/176 |
 | 2026-11-10 | L4.E5 | Agregar un proyecto entero a la hoja de ruta (`POST /api/hojas-ruta/:id/paradas-proyecto`); en `afull-demo`, `gerardo` pasa a admin (asigna tareas y arma hojas). | API 4/4, web 4/4, recorrido 4/4; totales API 188/189 (anon), web 173/173 |

@@ -82,9 +82,12 @@ export async function listarTareasOT(otId: string): Promise<TareaFila[]> {
         t.estado,
         coalesce(
           (
-            SELECT round(sum(EXTRACT(EPOCH FROM (coalesce(i.hora_fin, now()) - i.hora_inicio)) / 60)::numeric, 0)::int
-            FROM tarea_intervalo i
-            WHERE i.tarea_id = t.id
+            -- Cerrados con su parte de tanda (v_mano_obra) + el tramo abierto propio.
+            SELECT round(coalesce(sum(v.segundos * v.peso / v.peso_total) / 60, 0)::numeric, 0)::int
+              + coalesce((SELECT round(sum(EXTRACT(EPOCH FROM now() - i.hora_inicio)) / 60)::int
+                          FROM tarea_intervalo i WHERE i.tarea_id = t.id AND i.hora_fin IS NULL), 0)
+            FROM v_mano_obra v
+            WHERE v.tarea_id = t.id
           ),
           0
         ) AS minutos_trabajados,

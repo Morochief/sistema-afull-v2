@@ -4,6 +4,7 @@ import { publicarLive } from '../live/publicar.js';
 import { puedeTransicionarTarea, type MotivoCierreIntervalo, type EstadoTarea } from '@afull/shared';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
+import { exigirNoSecundaria, moverSecundarias } from './tanda.service.js';
 
 export async function pausarTarea(ctx: Ctx, tareaId: string, motivo: MotivoCierreIntervalo, claveIdempotencia: string) {
   try {
@@ -25,6 +26,7 @@ export async function pausarTarea(ctx: Ctx, tareaId: string, motivo: MotivoCierr
       if (tarea.persona_asignada_id !== persona.id) {
         throw new ErrorApp(403, 'Solo puedes operar tareas asignadas a tu persona');
       }
+      const tanda = await exigirNoSecundaria(tx, tareaId);
       // Reintento (red, doble toque): si ya está en el estado pedido, responder igual sin repetir nada.
       if (tarea.estado === 'PAUSADA') return { tareaId, estado: 'PAUSADA', repetida: true };
       if (!puedeTransicionarTarea(tarea.estado as EstadoTarea, 'PAUSADA')) {
@@ -40,6 +42,7 @@ export async function pausarTarea(ctx: Ctx, tareaId: string, motivo: MotivoCierr
       await tx`
         UPDATE tarea SET estado = 'PAUSADA', updated_at = now() WHERE id = ${tareaId}
       `;
+      if (tanda) await moverSecundarias(tx, tanda, 'PAUSADA', ctx.usuarioId);
 
       await tx`
         INSERT INTO tarea_evento (tarea_id, estado_anterior, estado_nuevo, autor_id, comentario)
@@ -88,6 +91,7 @@ export async function finalizarTarea(ctx: Ctx, tareaId: string, comentario?: str
       if (tarea.persona_asignada_id !== persona.id) {
         throw new ErrorApp(403, 'Solo puedes operar tareas asignadas a tu persona');
       }
+      const tanda = await exigirNoSecundaria(tx, tareaId);
       // Reintento (red, doble toque): si ya está en el estado pedido, responder igual sin repetir nada.
       if (tarea.estado === 'LISTO') return { tareaId, estado: 'LISTO', repetida: true };
       if (!puedeTransicionarTarea(tarea.estado as EstadoTarea, 'LISTO')) {
@@ -103,6 +107,7 @@ export async function finalizarTarea(ctx: Ctx, tareaId: string, comentario?: str
       await tx`
         UPDATE tarea SET estado = 'LISTO', updated_at = now() WHERE id = ${tareaId}
       `;
+      if (tanda) await moverSecundarias(tx, tanda, 'LISTO', ctx.usuarioId);
 
       await tx`
         INSERT INTO tarea_evento (tarea_id, estado_anterior, estado_nuevo, autor_id, comentario)

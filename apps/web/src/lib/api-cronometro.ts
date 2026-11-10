@@ -42,3 +42,8 @@ export async function finalizarTarea(
     body: JSON.stringify(datos),
   });
 }
+
+/** Loop 12: arranca una tanda de máquina para varias OTs (el tiempo se reparte por m²). La primera es la principal. */
+export async function iniciarTanda(tareas: { tareaId: string; m2Piezas: number }[]): Promise<{ tandaId: string; tareaId: string }> {
+  return apiFetch('/api/mi-trabajo/tanda', { method: 'POST', body: JSON.stringify({ tareas, claveIdempotencia: crypto.randomUUID() }) });
+}

@@ -5,6 +5,7 @@ import { puedeTransicionarTarea, esEstadoTareaFinal, type EstadoTarea, type Tare
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import { verificarUpdatedAt, esperarAvanceReloj } from '../clientes/service.js';
 import type { Ctx } from '../clientes/service.js';
+import { tandaAbiertaDe } from '../cronometro/tanda.service.js';
 
 export type PatchTareaInput = {
   descripcion?: string;
@@ -42,6 +43,9 @@ export async function editarTarea(ctx: Ctx, tareaId: string, d: PatchTareaInput)
         throw new ErrorApp(409, 'La tarea está en curso: el operario debe pausarla antes de reasignarla');
       }
 
+      if (d.personaAsignadaId !== undefined && d.personaAsignadaId !== tarea.persona_asignada_id && (await tandaAbiertaDe(tx, tareaId))) {
+        throw new ErrorApp(409, 'La tarea está en una tanda compartida: no se puede reasignar hasta que se finalice');
+      }
       if (d.personaAsignadaId) {
         const [p] = await tx<{ activo: boolean }[]>`SELECT activo FROM persona WHERE id = ${d.personaAsignadaId}`;
         if (!p?.activo) throw new ErrorApp(400, 'Persona asignada inexistente o inactiva');
@@ -99,6 +103,7 @@ export async function cancelarTarea(ctx: Ctx, tareaId: string, d: { desde: Estad
       if (!puedeTransicionarTarea(tarea.estado as EstadoTarea, 'CANCELADA')) {
         throw new ErrorApp(400, `No se puede cancelar una tarea en estado ${tarea.estado}`);
       }
+      if (await tandaAbiertaDe(tx, tareaId)) throw new ErrorApp(409, 'La tarea está en una tanda compartida: el operario tiene que finalizarla primero');
 
       await tx`
         UPDATE tarea_intervalo

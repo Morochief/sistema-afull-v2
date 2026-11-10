@@ -19,7 +19,8 @@ export function margenSobreVenta(ventaGs: number | null, costoGs: number): numbe
 
 /**
  * Costo real de una OT a la fecha, calculado en Postgres con NUMERIC exacto:
- * - Mano de obra: cada intervalo cerrado × la tarifa de la persona vigente el día (Asunción) en que empezó.
+ * - Mano de obra: cada intervalo cerrado × la tarifa de la persona vigente el día (Asunción) en que empezó;
+ *   los de una tanda compartida, por la fracción de m² de cada OT (v_mano_obra, Loop 12).
  * - Material: consumos con su costo congelado (las correcciones restan).
  * - Km: cada viaje cerrado de una hoja de ruta se reparte en partes iguales entre las OTs con parada no omitida.
  * Cada componente se redondea UNA vez a guaraníes; el total es la suma de los componentes redondeados.
@@ -27,18 +28,19 @@ export function margenSobreVenta(ventaGs: number | null, costoGs: number): numbe
 export async function calcularCosteo(q: Q, otId: string): Promise<Costeo> {
   const mano = await q`
     SELECT p.nombre AS persona, coalesce(tt.nombre, t.tipo) AS proceso,
-           sum(extract(epoch FROM i.hora_fin - i.hora_inicio) / 3600)::text AS horas,
+           sum(v.segundos * v.peso / v.peso_total / 3600)::text AS horas,
            -- Si la tarifa cambió en el medio de la OT no hay una sola: se muestra vacía (el costo igual es exacto).
            CASE WHEN count(DISTINCT tf.tarifa_hora_gs) = 1 THEN max(tf.tarifa_hora_gs)::text END AS tarifa,
-           coalesce(sum(extract(epoch FROM i.hora_fin - i.hora_inicio) / 3600 * tf.tarifa_hora_gs), 0)::text AS costo,
+           coalesce(sum(v.segundos * v.peso / v.peso_total / 3600 * tf.tarifa_hora_gs), 0)::text AS costo,
            bool_or(tf.id IS NULL) AS sin_tarifa
-    FROM tarea_intervalo i
-    JOIN tarea t ON t.id = i.tarea_id
-    JOIN persona p ON p.id = i.persona_id
+    -- v_mano_obra: tramos cerrados; los de una tanda compartida se reparten por m² entre sus OTs (Loop 12).
+    FROM v_mano_obra v
+    JOIN tarea t ON t.id = v.tarea_id
+    JOIN persona p ON p.id = v.persona_id
     LEFT JOIN tipo_tarea tt ON tt.codigo = t.tipo
-    LEFT JOIN tarifa_persona tf ON tf.persona_id = i.persona_id
-      AND (i.hora_inicio AT TIME ZONE 'America/Asuncion')::date BETWEEN tf.fecha_inicio AND coalesce(tf.fecha_fin, 'infinity'::date)
-    WHERE t.orden_trabajo_id = ${otId} AND i.hora_fin IS NOT NULL
+    LEFT JOIN tarifa_persona tf ON tf.persona_id = v.persona_id
+      AND (v.hora_inicio AT TIME ZONE 'America/Asuncion')::date BETWEEN tf.fecha_inicio AND coalesce(tf.fecha_fin, 'infinity'::date)
+    WHERE v.orden_trabajo_id = ${otId}
     GROUP BY p.nombre, coalesce(tt.nombre, t.tipo)
     ORDER BY p.nombre, 2
   `;
@@ -46,8 +48,10 @@ export async function calcularCosteo(q: Q, otId: string): Promise<Costeo> {
     q`SELECT coalesce(sum(cantidad * costo_unitario_gs), 0)::text AS total,
              coalesce(sum(cantidad * costo_unitario_gs) FILTER (WHERE es_desperdicio), 0)::text AS desperdicio
       FROM consumo_insumo WHERE orden_trabajo_id = ${otId}`,
-    q`SELECT count(*)::int AS abiertos FROM tarea_intervalo i JOIN tarea t ON t.id = i.tarea_id
-      WHERE t.orden_trabajo_id = ${otId} AND i.hora_fin IS NULL`,
+    q`SELECT count(*)::int AS abiertos FROM tarea_intervalo i
+      WHERE i.hora_fin IS NULL AND EXISTS (
+        SELECT 1 FROM tarea t LEFT JOIN tanda_tarea tt ON tt.tanda_id = i.tanda_id
+        WHERE t.id = coalesce(tt.tarea_id, i.tarea_id) AND t.orden_trabajo_id = ${otId})`,
     q`
       WITH v AS (
         SELECT vi.id, (vi.hora_inicio AT TIME ZONE 'America/Asuncion')::date::text AS fecha, ve.chapa,

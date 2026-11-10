@@ -231,6 +231,8 @@ export type MiTrabajoTarea = {
     id: string;
     hora_inicio: string;
   } | null;
+  /** Loop 12: si es la tarea principal de una tanda abierta, las tareas que reparte (la principal primero). */
+  tanda: { id: string; tareas: { tarea_id: string; orden_trabajo_id: string; codigo_ot: string; cliente_nombre: string; m2: number }[] } | null;
   updated_at: string;
 };
 

@@ -11,6 +11,7 @@ import {
 } from '@afull/shared';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
+import { exigirNoSecundaria, exigirOTsAbiertas, moverSecundarias, tandaAbiertaDe } from './tanda.service.js';
 
 export async function obtenerPersonaActiva(txOrSql: typeof sql, usuarioId: string) {
   const [u] = await txOrSql<{ persona_id: string | null }[]>`
@@ -78,6 +79,11 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
           WHERE i.tarea_id = t.id AND i.persona_id = ${persona.id} AND i.hora_fin IS NULL
         ) AS intervalo_abierto,
         t.fecha_trabajo::text AS fecha_trabajo, t.cantidad::float8 AS cantidad, t.unidad, t.minutos_estimados,
+        (SELECT json_build_object('id', ta.id, 'tareas', (
+           SELECT json_agg(json_build_object('tarea_id', x.tarea_id, 'orden_trabajo_id', o2.id, 'codigo_ot', o2.codigo_ot, 'cliente_nombre', c2.nombre, 'm2', x.m2_piezas::float8) ORDER BY x.orden)
+           FROM tanda_tarea x JOIN tarea t2 ON t2.id = x.tarea_id JOIN orden_trabajo o2 ON o2.id = t2.orden_trabajo_id JOIN cliente c2 ON c2.id = o2.cliente_id
+           WHERE x.tanda_id = ta.id))
+         FROM tanda ta WHERE ta.tarea_principal_id = t.id ORDER BY ta.created_at DESC LIMIT 1) AS tanda,
         t.updated_at
       FROM tarea t
       JOIN orden_trabajo ot ON ot.id = t.orden_trabajo_id
@@ -86,6 +92,9 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
         AND t.estado NOT IN ('LISTO', 'CANCELADA')
         AND (t.estado = 'EN_CURSO' OR ot.estado NOT IN ('TERMINADO', 'CANCELADO'))
         AND (t.estado = 'EN_CURSO' OR ot.hoja_estado <> 'BORRADOR')
+        -- Las secundarias de una tanda abierta se ven dentro de la tarjeta de la principal (Loop 12).
+        AND NOT EXISTS (SELECT 1 FROM tanda_tarea x JOIN tanda ta ON ta.id = x.tanda_id JOIN tarea p ON p.id = ta.tarea_principal_id
+                        WHERE x.tarea_id = t.id AND ta.tarea_principal_id <> t.id AND p.estado NOT IN ('LISTO', 'CANCELADA'))
       ORDER BY
         CASE WHEN t.estado = 'EN_CURSO' THEN 0 ELSE 1 END,
         t.fecha_trabajo NULLS LAST,
@@ -152,6 +161,8 @@ export async function iniciarTarea(ctx: Ctx, tareaId: string, claveIdempotencia:
       if (!puedeTransicionarTarea(tarea.estado as EstadoTarea, 'EN_CURSO')) {
         throw new ErrorApp(400, `No se puede iniciar una tarea en estado ${tarea.estado}`);
       }
+      const tanda = await exigirNoSecundaria(tx, tareaId);
+      if (tanda) await exigirOTsAbiertas(tx, tanda);
 
       const [intervaloAbierto] = await tx<{ id: string; tarea_id: string }[]>`
         SELECT id, tarea_id FROM tarea_intervalo WHERE persona_id = ${persona.id} AND hora_fin IS NULL FOR UPDATE
@@ -173,12 +184,14 @@ export async function iniciarTarea(ctx: Ctx, tareaId: string, claveIdempotencia:
           INSERT INTO tarea_evento (tarea_id, estado_anterior, estado_nuevo, autor_id, comentario)
           VALUES (${intervaloAbierto.tarea_id}, 'EN_CURSO', 'PAUSADA', ${ctx.usuarioId}, 'Auto-pausa por cambio de tarea')
         `;
+        const otraTanda = await tandaAbiertaDe(tx, intervaloAbierto.tarea_id);
+        if (otraTanda) await moverSecundarias(tx, otraTanda, 'PAUSADA', ctx.usuarioId);
         autoPausadaTareaId = intervaloAbierto.tarea_id;
       }
 
       const [nuevoIntervalo] = await tx<{ id: string; hora_inicio: Date }[]>`
-        INSERT INTO tarea_intervalo (tarea_id, persona_id, hora_inicio, clave_idempotencia)
-        VALUES (${tareaId}, ${persona.id}, clock_timestamp(), ${claveIdempotencia})
+        INSERT INTO tarea_intervalo (tarea_id, persona_id, hora_inicio, clave_idempotencia, tanda_id)
+        VALUES (${tareaId}, ${persona.id}, clock_timestamp(), ${claveIdempotencia}, ${tanda?.id ?? null})
         RETURNING id, hora_inicio
       `;
 
@@ -190,6 +203,7 @@ export async function iniciarTarea(ctx: Ctx, tareaId: string, claveIdempotencia:
         INSERT INTO tarea_evento (tarea_id, estado_anterior, estado_nuevo, autor_id, comentario)
         VALUES (${tareaId}, ${tarea.estado}, 'EN_CURSO', ${ctx.usuarioId}, NULL)
       `;
+      if (tanda) await moverSecundarias(tx, tanda, 'EN_CURSO', ctx.usuarioId);
 
       await auditar(
         {

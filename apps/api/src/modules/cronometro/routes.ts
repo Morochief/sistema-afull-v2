@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { requireSesion, requireAlgunaCapacidad } from '../auth/middleware.js';
 import { obtenerMiTrabajo, iniciarTarea } from './service.js';
 import { pausarTarea, finalizarTarea } from './mutaciones.service.js';
-import { iniciarTareaSchema, pausarTareaSchema, finalizarTareaSchema } from '@afull/shared';
+import { iniciarTareaSchema, pausarTareaSchema, finalizarTareaSchema, tandaSchema } from '@afull/shared';
+import { crearTanda } from './tanda.service.js';
 import { ipDe } from '../../lib/ip.js';
 import type { Ctx } from '../clientes/service.js';
 
@@ -19,6 +20,13 @@ export const cronometroRoutes = new Hono()
     const body = iniciarTareaSchema.parse(await c.req.json().catch(() => null));
     const r = await iniciarTarea(ctxDe(c), id, body.claveIdempotencia);
     return c.json(r, r.esIdempotente ? 200 : 201);
+  })
+  // Loop 12: crea la tanda y arranca el reloj sobre la tarea principal (misma clave: reintentos seguros).
+  .post('/tanda', async (c) => {
+    const body = tandaSchema.parse(await c.req.json().catch(() => null));
+    const t = await crearTanda(ctxDe(c), body.tareas, body.claveIdempotencia);
+    await iniciarTarea(ctxDe(c), t.tareaId, body.claveIdempotencia);
+    return c.json(t, t.repetida ? 200 : 201);
   })
   .post('/tareas/:id/pausar', async (c) => {
     const id = z.string().uuid().parse(c.req.param('id'));

@@ -59,6 +59,18 @@ export const pausarTareaSchema = z.object({
   claveIdempotencia: z.string().uuid(),
 });
 
+/** Procesos de máquina: tienen Merma, Compartido y Tanda compartida (Loop 5 y Loop 12). */
+export const TIPOS_CON_MERMA = ['TALLER_IMPRESION', 'PLOTEO', 'TALLER_CORTE', 'REFILADO'] as const;
+
+/** Loop 12: una tanda de máquina para varias OTs; el tiempo se reparte por m² de piezas. */
+export const tandaSchema = z.object({
+  tareas: z
+    .array(z.object({ tareaId: z.string().uuid(), m2Piezas: z.number().positive().max(10000) }))
+    .min(2, 'Una tanda necesita al menos 2 tareas')
+    .max(10),
+  claveIdempotencia: z.string().uuid(),
+});
+
 export const finalizarTareaSchema = z.object({
   comentario: z.string().trim().max(1000).optional(),
   claveIdempotencia: z.string().uuid(),

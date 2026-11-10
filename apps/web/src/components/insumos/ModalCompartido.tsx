@@ -18,7 +18,9 @@ import { BuscadorInsumo } from './BuscadorInsumo.js';
 export function ModalCompartido({ onCerrar }: { onCerrar: () => void }) {
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ['mi-trabajo'], queryFn: obtenerMiTrabajo });
-  const ots = [...new Map((data?.tareas ?? []).map((t) => [t.orden_trabajo_id, t])).values()];
+  // Las OTs de las tareas propias, más las de una tanda en marcha (sus tarjetas no se muestran aparte, Loop 12).
+  const deTandas = (data?.tareas ?? []).flatMap((t) => t.tanda?.tareas ?? []);
+  const ots = [...new Map([...(data?.tareas ?? []), ...deTandas].map((t) => [t.orden_trabajo_id, { orden_trabajo_id: t.orden_trabajo_id, codigo_ot: t.codigo_ot, cliente_nombre: t.cliente_nombre }])).values()];
   const [insumo, setInsumo] = useState<Insumo | null>(null);
   const [total, setTotal] = useState('');
   const [m2, setM2] = useState<Record<string, string>>({});

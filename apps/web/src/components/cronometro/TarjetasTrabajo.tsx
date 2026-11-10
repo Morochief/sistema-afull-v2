@@ -7,6 +7,7 @@ import { BotonSubirDiseno } from '../disenos/BotonSubirDiseno.js';
 import { AccionesMaterial } from '../insumos/AccionesMaterial.js';
 import { MuestrasTarea } from '../ots/MuestrasTarea.js';
 import { resumenPlan } from '../../lib/plan-tarea.js';
+import { EtiquetaTanda } from './EtiquetaTanda.js';
 
 /** Reloj de la tarea (L2.E5): lo acumulado en tramos cerrados más el tramo abierto, que corre en el navegador. */
 export function TarjetaTareaActiva({
@@ -32,6 +33,7 @@ export function TarjetaTareaActiva({
       <h2 className="text-sm font-bold text-white mb-1">{tarea.ot_titulo}</h2>
       <p className="text-xs text-neutral-300 mb-1 whitespace-pre-wrap">{tarea.descripcion}</p>
       {resumenPlan(tarea) && <p className="mb-3 text-[11px] font-medium text-neutral-200">{resumenPlan(tarea)}</p>}
+      <EtiquetaTanda tarea={tarea} />
 
       <div className="flex flex-col items-center py-3 my-2 rounded bg-[#090a0f] border border-[#1f2937]">
         <span className="text-[11px] uppercase tracking-wider text-neutral-500">Total en esta tarea</span>
@@ -90,6 +92,7 @@ export function TarjetaTareaAsignada({
       <h4 className="text-xs font-semibold text-white mb-1">{tarea.ot_titulo}</h4>
       <p className="text-xs text-neutral-300 mb-1 line-clamp-3 whitespace-pre-wrap">{tarea.descripcion}</p>
       {resumenPlan(tarea) && <p className="mb-2 text-[11px] font-medium text-neutral-200">{resumenPlan(tarea)}</p>}
+      <EtiquetaTanda tarea={tarea} />
       {(tarea.segundos_acumulados ?? 0) > 0 && (
         <p className="mb-2 flex items-center gap-1.5 text-xs text-amber-300">
           <Clock className="h-3.5 w-3.5" /> Llevás {formatearTiempoTranscurrido(tarea.segundos_acumulados)}

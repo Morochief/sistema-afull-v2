@@ -20,6 +20,7 @@
     { "idx": 15, "version": "7", "when": 1793000015000, "tag": "0016_portal", "breakpoints": true },
     { "idx": 16, "version": "7", "when": 1793000016000, "tag": "0017_sin_senal", "breakpoints": true },
     { "idx": 17, "version": "7", "when": 1793000017000, "tag": "0018_archivos", "breakpoints": true },
-    { "idx": 18, "version": "7", "when": 1793000018000, "tag": "0019_hoja_ruta_ot", "breakpoints": true }
+    { "idx": 18, "version": "7", "when": 1793000018000, "tag": "0019_hoja_ruta_ot", "breakpoints": true },
+    { "idx": 19, "version": "7", "when": 1793000019000, "tag": "0020_tanda_compartida", "breakpoints": true }
   ]
 }

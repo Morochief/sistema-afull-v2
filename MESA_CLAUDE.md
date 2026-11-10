@@ -667,3 +667,17 @@ La primera versión del Inicio salió sin diseño previo y con un test superfici
 **Error reportado por el usuario** (captura de Edu en el celular): la ventana "Material compartido entre OTs" mostraba los casilleros de m² sin el código de OT ni el cliente. Causa: `Input` va envuelto en un `div` `w-full`, que en la fila flex aplastaba el nombre a 0 px. Arreglo: el casillero va en un contenedor fijo (`w-24 shrink-0`) y el nombre con `min-w-0`; placeholder "m²".
 
 **Evidencia (local):** `scripts/prueba-compartido.cjs` (celular 375 px): con el código viejo `FALLA 2 Compartido muestra cada OT con su cliente…` (el nombre no es visible); con el arreglo **4/4** (cada OT con su cliente visible, reparte 5 m² en 2,857 / 2,143, la base suma 5). Web 186/186, lint 0, `pnpm typecheck` 0, build 0.
+
+---
+
+## 2026-11-10 — Loop 12: horas de máquina compartidas (tanda)
+
+**Pedido del usuario** (ítem 1 del control cruzado con el sistema viejo): cuando Edu imprime una tanda con piezas de varios clientes, el tiempo de máquina tiene que repartirse por m² como el material. **Diseño:** `docs/LOOP_12_HORAS_COMPARTIDAS_DISENO.md`.
+
+**Migración `0020_tanda_compartida`:** `tanda` y `tanda_tarea` (inmutables, RLS, sin DELETE), `tarea_intervalo.tanda_id` (el trigger impide cambiarlo) y la vista **`v_mano_obra`** (`security_invoker`): una fila por tramo cerrado y tarea, con `peso`/`peso_total` (m²; 1/1 sin tanda). **API:** `POST /api/mi-trabajo/tanda` (crea y arranca el reloj sobre la principal; misma clave para reintentos); iniciar/pausar/finalizar de la principal mueven las secundarias; operar una secundaria → 409; auto-pausa al cambiar de tarea pausa toda la tanda; la oficina no puede cancelar ni reasignar una tarea de una tanda abierta (409). Costeo de la OT, "Trabajado" de cada tarea y el aviso de relojes abiertos leen `v_mano_obra`. **Web:** botón "Tanda para varios clientes" en tareas de máquina, ventana con los m² propuestos desde la cantidad de cada tarea, etiqueta "Tanda compartida" en la tarjeta; Compartido (material) sigue listando las OTs de la tanda.
+
+**Evidencia (local):**
+- `tests/loop12/tanda.test.ts`: con el código anterior **6 fallas** (CA-12.2, sin regresión, en verde); con el código **7/7** (1 h de tanda → 12.000 y 9.000 Gs con tarifa 21.000; pausa/reanuda/finaliza mueven las dos; rechazos 400/403/409; inmutabilidad; oficina 409).
+- `ModalTanda.test.tsx` **4/4**.
+- `scripts/prueba-tanda.cjs` (celular 375 px) **6/6**: el tiempo queda en proporción 2 : 1,5 exacta entre las OTs. Sin regresión: compartido 4/4, reloj acumulado 5/5, hoja de ruta 7/7, loop2 9/9.
+- Totales: API 202/203 (solo `anon.test.ts`, necesita Supabase), web 190/190, lint 0, `pnpm typecheck` 0, build 0.
