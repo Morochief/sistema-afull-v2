@@ -68,45 +68,60 @@ export function repartirCantidad(cantidadTotal: Decimal, pesos: readonly Decimal
 
 /** Loop 18: pieza medida en centímetros (hasta 2 decimales). */
 export type PiezaCm = { anchoCm: Decimal; altoCm: Decimal; cantidad: number };
-export type ResultadoCorte = ResultadoMerma & { porTrabajo: { m2Piezas: number; m2Desperdicio: number }[] };
+/** `deDesperdicioDe`: índice del trabajo de este corte en cuyo desperdicio se imprimió (L18.E2, ej. pl mogul en bob). */
+export type TrabajoCorte = { piezas: readonly PiezaCm[]; deDesperdicioDe?: number };
+export type ResultadoCorte = ResultadoMerma & { porTrabajo: { m2Piezas: number; m2Desperdicio: number; aprovechado: boolean }[] };
 
 /** m² con coma decimal y sin ceros de más, para los mensajes ("0,25", "9,4667"). */
 const m2Texto = (v8: bigint) => String(a4(v8)).replace('.', ',');
+
+function areaPiezas8(piezas: readonly PiezaCm[]) {
+  if (piezas.length < 1) throw new Error('Cada trabajo necesita al menos una pieza');
+  let s = 0n;
+  for (const p of piezas) {
+    if (!Number.isInteger(p.cantidad) || p.cantidad < 1) throw new Error('La cantidad de piezas tiene que ser un entero ≥ 1');
+    const a = aEscalado(p.anchoCm, 2) * aEscalado(p.altoCm, 2);
+    if (a <= 0n) throw new Error('Las medidas de las piezas tienen que ser mayores a 0');
+    s += a * BigInt(p.cantidad);
+  }
+  return s;
+}
 
 /**
  * Corte de Edu en centímetros (Loop 18): la medida total del material que salió de la máquina (ancho × largo)
  * y las piezas de cada trabajo. El desperdicio total se reparte entre los trabajos en proporción a sus m² de piezas.
  * cm × 100 (escala 2) por cm × 100 = m² en escala 8. Σ de piezas + desperdicio de todos los trabajos = m² usados (escala 4).
+ * L18.E2: un trabajo impreso en el desperdicio de otro no suma m² ni paga desperdicio (su material ya está en el otro).
  */
-export function calcularCorte(anchoCm: Decimal, largoCm: Decimal, trabajos: readonly { piezas: readonly PiezaCm[] }[]): ResultadoCorte {
+export function calcularCorte(anchoCm: Decimal, largoCm: Decimal, trabajos: readonly TrabajoCorte[]): ResultadoCorte {
   const usados8 = aEscalado(anchoCm, 2) * aEscalado(largoCm, 2);
   if (usados8 <= 0n) throw new Error('El material usado tiene que ser mayor a 0');
   if (trabajos.length < 1) throw new Error('Falta al menos un trabajo con sus piezas');
-  const piezas8 = trabajos.map((t) => {
-    if (t.piezas.length < 1) throw new Error('Cada trabajo necesita al menos una pieza');
-    let s = 0n;
-    for (const p of t.piezas) {
-      if (!Number.isInteger(p.cantidad) || p.cantidad < 1) throw new Error('La cantidad de piezas tiene que ser un entero ≥ 1');
-      const a = aEscalado(p.anchoCm, 2) * aEscalado(p.altoCm, 2);
-      if (a <= 0n) throw new Error('Las medidas de las piezas tienen que ser mayores a 0');
-      s += a * BigInt(p.cantidad);
-    }
-    return s;
+  const piezas8 = trabajos.map((t) => areaPiezas8(t.piezas));
+  trabajos.forEach((t, i) => {
+    const o = t.deDesperdicioDe;
+    if (o === undefined) return;
+    if (!Number.isInteger(o) || o < 0 || o >= trabajos.length || o === i) throw new Error('El trabajo del que sale no está en este corte');
+    if (trabajos[o].deDesperdicioDe !== undefined) throw new Error('Ese trabajo sale de otro trabajo que también sale de un desperdicio: elegí el trabajo que usa el material');
+    if (piezas8[i] > piezas8[o]) throw new Error('Lo que sale del desperdicio es más grande que el trabajo del que sale: revisá las medidas');
   });
-  const total8 = piezas8.reduce((a, b) => a + b, 0n);
+  const pagan = trabajos.map((t) => t.deDesperdicioDe === undefined);
+  if (!pagan.some(Boolean)) throw new Error('Al menos un trabajo tiene que usar el material');
+  const total8 = piezas8.reduce((a, b, i) => (pagan[i] ? a + b : a), 0n);
   if (total8 > usados8) throw new Error(`Las piezas suman ${m2Texto(total8)} m² y el material ${m2Texto(usados8)} m²: revisá las medidas`);
   const piezas4 = piezas8.map(a4);
   const usados4 = a4(usados8);
-  // El desperdicio sale de lo ya redondeado: así piezas + desperdicio cierra exacto con lo usado.
-  const desp4 = Math.max(0, Math.round(usados4 * 1e4) - piezas4.reduce((a, b) => a + Math.round(b * 1e4), 0));
-  const partes = desp4 > 0 ? repartirCantidad((desp4 / 1e4).toFixed(4), piezas4.map((x) => x.toFixed(4))) : piezas4.map(() => 0);
+  // El desperdicio sale de lo ya redondeado: así piezas + desperdicio de los que pagan cierra exacto con lo usado.
+  const desp4 = Math.max(0, Math.round(usados4 * 1e4) - piezas4.reduce((a, b, i) => (pagan[i] ? a + Math.round(b * 1e4) : a), 0));
+  const idx = pagan.flatMap((p, i) => (p ? [i] : []));
+  const partes = desp4 > 0 ? repartirCantidad((desp4 / 1e4).toFixed(4), idx.map((i) => piezas4[i].toFixed(4))) : idx.map(() => 0);
   const pct10 = (total8 * 1000n * 2n + usados8) / (usados8 * 2n);
   return {
     m2Usados: usados4,
     m2Piezas: a4(total8),
     m2Desperdicio: desp4 / 1e4,
     aprovechamientoPct: Number(pct10) / 10,
-    porTrabajo: piezas4.map((m2Piezas, i) => ({ m2Piezas, m2Desperdicio: partes[i] })),
+    porTrabajo: piezas4.map((m2Piezas, i) => ({ m2Piezas, m2Desperdicio: pagan[i] ? partes[idx.indexOf(i)] : 0, aprovechado: !pagan[i] })),
   };
 }
 

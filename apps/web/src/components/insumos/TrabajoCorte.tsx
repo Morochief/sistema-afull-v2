@@ -3,12 +3,12 @@ import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 
 export type FilaPieza = { ancho: string; alto: string; cantidad: string };
-export type FilaTrabajo = { otId: string; tareaId?: string; codigo: string; etiqueta: string; piezas: FilaPieza[] };
+export type FilaTrabajo = { otId: string; tareaId?: string; codigo: string; etiqueta: string; piezas: FilaPieza[]; deDesperdicioDe?: string };
 export const PIEZA_VACIA: FilaPieza = { ancho: '', alto: '', cantidad: '1' };
 
 /** Un trabajo del corte (Loop 18): su OT y sus piezas en cm, con lo que le toca (piezas + parte del desperdicio). */
-export function TrabajoCorte({ t, parte, onCambiar, onQuitar }: {
-  t: FilaTrabajo; parte: string | null; onCambiar: (t: FilaTrabajo) => void; onQuitar?: () => void;
+export function TrabajoCorte({ t, parte, origenes, onCambiar, onQuitar }: {
+  t: FilaTrabajo; parte: string | null; origenes: FilaTrabajo[]; onCambiar: (t: FilaTrabajo) => void; onQuitar?: () => void;
 }) {
   const cambiar = (i: number, k: keyof FilaPieza, v: string) => onCambiar({ ...t, piezas: t.piezas.map((p, j) => (j === i ? { ...p, [k]: v } : p)) });
   return (
@@ -17,6 +17,14 @@ export function TrabajoCorte({ t, parte, onCambiar, onQuitar }: {
         <span className="min-w-0 flex-1 truncate font-semibold text-neutral-200">{t.etiqueta}</span>
         {onQuitar && <button type="button" className="text-neutral-500 hover:text-red-400" onClick={onQuitar} aria-label={`Quitar ${t.codigo}`}><Trash2 className="h-3.5 w-3.5" /></button>}
       </div>
+      {/* L18.E2: un trabajo impreso en el desperdicio de otro (ej. pl mogul en isla bob) no paga material. */}
+      {origenes.length > 0 && (
+        <select aria-label={`Material de ${t.codigo}`} value={t.deDesperdicioDe ?? ''} className="h-8 w-full rounded border border-[#1f2937] bg-[#111318] px-2 text-[11px] text-neutral-300"
+          onChange={(e) => onCambiar({ ...t, deDesperdicioDe: e.target.value || undefined })}>
+          <option value="">Usa material propio</option>
+          {origenes.map((o) => <option key={o.otId} value={o.otId}>Sale del desperdicio de {o.codigo}</option>)}
+        </select>
+      )}
       {t.piezas.map((p, i) => (
         <div key={i} className="flex items-center gap-1.5">
           <Input aria-label={`Ancho pieza ${i + 1} de ${t.codigo}`} inputMode="decimal" placeholder="Ancho cm" value={p.ancho} onChange={(e) => cambiar(i, 'ancho', e.target.value)} />

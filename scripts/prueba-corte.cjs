@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* global require, console, process */
 /**
- * Recorrido CA-18.6 (Loop 18): Edu (celular 375 px) carga el ejemplo de la reunión en centímetros:
- * adhesivo 137 × 691 cm con piezas de dos trabajos (87 × 330 y 90 × 303). Ve el desperdicio y su reparto,
- * carga, y la oficina (compu) ve en cada OT su parte en m² (piezas + desperdicio).
+ * Recorrido CA-18.6 (Loop 18 + L18.E2): Edu (celular 375 px) carga el ejemplo real de la reunión en centímetros:
+ * adhesivo 137 × 691 cm con mc reservado 87 × 330, isla bob 46 × 686, isla kellogs 90 × 303 y pl mogul 25 × 386,
+ * que (según Edu, audio del 17/11) se imprime en el desperdicio de bob y no paga material. Ve el desperdicio
+ * (0,7131 m², 92,5 % aprovechado) y su reparto; la oficina ve en cada OT su parte en m².
  * Uso: node scripts/prueba-corte.cjs   (BASE_URL y CHROMIUM_PATH opcionales)
  */
 const { chromium } = require('playwright');
@@ -60,7 +61,7 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
       await sql`UPDATE usuario SET persona_id = ${p.id} WHERE id = ${uEdu}`;
       const [i] = await sql`INSERT INTO insumo (nombre, unidad) VALUES (${material}, 'M2') RETURNING id`;
       await sql`INSERT INTO insumo_precio (insumo_id, costo_unitario_gs) VALUES (${i.id}, 63000)`;
-      for (const [k, cli] of [['A', 'mc reservado'], ['B', 'isla kellogs']]) {
+      for (const [k, cli] of [['A', 'mc reservado'], ['B', 'isla bob'], ['C', 'isla kellogs'], ['D', 'pl mogul']]) {
         const [c] = await sql`INSERT INTO cliente (codigo, nombre) VALUES (${`C18${k}-` + s}, ${`zz_test ${cli} ${s}`}) RETURNING id`;
         const [ot] = await sql`INSERT INTO orden_trabajo (codigo_ot, cliente_id, titulo, creado_por) VALUES (${`OT18${k}-` + s}, ${c.id}, ${'zz_test ' + cli}, ${uEdu}) RETURNING id, codigo_ot`;
         await sql`INSERT INTO tarea (orden_trabajo_id, persona_asignada_id, tipo, descripcion, orden_secuencia, estado, creado_por)
@@ -79,33 +80,41 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
       await dlg.getByRole('button', { name: '137', exact: true }).click();
       await dlg.getByLabel('Largo usado (cm)').fill('691');
     });
-    await paso('piezas en cm de los dos trabajos: ve 9,4667 m², desperdicio 3,8687 m² y el reparto', async () => {
+    await paso('piezas en cm de los cuatro trabajos; mogul "sale del desperdicio" de bob: 92,5 % y 0,7131 m² de desperdicio', async () => {
       const dlg = pe.getByRole('dialog');
-      await dlg.getByLabel(`Ancho pieza 1 de ${ots[0].codigo_ot}`).fill('87');
-      await dlg.getByLabel(`Alto pieza 1 de ${ots[0].codigo_ot}`).fill('330');
-      await dlg.getByLabel('Agregar otro trabajo').selectOption({ label: `${ots[1].codigo_ot} · zz_test isla kellogs ${s}` });
-      await dlg.getByLabel(`Ancho pieza 1 de ${ots[1].codigo_ot}`).fill('90');
-      await dlg.getByLabel(`Alto pieza 1 de ${ots[1].codigo_ot}`).fill('303');
+      const medidas = [['87', '330'], ['46', '686'], ['90', '303'], ['25', '386']];
+      for (const [i, ot] of ots.entries()) {
+        if (i > 0) await dlg.getByLabel('Agregar otro trabajo').selectOption({ label: `${ot.codigo_ot} · zz_test ${ot.cli} ${s}` });
+        await dlg.getByLabel(`Ancho pieza 1 de ${ot.codigo_ot}`).fill(medidas[i][0]);
+        await dlg.getByLabel(`Alto pieza 1 de ${ot.codigo_ot}`).fill(medidas[i][1]);
+      }
+      // Sin el tilde, las piezas suman más que el adhesivo y no deja cargar.
+      await dlg.getByText('Las piezas suman 9,7186 m² y el material 9,4667 m²', { exact: false }).waitFor();
+      await dlg.getByLabel(`Material de ${ots[3].codigo_ot}`).selectOption({ label: `Sale del desperdicio de ${ots[1].codigo_ot}` });
       const res = await dlg.getByTestId('resumen-corte').innerText();
-      if (!res.includes('9,4667 m²') || !res.includes('3,8687 m²') || !res.includes('59,1 %')) throw new Error(res);
-      await dlg.getByTestId(`parte-${ots[0].codigo_ot}`).filter({ hasText: '2,871 m² + 1,9841 m² desperdicio' }).waitFor();
-      await dlg.getByTestId(`parte-${ots[1].codigo_ot}`).filter({ hasText: '2,727 m² + 1,8846 m² desperdicio' }).waitFor();
+      if (!res.includes('9,4667 m²') || !res.includes('0,7131 m²') || !res.includes('92,5 %')) throw new Error(res);
+      await dlg.getByTestId(`parte-${ots[1].codigo_ot}`).filter({ hasText: '3,1556 m² + 0,257 m² desperdicio' }).waitFor();
+      await dlg.getByTestId(`parte-${ots[3].codigo_ot}`).filter({ hasText: `0,965 m² del desperdicio de ${ots[1].codigo_ot} (sin costo)` }).waitFor();
     });
     await paso('carga: aviso con el total y el aprovechamiento', async () => {
       await pe.getByRole('dialog').getByRole('button', { name: 'Cargar', exact: true }).click();
-      await pe.getByText(/Cargado: 5,598 m² de piezas y 3,8687 m² de desperdicio \(59,1 % aprovechado\)/).waitFor();
+      await pe.getByText(/Cargado: 8,7536 m² de piezas y 0,7131 m² de desperdicio \(92,5 % aprovechado\)/).waitFor();
     });
-    await paso('la oficina ve en cada OT su parte en m² (piezas + desperdicio)', async () => {
-      for (const [ot, piezas, desp] of [[ots[0], '2,871', '1,9841'], [ots[1], '2,727', '1,8846']]) {
+    await paso('la oficina ve en cada OT su parte; mogul con sus m² a Gs. 0 y de dónde salió', async () => {
+      for (const [ot, piezas, desp] of [[ots[0], '2,871', '0,2339'], [ots[1], '3,1556', '0,257'], [ots[2], '2,727', '0,2222']]) {
         await pj.goto(`${B}/ots/${ot.id}`);
         await pj.getByText(piezas, { exact: false }).first().waitFor();
         await pj.getByText(desp, { exact: false }).first().waitFor();
       }
-      const [{ total }] = await sql`SELECT sum(cantidad)::float8 AS total FROM consumo_insumo WHERE orden_trabajo_id IN (${ots[0].id}, ${ots[1].id})`;
-      if (Math.abs(total - 9.4667) > 1e-9) throw new Error('Σ = ' + total);
+      await pj.goto(`${B}/ots/${ots[3].id}`);
+      await pj.getByText('0,965', { exact: false }).first().waitFor();
+      await pj.getByText(`aprovecha el desperdicio de ${ots[1].codigo_ot}`, { exact: false }).first().waitFor();
+      const [{ total, gs }] = await sql`SELECT sum(cantidad)::float8 AS total, sum(cantidad * costo_unitario_gs)::float8 AS gs
+                                        FROM consumo_insumo WHERE orden_trabajo_id IN (${ots[0].id}, ${ots[1].id}, ${ots[2].id})`;
+      if (Math.abs(total - 9.4667) > 1e-9 || Math.abs(gs - 9.4667 * 63000) > 1e-6) throw new Error(`Σ = ${total} m², ${gs} Gs`);
     });
     if (errores.length) throw new Error(errores.join(' | '));
-    console.log(`\n>>> RECORRIDO MEDIDAS EN CM (CA-18.6) EN VERDE: ${n}/${n} PASOS OK <<<\n`);
+    console.log(`\n>>> RECORRIDO MEDIDAS EN CM (CA-18.6 + L18.E2) EN VERDE: ${n}/${n} PASOS OK <<<\n`);
   } finally {
     await browser.close();
     for (const id of personas) await sql`UPDATE persona SET activo = false WHERE id = ${id}`;

@@ -43,12 +43,18 @@ export function ModalCorte({ origen, tareas, onCerrar }: { origen: MiTrabajoTare
   const [largo, setLargo] = useState('');
   const [cargando, setCargando] = useState(false);
 
-  const datos = trabajos.map((t) => ({ otId: t.otId, tareaId: t.tareaId, piezas: t.piezas.map((p) => ({ anchoCm: numero(p.ancho), altoCm: numero(p.alto), cantidad: Number(p.cantidad) })) }));
+  // Un origen que ya no está en el corte (lo quitaron) deja de contar.
+  const origenDe = (t: FilaTrabajo) => (t.deDesperdicioDe && trabajos.some((x) => x.otId === t.deDesperdicioDe) ? t.deDesperdicioDe : undefined);
+  const datos = trabajos.map((t) => ({
+    otId: t.otId, tareaId: t.tareaId, aprovechaDesperdicioDe: origenDe(t),
+    piezas: t.piezas.map((p) => ({ anchoCm: numero(p.ancho), altoCm: numero(p.alto), cantidad: Number(p.cantidad) })),
+  }));
+  const formula = datos.map((t) => ({ piezas: t.piezas, deDesperdicioDe: t.aprovechaDesperdicioDe ? datos.findIndex((x) => x.otId === t.aprovechaDesperdicioDe) : undefined }));
   const completo = numero(ancho) > 0 && numero(largo) > 0 && datos.every((t) => t.piezas.every((p) => p.anchoCm > 0 && p.altoCm > 0 && Number.isInteger(p.cantidad) && p.cantidad >= 1));
   let r: ResultadoCorte | null = null;
   let aviso: string | null = null;
   try {
-    if (completo) r = calcularCorte(numero(ancho), numero(largo), datos);
+    if (completo) r = calcularCorte(numero(ancho), numero(largo), formula);
   } catch (e) {
     aviso = (e as Error).message;
   }
@@ -92,7 +98,10 @@ export function ModalCorte({ origen, tareas, onCerrar }: { origen: MiTrabajoTare
         <Label>Piezas de cada trabajo: ancho × alto (cm) × cantidad</Label>
         {trabajos.map((t, i) => (
           <TrabajoCorte key={t.otId} t={t}
-            parte={r ? `${coma(r.porTrabajo[i].m2Piezas)} m² + ${coma(r.porTrabajo[i].m2Desperdicio)} m² desperdicio` : null}
+            origenes={trabajos.filter((x) => x.otId !== t.otId && !origenDe(x))}
+            parte={!r ? null : r.porTrabajo[i].aprovechado
+              ? `${coma(r.porTrabajo[i].m2Piezas)} m² del desperdicio de ${trabajos.find((x) => x.otId === origenDe(t))?.codigo} (sin costo)`
+              : `${coma(r.porTrabajo[i].m2Piezas)} m² + ${coma(r.porTrabajo[i].m2Desperdicio)} m² desperdicio`}
             onCambiar={(n) => setTrabajos(trabajos.map((x, j) => (j === i ? n : x)))}
             onQuitar={trabajos.length > 1 ? () => setTrabajos(trabajos.filter((_, j) => j !== i)) : undefined} />
         ))}

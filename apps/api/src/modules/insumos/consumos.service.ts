@@ -5,7 +5,7 @@ import { auditar } from '../auditoria/service.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
 
-type Linea = { otId: string; tareaId?: string; insumoId: string; cantidad: number; esDesperdicio: boolean; nota?: string; grupoId?: string; clave: string };
+type Linea = { otId: string; tareaId?: string; insumoId: string; cantidad: number; esDesperdicio: boolean; nota?: string; grupoId?: string; clave: string; costoCero?: boolean };
 
 async function enTx<T>(fn: (tx: TransactionSql) => Promise<T>): Promise<T> {
   try {
@@ -38,7 +38,7 @@ async function insertar(tx: TransactionSql, ctx: Ctx, persona: string | null, l:
   if (i.costo === null) throw new ErrorApp(400, 'El insumo no tiene precio cargado');
   const [c] = await tx`
     INSERT INTO consumo_insumo (orden_trabajo_id, tarea_id, insumo_id, persona_id, cargado_por, cantidad, costo_unitario_gs, es_desperdicio, grupo_id, nota, clave_idempotencia)
-    VALUES (${l.otId}, ${l.tareaId ?? null}, ${l.insumoId}, ${persona}, ${ctx.usuarioId}, ${l.cantidad}, ${i.costo}, ${l.esDesperdicio}, ${l.grupoId ?? null}, ${l.nota ?? null}, ${l.clave})
+    VALUES (${l.otId}, ${l.tareaId ?? null}, ${l.insumoId}, ${persona}, ${ctx.usuarioId}, ${l.cantidad}, ${l.costoCero ? 0 : i.costo}, ${l.esDesperdicio}, ${l.grupoId ?? null}, ${l.nota ?? null}, ${l.clave})
     RETURNING id
   `;
   return c.id as string;
@@ -110,12 +110,14 @@ export function registrarCompartido(ctx: Ctx, d: { insumoId: string; cantidadTot
  * Corte en cm (Loop 18): la medida total del material y las piezas de cada trabajo (una o varias OTs).
  * Por OT: una línea con sus m² de piezas y otra con su parte del desperdicio (mismo grupo para todo el corte).
  */
-type TrabajoCorte = { otId: string; tareaId?: string; piezas: PiezaCm[] };
+type TrabajoCorte = { otId: string; tareaId?: string; piezas: PiezaCm[]; aprovechaDesperdicioDe?: string };
 export function registrarCorte(ctx: Ctx, d: { insumoId: string; insumoDesperdicioId?: string; anchoCm: number; largoCm: number; trabajos: TrabajoCorte[]; claveIdempotencia: string }) {
   return enTx(async (tx) => {
     let r;
     try {
-      r = calcularCorte(d.anchoCm, d.largoCm, d.trabajos);
+      // L18.E2: "aprovecha el desperdicio de" se pasa como índice del trabajo de origen dentro del mismo corte.
+      const indice = (ot?: string) => (ot === undefined ? undefined : d.trabajos.findIndex((t) => t.otId === ot));
+      r = calcularCorte(d.anchoCm, d.largoCm, d.trabajos.map((t) => ({ piezas: t.piezas, deDesperdicioDe: indice(t.aprovechaDesperdicioDe) })));
     } catch (e) {
       throw new ErrorApp(400, (e as Error).message);
     }
@@ -128,11 +130,19 @@ export function registrarCorte(ctx: Ctx, d: { insumoId: string; insumoDesperdici
     }
     const persona = await personaDe(tx, ctx.usuarioId);
     const grupoId = crypto.randomUUID();
+    const codigos = new Map<string, string>();
+    for (const t of d.trabajos) {
+      await otAbierta(tx, t.otId);
+      const [o] = await tx`SELECT codigo_ot FROM orden_trabajo WHERE id = ${t.otId}`;
+      codigos.set(t.otId, o.codigo_ot as string);
+    }
     const nota = `Corte ${d.anchoCm} × ${d.largoCm} cm · ${d.trabajos.length} ${d.trabajos.length === 1 ? 'trabajo' : 'trabajos'} · aprovechamiento ${String(r.aprovechamientoPct).replace('.', ',')} %`;
     for (const [i, t] of d.trabajos.entries()) {
-      await otAbierta(tx, t.otId);
       const parte = r.porTrabajo[i];
-      await insertar(tx, ctx, persona, { otId: t.otId, tareaId: t.tareaId, insumoId: d.insumoId, cantidad: parte.m2Piezas, esDesperdicio: false, nota, grupoId, clave: i === 0 ? d.claveIdempotencia : crypto.randomUUID() });
+      // L18.E2: el que se imprimió en el desperdicio de otro queda con sus m² a Gs. 0 (su material ya lo paga el otro).
+      const aprovecha = t.aprovechaDesperdicioDe ? ` · aprovecha el desperdicio de ${codigos.get(t.aprovechaDesperdicioDe)}` : '';
+      await insertar(tx, ctx, persona, { otId: t.otId, tareaId: t.tareaId, insumoId: d.insumoId, cantidad: parte.m2Piezas, esDesperdicio: false, nota: nota + aprovecha, grupoId,
+        clave: i === 0 ? d.claveIdempotencia : crypto.randomUUID(), costoCero: parte.aprovechado });
       if (parte.m2Desperdicio > 0) {
         await insertar(tx, ctx, persona, { otId: t.otId, tareaId: t.tareaId, insumoId: d.insumoDesperdicioId ?? d.insumoId, cantidad: parte.m2Desperdicio, esDesperdicio: true, nota, grupoId, clave: crypto.randomUUID() });
       }

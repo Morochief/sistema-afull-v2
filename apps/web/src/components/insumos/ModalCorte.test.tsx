@@ -72,4 +72,23 @@ describe('Loop 18 — Medidas en cm (pantalla de Edu)', () => {
     expect(screen.getByText('OT-10 · Farmacia')).toBeTruthy();
     expect(screen.getByText('OT-11 · Super')).toBeTruthy();
   });
+
+  it('L18.E2: un trabajo que sale del desperdicio de otro no suma m² y se manda con su OT de origen', async () => {
+    montar(t('bob'), [t('bob'), t('mogul', { estado: 'PENDIENTE' })]);
+    fireEvent.click(screen.getByText('elegir adhesivo'));
+    escribir('Ancho del material (cm)', '50');
+    escribir('Largo usado (cm)', '700');
+    escribir('Ancho pieza 1 de OT-bob', '46');
+    escribir('Alto pieza 1 de OT-bob', '686');
+    fireEvent.change(screen.getByLabelText('Agregar otro trabajo'), { target: { value: 'ot-mogul' } });
+    escribir('Ancho pieza 1 de OT-mogul', '25');
+    escribir('Alto pieza 1 de OT-mogul', '386');
+    fireEvent.change(screen.getByLabelText('Material de OT-mogul'), { target: { value: 'ot-bob' } });
+    expect(screen.getByTestId('resumen-corte').textContent).toContain('3,1556 m²');
+    expect(screen.getByTestId('parte-OT-mogul').textContent).toBe('0,965 m² del desperdicio de OT-bob (sin costo)');
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar' }));
+    await waitFor(() => expect(cargarCorte).toHaveBeenCalledTimes(1));
+    expect(cargarCorte.mock.calls[0][0].trabajos[1]).toMatchObject({ otId: 'ot-mogul', aprovechaDesperdicioDe: 'ot-bob' });
+    expect(cargarCorte.mock.calls[0][0].trabajos[0].aprovechaDesperdicioDe).toBeUndefined();
+  });
 });

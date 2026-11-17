@@ -48,3 +48,11 @@ Sin cambios de base de datos (usa `consumo_insumo`). La oficina lo ve como siemp
 ## 7. Decisiones del usuario (2026-11-17)
 - Un trabajo puede tener una o varias piezas, y una tanda puede tener varias OTs.
 - Los centímetros son solo para la carga de Edu; la oficina sigue viendo m².
+
+## 8. L18.E2 — Un trabajo impreso en el desperdicio de otro (audio de Edu, 2026-11-17)
+- Edu: "el adhesivo siempre es más que la impresión"; **pl mogul no está incluido en isla bob** (son trabajos distintos), pero **sale del desperdicio de bob**: "a Juan le sale gratis".
+- En la ventana, cada trabajo tiene **Material: Usa material propio / Sale del desperdicio de OT-x**.
+- El que sale del desperdicio: no suma m² de piezas ni paga desperdicio; su OT recibe una línea con sus m² **a Gs. 0** y la nota "aprovecha el desperdicio de OT-x". Debe ser ≤ que el trabajo del que sale; no puede salir de otro que también sale de un desperdicio.
+- Ejemplo real: 137 × 691 cm con mc 87 × 330, bob 46 × 686, kellogs 90 × 303 y mogul 25 × 386 (de bob): piezas 8,7536 m², desperdicio 0,7131 m² (92,5 %), repartido 0,2339 / 0,257 / 0,2222.
+- La oficina ve la nota de cada línea en **Material usado** de la OT.
+- Decisión del usuario (17/11): tilde "Sale del desperdicio" (no paga material, queda anotado).

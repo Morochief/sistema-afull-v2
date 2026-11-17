@@ -61,6 +61,8 @@ export const corteSchema = z.object({
     otId: z.string().uuid(),
     tareaId: z.string().uuid().optional(),
     piezas: z.array(z.object({ anchoCm: cm, altoCm: cm, cantidad: z.number().int().min(1).max(10_000) })).min(1).max(100),
+    /** L18.E2: OT del mismo corte en cuyo desperdicio se imprimió este trabajo (no paga material). */
+    aprovechaDesperdicioDe: z.string().uuid().optional(),
   })).min(1).max(30),
   claveIdempotencia: clave,
 });

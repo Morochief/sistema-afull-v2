@@ -61,6 +61,8 @@ export function SeccionMaterialOT({ otId, otFinalizada }: { otId: string; otFina
                     {f.es_desperdicio && <span className="ml-1 rounded bg-amber-500/10 px-1 text-[10px] text-amber-400">desperdicio</span>}
                     {f.cantidad < 0 && <span className="ml-1 text-[10px]">(corrección{f.nota ? `: ${f.nota}` : ''})</span>}
                     {f.tarea && <div className="text-[10px] text-neutral-500">{f.tarea}</div>}
+                    {/* Corte en cm (Loop 18): la nota dice la medida del material y, si aprovechó el desperdicio de otra OT, cuál. */}
+                    {f.cantidad > 0 && f.nota && <div className="text-[10px] text-neutral-500">{f.nota}</div>}
                   </td>
                   <td className="font-mono">{cant(f.cantidad)} {UNIDAD_CORTA[f.unidad]}</td>
                   <td className="text-right font-mono">{formatearGs(f.total_gs)}</td>
