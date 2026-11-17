@@ -48,6 +48,7 @@ const DRIVE = (n) => `https://drive.google.com/file/d/zz_test_nachi_${n}/view`;
   const cola = async () => {
     await pe.goto(B + '/disenos');
     await pe.getByRole('heading', { name: /Para producir/ }).waitFor();
+    await pe.waitForLoadState('networkidle'); // el título aparece antes de que llegue la lista
     return pe.getByText(ot.codigo_ot).count();
   };
   try {

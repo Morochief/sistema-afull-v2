@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Users, FileText, Clock, Radio, UserCheck, Calculator, FolderKanban, Palette, Truck, Route, MapPinned, ListChecks, Package, TrendingUp, CalendarCheck, FileSignature, Inbox, KeyRound, LayoutDashboard } from 'lucide-react';
+import { Users, FileText, Clock, Radio, UserCheck, Calculator, FolderKanban, Palette, Truck, Route, MapPinned, ListChecks, Package, TrendingUp, CalendarCheck, FileSignature, Inbox, KeyRound, LayoutDashboard, FileSpreadsheet } from 'lucide-react';
 
 export type ItemMenu = { titulo: string; ruta: string; icono: LucideIcon; visible: boolean };
 
@@ -56,6 +56,7 @@ export function itemsDeMenu(tieneCapacidad: (c: string) => boolean): ItemMenu[] 
       icono: TrendingUp,
       visible: tieneCapacidad('comercial'),
     },
+    { titulo: 'Reportes', ruta: '/reportes', icono: FileSpreadsheet, visible: tieneCapacidad('comercial') || tieneCapacidad('rrhh') },
     {
       titulo: 'Salidas',
       ruta: '/hojas-ruta',
