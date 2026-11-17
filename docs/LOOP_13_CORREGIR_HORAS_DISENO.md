@@ -10,11 +10,12 @@ Las horas son **eventos inmutables** (`tarea_intervalo`). No se edita un tramo: 
 2. **Se olvidó de pausar y ya se cerró** (el tramo quedó largo): se registra una **corrección de fin** `intervalo_correccion (intervalo_id UNIQUE, hora_fin_corregida, motivo, corregido_por)`. Solo puede **acortar** (`hora_inicio ≤ corregida < hora_fin`). Una por tramo.
 3. **Trabajó sin celular** (no hay tramo): la oficina **carga un tramo cerrado a mano** sobre la tarea: fecha, hora de inicio y fin, motivo. Queda con `origen = 'MANUAL'` y `cargado_por`.
 
-## 3. Modelo (migración `0021_correccion_horas`)
+## 3. Modelo (migración `0022_correccion_horas`; la `0021` quedó para el Loop 19)
 - `tarea_intervalo`: `origen VARCHAR(10) NOT NULL DEFAULT 'RELOJ' CHECK (RELOJ|MANUAL)`, `cargado_por UUID NULL`, `motivo_manual TEXT NULL`. CHECK: MANUAL exige `hora_fin`, `cargado_por` y motivo; RELOJ los deja nulos. El trigger permite insertar MANUAL ya cerrado.
 - `intervalo_correccion`: inmutable (triggers UPDATE/DELETE/TRUNCATE), RLS, `GRANT SELECT, INSERT`.
 - **Sin solapamientos por persona**: un tramo manual o una corrección no puede pisar otro tramo de la misma persona (validación en la API dentro de la transacción, con `pg_advisory_xact_lock` por persona). Se evalúa con la hora efectiva.
-- **Hora de fin efectiva** = `coalesce(corrección.hora_fin_corregida, hora_fin)`. La usan `v_mano_obra` (Loop 12), reloj acumulado, "Hoy", Control en Vivo e historial.
+- **Hora de fin efectiva** = `coalesce(corrección.hora_fin_corregida, hora_fin)`, en la vista **`v_tramo`** (misma forma que `tarea_intervalo`, con `hora_fin` efectiva y `hora_fin_original`). La usan `v_mano_obra` (Loop 12), reloj acumulado, "Hoy", Control en Vivo e historial: ninguna consulta de tiempo lee `tarea_intervalo` directo.
+- Cerrar con hora: `tarea_intervalo.cerrado_por` y `motivo_cierre = 'CORRECCION'` + `motivo_correccion`; la tarea pasa a PAUSADA (y su tanda, si la tiene).
 
 ## 4. Quién puede
 - `admin` (Juan, Gerardo) y `rrhh` (Sofi): son horas que se pagan.

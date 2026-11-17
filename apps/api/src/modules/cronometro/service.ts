@@ -44,7 +44,7 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
         round(sum(EXTRACT(EPOCH FROM (coalesce(hora_fin, now()) - hora_inicio)) / 60)::numeric, 0)::int,
         0
       ) AS minutos_hoy
-      FROM tarea_intervalo
+      FROM v_tramo
       WHERE persona_id = ${persona.id}
         AND hora_inicio >= (date_trunc('day', now() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion')
     `;
@@ -62,7 +62,7 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
         coalesce(
           (
             SELECT round(sum(EXTRACT(EPOCH FROM (coalesce(i.hora_fin, now()) - i.hora_inicio)) / 60)::numeric, 0)::int
-            FROM tarea_intervalo i
+            FROM v_tramo i
             WHERE i.tarea_id = t.id AND i.persona_id = ${persona.id}
               AND i.hora_inicio >= (date_trunc('day', now() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion')
           ),
@@ -70,7 +70,7 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
         ) AS minutos_trabajados_hoy,
         (
           SELECT coalesce(floor(sum(EXTRACT(EPOCH FROM (i.hora_fin - i.hora_inicio)))), 0)::int
-          FROM tarea_intervalo i
+          FROM v_tramo i -- hora de fin efectiva (Loop 13)
           WHERE i.tarea_id = t.id AND i.persona_id = ${persona.id} AND i.hora_fin IS NOT NULL
         ) AS segundos_acumulados,
         (

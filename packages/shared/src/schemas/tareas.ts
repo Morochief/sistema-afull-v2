@@ -84,3 +84,21 @@ export const patchProcesoSchema = nuevoProcesoSchema.partial().extend({
   activo: z.boolean().optional(),
   orden: z.number().int().min(0).max(9999).optional(),
 });
+
+/** Loop 13: corregir y cargar horas a mano (Juan, Gerardo y Sofi). Horas con zona horaria (ISO 8601). */
+const instante = z.string().datetime({ offset: true, message: 'Fecha y hora inválidas' });
+const motivoHoras = z.string().trim().min(3, 'Escribí el motivo').max(500);
+export const corregirHoraSchema = z.object({ horaFin: instante, motivo: motivoHoras });
+export const horasManualSchema = z.object({
+  tareaId: z.string().uuid(),
+  personaId: z.string().uuid(),
+  horaInicio: instante,
+  horaFin: instante,
+  motivo: motivoHoras,
+  claveIdempotencia: z.string().uuid(),
+});
+export const filtroHorasSchema = z.object({
+  desde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  hasta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  pagina: z.coerce.number().int().min(1).default(1),
+});

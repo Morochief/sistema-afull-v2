@@ -6,7 +6,10 @@ import {
   nuevaTarifaSchema,
   cerrarTarifaSchema,
   estadoConTimestampSchema,
+  filtroHorasSchema,
 } from '@afull/shared';
+import { z } from 'zod';
+import { horasDePersona } from '../horas/service.js';
 import { requireSesion, requireCapacidad } from '../auth/middleware.js';
 import {
   listarPersonas,
@@ -67,6 +70,11 @@ export const personasRoutes = new Hono()
     return c.json(await cambiarEstadoPersona(ctxDe(c), c.req.param('id'), body));
   })
   // 5. Tarifas de la persona (capacidad rrhh)
+  // Loop 13: horas de la persona (tramos con lo corregido y lo cargado a mano).
+  .get('/:id/horas', requireCapacidad('rrhh'), async (c) => {
+    const f = filtroHorasSchema.parse(c.req.query());
+    return c.json(await horasDePersona(z.string().uuid().parse(c.req.param('id')), f.desde, f.hasta, f.pagina));
+  })
   .get('/:id/tarifas', requireCapacidad('rrhh'), async (c) => {
     return c.json(await listarTarifas(c.req.param('id')));
   })

@@ -33,7 +33,7 @@ export async function obtenerEstadoLive(): Promise<LiveEstadoRespuesta> {
       c.nombre AS cliente_nombre,
       COALESCE(
         (SELECT ROUND(SUM(EXTRACT(EPOCH FROM (COALESCE(ic.hora_fin, clock_timestamp()) - ic.hora_inicio)) / 60))
-         FROM tarea_intervalo ic
+         FROM v_tramo ic
          WHERE ic.persona_id = p.id
            AND ic.hora_inicio >= (date_trunc('day', now() AT TIME ZONE 'America/Asuncion') AT TIME ZONE 'America/Asuncion')
         ), 0

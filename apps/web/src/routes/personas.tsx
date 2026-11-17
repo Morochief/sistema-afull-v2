@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Edit2, Link as LinkIcon, DollarSign, Power } from 'lucide-react';
+import { Plus, Edit2, Link as LinkIcon, DollarSign, Power, Clock } from 'lucide-react';
 import type { PersonaFila } from '@afull/shared';
 import { usePersonas } from '../hooks/personas/usePersonas.js';
 import { useSesion } from '../hooks/useSesion.js';
@@ -14,6 +14,7 @@ import { ModalNuevaPersona } from '../components/modals/ModalNuevaPersona.js';
 import { ModalEditarPersona } from '../components/modals/ModalEditarPersona.js';
 import { ModalVincularUsuario } from '../components/modals/ModalVincularUsuario.js';
 import { ModalTarifasPersona } from '../components/modals/ModalTarifasPersona.js';
+import { ModalHorasPersona } from '../components/horas/ModalHorasPersona.js';
 
 export function PersonasPage() {
   const { tieneCapacidad } = useSesion();
@@ -23,6 +24,7 @@ export function PersonasPage() {
   const [personaEditar, setPersonaEditar] = useState<PersonaFila | null>(null);
   const [personaVincular, setPersonaVincular] = useState<PersonaFila | null>(null);
   const [personaTarifas, setPersonaTarifas] = useState<PersonaFila | null>(null);
+  const [personaHoras, setPersonaHoras] = useState<PersonaFila | null>(null);
 
   const esAdmin = tieneCapacidad('admin');
   const esRrhh = tieneCapacidad('rrhh');
@@ -120,6 +122,19 @@ export function PersonasPage() {
             </Button>
           )}
 
+          {esRrhh && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPersonaHoras(fila)}
+              className="h-8 w-8 p-0 text-neutral-400 hover:text-sky-400"
+              title="Horas trabajadas"
+              aria-label={`Horas de ${fila.nombre}`}
+            >
+              <Clock className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="sm"
@@ -195,6 +210,7 @@ export function PersonasPage() {
         persona={personaTarifas}
         onCerrar={() => setPersonaTarifas(null)}
       />
+      {personaHoras && <ModalHorasPersona persona={personaHoras} onCerrar={() => setPersonaHoras(null)} />}
     </div>
   );
 }
