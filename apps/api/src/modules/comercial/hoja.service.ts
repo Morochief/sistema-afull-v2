@@ -1,5 +1,6 @@
 import type { TransactionSql } from 'postgres';
 import { sql } from '../../db/client.js';
+import { publicarLive } from '../live/publicar.js';
 import { auditar } from '../auditoria/service.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
@@ -21,6 +22,12 @@ async function enTx<T>(fn: (tx: TransactionSql) => Promise<T>): Promise<T> {
   }
 }
 
+/** La hoja cambió: Mi trabajo y el panel de Gerardo se actualizan al instante (Loop 14). */
+async function avisar<T>(otId: string, r: T): Promise<T> {
+  await publicarLive('ot.hoja', otId);
+  return r;
+}
+
 async function bloquear(tx: TransactionSql, otId: string) {
   const [o] = await tx`SELECT hoja_estado FROM orden_trabajo WHERE id = ${otId} FOR UPDATE`;
   if (!o) throw new ErrorApp(404, 'OT no encontrada');
@@ -28,8 +35,8 @@ async function bloquear(tx: TransactionSql, otId: string) {
 }
 
 /** Borrador → Activa → Cerrada (y reabrir). `desde` es lo que veía la persona: si cambió, 409. */
-export function accionHoja(ctx: Ctx, otId: string, d: { accion: Accion; desde: string }) {
-  return enTx(async (tx) => {
+export async function accionHoja(ctx: Ctx, otId: string, d: { accion: Accion; desde: string }) {
+  return avisar(otId, await enTx(async (tx) => {
     const actual = await bloquear(tx, otId);
     if (actual !== d.desde) throw new ErrorApp(409, `La hoja de ruta cambió: ahora está ${actual}`);
     const t = TRANSICION[d.accion];
@@ -45,7 +52,7 @@ export function accionHoja(ctx: Ctx, otId: string, d: { accion: Accion; desde: s
       WHERE id = ${otId}`;
     await auditar({ usuarioId: ctx.usuarioId, accion: `hoja_ruta_ot.${d.accion.toLowerCase()}`, recurso: 'orden_trabajo', recursoId: otId, ip: ctx.ip, metadata: { desde: actual, a: t.a } }, tx);
     return { hoja_estado: t.a };
-  });
+  }));
 }
 
 export function notasHoja(ctx: Ctx, otId: string, notas: string | null) {
@@ -59,8 +66,8 @@ export function notasHoja(ctx: Ctx, otId: string, notas: string | null) {
 }
 
 /** Arma el WhatsApp con el formato de siempre; si la hoja estaba en borrador, la activa (como en el sistema viejo). */
-export function whatsappHoja(ctx: Ctx, otId: string) {
-  return enTx(async (tx) => {
+export async function whatsappHoja(ctx: Ctx, otId: string) {
+  return avisar(otId, await enTx(async (tx) => {
     const actual = await bloquear(tx, otId);
     const estado = actual === 'BORRADOR' ? 'ACTIVA' : actual;
     const [cab] = await tx`
@@ -80,5 +87,5 @@ export function whatsappHoja(ctx: Ctx, otId: string) {
       WHERE id = ${otId}`;
     await auditar({ usuarioId: ctx.usuarioId, accion: 'hoja_ruta_ot.whatsapp', recurso: 'orden_trabajo', recursoId: otId, ip: ctx.ip, metadata: { activo: actual === 'BORRADOR' } }, tx);
     return { mensaje: mensajeHoja(cab as never, [...tareas], cab.hoy as string), estado };
-  });
+  }));
 }

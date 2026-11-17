@@ -1,3 +1,4 @@
+import { publicarLive } from '../live/publicar.js';
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
 import {
@@ -107,6 +108,12 @@ export async function listarTareasOT(otId: string): Promise<TareaFila[]> {
 }
 
 export async function agregarTareaOT(ctx: Ctx, otId: string, d: ItemTareaInput) {
+  const tarea = await insertarTareaOT(ctx, otId, d);
+  if (tarea) await publicarLive('tarea.crear', tarea.id); // Mi trabajo y el panel de Gerardo se actualizan al instante
+  return tarea;
+}
+
+async function insertarTareaOT(ctx: Ctx, otId: string, d: ItemTareaInput) {
   try {
     return await sql.begin(async (tx) => {
       const [ot] = await tx<{ estado: string; hoja_estado: string }[]>`SELECT estado, hoja_estado FROM orden_trabajo WHERE id = ${otId}`;

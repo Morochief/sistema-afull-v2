@@ -9,6 +9,8 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
+> **2026-11-17, Loop 14:** menú **Panel** (Gerardo): quién vino y no tiene nada en marcha, quién trabaja y quién está en pausa, y "Asignar tarea" en el momento. Crear tarea, activar la hoja y marcar asistencia ahora avisan en vivo. Sin migración.
+
 > **2026-11-17, Loop 20:** menú **Reportes**: los registros como el Excel de Juan (MO, insumos y vehículos) con descarga a Excel, la planilla de horas para pagar y la pre-factura (margen, IVA, hoja A4). Sin migración. Ver `MESA_CLAUDE.md`.
 
 > **2026-11-10, Loop 11:** la hoja de ruta vuelve a ser de cada OT (como en el sistema viejo): Gerardo asigna tareas con día, cantidad y tiempo, la hoja nace en Borrador (los operarios no la ven) y se activa o se manda por WhatsApp; la camioneta pasa a llamarse "Salidas". Ver `MESA_CLAUDE.md`.
@@ -359,7 +361,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al bloqueo (2026-11-03, decisión del usuario):** se importa el catálogo real de insumos en `afull-dev` (solo dev). `afull-prod` y el resto de los datos reales siguen bloqueados.
 
-0. **Reunión con Sofi (10/11, notas del 17/11): primero lo de la reunión.** Loops 18 (cm, medida total y L18.E2 desperdicio aprovechado) y 19 (Nachi, `0021`) en `main`. **Orden del usuario (17/11):** 13 corregir horas (hecho, `0022`) → planilla de horas para pagar y pre-factura en Excel (Loop 20, hecho, sin migración) → 14 panel de Gerardo → 15 historial → 16 cuadrilla → 17 constancia de entrega. La calculadora de adhesivo del viejo queda cubierta por el Loop 18.
+0. **Reunión con Sofi (10/11, notas del 17/11): primero lo de la reunión.** Loops 18 (cm, medida total y L18.E2 desperdicio aprovechado) y 19 (Nachi, `0021`) en `main`. **Orden del usuario (17/11):** 13 corregir horas (hecho, `0022`) → planilla de horas para pagar y pre-factura en Excel (Loop 20, hecho, sin migración) → 14 panel de Gerardo (hecho, sin migración) → 15 historial → 16 cuadrilla → 17 constancia de entrega. La calculadora de adhesivo del viejo queda cubierta por el Loop 18.
 0. **Loop 12 (tanda compartida) en `main` con `0020`.**
 0. **Loops 12 a 17 diseñados (2026-11-10, decisión del usuario, en este orden):** 12 horas de máquina compartidas (`docs/LOOP_12_HORAS_COMPARTIDAS_DISENO.md`), 13 corregir y cargar horas a mano, 14 panel de Gerardo, 15 historial de terminadas del operario, 16 asistencia de cuadrilla y marcación remota, 17 constancia de entrega. Cada diseño tiene sus supuestos a confirmar. Después: reportes exportables (planilla de horas para pagar y pre-factura). Loop 11 y `0019` ya en `afull-dev` y `afull-demo`.
 0. **Después de la demo (2026-11-09):** `search_path` fijo en las 14 funciones de trigger; prueba en celulares reales; backup de `afull-demo` si se sigue usando; Vercel Pro y Supabase Pro antes de operar con datos reales; sincronizar `D:\sistema-afull`.
@@ -374,6 +376,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 | Fecha | Commit | Resumen | Verificación |
 | :--- | :--- | :--- | :--- |
+| 2026-11-17 | Loop 14 | Panel de Gerardo (`/panel`): sin tarea, trabajando, en pausa, no marcaron; asignar tarea activando la hoja; eventos en vivo de tarea, hoja y asistencia. Sin migración. | API 6/6, web 3/3, recorrido 5/5; totales API 237/238 (anon), web 208/208 |
 | 2026-11-17 | Loop 20 | Menú Reportes: registros como el Excel de Juan con descarga `.xlsx`, horas para pagar (rrhh) y pre-factura con margen, IVA e impresión A4. Sin migración. | API 7/7, web 3/3, recorrido 6/6; totales API 231/232 (anon), web 205/205 |
 | 2026-11-17 | Loop 13 | Corregir y cargar horas a mano desde Personas → Horas (cerrar con hora, corregir fin, cargar a mano); hora efectiva en `v_tramo`. Migración `0022`. | API 6/6, web 3/3, recorrido 5/5; totales API 224/225 (anon), web 202/202 |
 | 2026-11-17 | Loop 19 | Nachi verifica su propio diseño (Edu lo ve enseguida) y sube versiones corregidas con motivo; la oficina puede observar lo autoverificado. Migración `0021`. | API 6/6, web 5/5, recorrido 6/6; totales API 215/216 (anon), web 198/198 |

@@ -19,6 +19,7 @@ import { PresupuestosListaPage } from './routes/presupuestos/lista.js';
 import { PresupuestoDetallePage } from './routes/presupuestos/detalle.js';
 import { PresupuestoImprimirPage } from './routes/presupuestos/imprimir.js';
 import { ReportesPage } from './routes/reportes.js';
+import { PanelPage } from './routes/panel.js';
 import { PreFacturaImprimirPage } from './routes/reportes/prefactura-imprimir.js';
 import { ProyectosListaPage } from './routes/proyectos/lista.js';
 import { ProyectoDetallePage } from './routes/proyectos/detalle.js';
@@ -141,6 +142,7 @@ const hojaRutaDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute,
 const flotaRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/flota', component: FlotaPage });
 const procesosRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/procesos', component: ProcesosPage });
 const insumosRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/insumos', component: InsumosPage });
+const panelRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/panel', component: PanelPage });
 const reportesRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/reportes', component: ReportesPage });
 // Fuera del AppLayout: hoja A4 de la pre-factura (Loop 20).
 const preFacturaImprimirRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reportes/prefactura/imprimir', component: PreFacturaImprimirPage });
@@ -182,6 +184,7 @@ const routeTree = rootRoute.addChildren([
     procesosRoute,
     insumosRoute,
     reportesRoute,
+    panelRoute,
     rentabilidadRoute,
     permisosRoute,
     permisoDetalleRoute,

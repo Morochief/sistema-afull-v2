@@ -1,5 +1,6 @@
 import { Hono, type Context } from 'hono';
 import { evaluarGeocerca, marcarAsistenciaSchema, filtroAsistenciaSchema } from '@afull/shared';
+import { publicarLive } from '../live/publicar.js';
 import { sql } from '../../db/client.js';
 import { requireSesion, requireCapacidad } from '../auth/middleware.js';
 import { auditar } from '../auditoria/service.js';
@@ -45,6 +46,7 @@ export const asistenciaRoutes = new Hono()
       );
       return { ...m, sede: mejor?.s.nombre ?? null, repetida: false };
     });
+    if (!r.repetida) await publicarLive('asistencia.marcar', String((r as { id?: unknown }).id ?? '')); // panel de Gerardo (Loop 14)
     return c.json(r, r.repetida ? 200 : 201);
   })
   .get('/', requireCapacidad('rrhh'), async (c) => {

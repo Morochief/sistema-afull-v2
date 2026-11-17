@@ -38,3 +38,10 @@ El viejo dejaba que Gerardo **iniciara** el reloj de otro. Choca con la decisió
 > Decisión: Gerardo solo asigna; no inicia el reloj de otro.
 - "Vino" = marcó entrada hoy (cualquier sede o remota del Loop 16).
 - Iniciar el reloj por otro queda afuera hasta que el usuario lo decida.
+
+## 8. Ajustes al implementar (2026-11-17)
+- **Salida marcada con el reloj abierto:** CA-14.2 decía que con salida no aparece en ninguna columna. Pero una salida con un tramo abierto es justo el reloj olvidado que Gerardo tiene que ver (si no, queda corriendo toda la noche, como pasó con Edu el 10/11). Entonces: con salida y **sin** reloj abierto no aparece en ninguna columna; con salida y reloj abierto aparece en **Trabajando** con el aviso "Marcó salida: ¿se olvidó de pausar?".
+- **Trabajando** incluye a quien tiene el reloj en marcha aunque no haya marcado entrada (operarios sin celular: el reloj lo usan desde la compu del taller).
+- **En pausa** = sin reloj abierto, y su último tramo de hoy cerró en una tarea que sigue **PAUSADA** (no FIN). Tiene prioridad sobre "Sin tarea en marcha".
+- **Pendientes para hoy** = tareas suyas PENDIENTE o PAUSADA, con la hoja de la OT **activa**, OT no final y día vacío o hasta hoy (lo mismo que ve en Mi trabajo).
+- **En vivo:** crear una tarea, activar la hoja y marcar entrada/salida ahora publican un evento mínimo (tipo + id), así el panel y Mi trabajo se actualizan al instante (antes solo iniciar/pausar/finalizar publicaban).
