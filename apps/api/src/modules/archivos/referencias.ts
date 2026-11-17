@@ -65,7 +65,8 @@ export async function refParaSubir(tx: TransactionSql, a: Actor, d: SolicitarArc
       if (v.conductor_persona_id !== (await personaDe(tx, a))) throw new ErrorApp(403, 'Solo el conductor sube la foto del odómetro');
       return { columna: 'viaje_id', id: v.id };
     }
-    case 'EVIDENCIA_PARADA': {
+    case 'EVIDENCIA_PARADA':
+    case 'REMISION_PARADA': {
       soloUsuario(a);
       if (!d.paradaId) throw new ErrorApp(400, 'Falta indicar la parada');
       const p = await paradaConCuadrilla(tx, d.paradaId, await personaDe(tx, a));

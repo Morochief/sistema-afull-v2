@@ -42,3 +42,12 @@ Antes de **Hecha**, un bloque **Entrega**:
 > Decisión: Remisión obligatoria por defecto, desmarcable por OT.
 - La remisión es obligatoria por defecto (se puede desmarcar por OT).
 - El portal muestra quién recibió (nombre y cargo).
+
+## 9. Ajustes al implementar (2026-11-17)
+- La migración es **`0024_constancia_entrega`** (`0022` y `0023` las usaron los Loops 13 y 16).
+- **Una sola acción:** el receptor viaja con **"Hecha"** (`POST /api/campo/paradas/:id/completar { receptorNombre, receptorCargo?, remisionEnCelular? }`), no en un pedido aparte. Sin señal, dos acciones encoladas podrían llegar en otro orden. La hora de entrega es `completada_at` (con la hora real si iba sin señal).
+- **La foto y el "Hecha" viajan por colas distintas** (fotos y acciones). Para que no se rechace una entrega legítima, la remisión se exige así: ya subida, **o** sacada y todavía en el celular (`remisionEnCelular`), **o** la parada se cerró sin señal. En los dos últimos casos la oficina ve "la foto de la remisión todavía no llegó" hasta que sube. Sin foto de ningún tipo y en línea: 400.
+- **Reintento:** repetir "Hecha" con el mismo receptor responde 200 (la cola puede reenviar); con otro receptor, 409. Un trigger impide cambiar receptor y cargo una vez cargados.
+- **Quién la cargó:** columna `completada_por` (usuario), solo para las nuevas.
+- **"Esta OT no lleva remisión":** columna `orden_trabajo.lleva_remision` (por defecto sí) y `POST /api/comercial/ot/:id/remision { lleva }` (comercial, auditado), desde la sección Entrega de la OT.
+- El portal recibe `entrega` (la última parada completada con receptor: fecha, nombre y cargo) en cada OT de `/api/portal/ots`; nunca la foto.

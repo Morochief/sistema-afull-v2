@@ -94,6 +94,11 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
     });
     await paso('completa la parada → la hoja queda terminada', async () => {
       await page.getByRole('button', { name: /Hecha/ }).click();
+      // Loop 17: "Hecha" pide la constancia de entrega (foto de la remisión firmada y quién recibió).
+      await page.getByLabel('Foto de la remisión firmada').setInputFiles(FOTO_JPEG);
+      await page.getByText('Foto lista').waitFor();
+      await page.getByLabel(/Recibió/).fill('zz_test María');
+      await page.getByRole('button', { name: 'Confirmar entrega' }).click();
       await page.getByText(/Salida terminada/).waitFor();
     });
     await paso('cierra el viaje con 1030 km', async () => {

@@ -25,6 +25,8 @@ export type ViajeHoja = {
 export type ParadaHoy = {
   id: string; orden: number; tipo: string; estado: string; hora_estimada: string | null; orden_trabajo_id: string; codigo_ot: string; titulo: string;
   cliente: string; sucursal: string | null; direccion: string | null; gps_lat: number | null; gps_lng: number | null;
+  /** Loop 17: si la OT lleva remisión firmada (foto obligatoria) y quién recibió, si ya se entregó. */
+  lleva_remision?: boolean; receptor_nombre?: string | null;
 };
 export type MiDiaCampo = {
   fecha: string;

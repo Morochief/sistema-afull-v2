@@ -10,6 +10,8 @@ import { paginaSchema } from '../../lib/paginacion.js';
 import { ipDe } from '../../lib/ip.js';
 import type { Ctx } from '../clientes/service.js';
 
+import { entregasOT, fijarRemision } from './entrega.service.js';
+
 const ctxDe = (c: Context): Ctx => ({ usuarioId: c.get('usuario').id, ip: ipDe(c) });
 
 export const otRoutes = new Hono()
@@ -61,5 +63,10 @@ export const otRoutes = new Hono()
   .patch('/:id/hoja', async (c) => {
     const id = z.string().uuid().parse(c.req.param('id'));
     return c.json(await notasHoja(ctxDe(c), id, notasHojaSchema.parse(await c.req.json().catch(() => null)).notas));
+  })
+  .get('/:id/entregas', async (c) => c.json(await entregasOT(z.string().uuid().parse(c.req.param('id')))))
+  .post('/:id/remision', async (c) => {
+    const { lleva } = z.object({ lleva: z.boolean() }).parse(await c.req.json().catch(() => null));
+    return c.json(await fijarRemision(ctxDe(c), z.string().uuid().parse(c.req.param('id')), lleva));
   })
   .post('/:id/hoja/whatsapp', async (c) => c.json(await whatsappHoja(ctxDe(c), z.string().uuid().parse(c.req.param('id')))));

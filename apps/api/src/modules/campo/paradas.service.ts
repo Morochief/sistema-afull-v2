@@ -2,28 +2,48 @@ import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
 import { ErrorApp } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
+import type { CompletarParada } from '@afull/shared';
 import { personaDeSesion, enTx, hoyAsuncion, horaDeAccion } from './comun.js';
 
 /** Completar u omitir una parada de una hoja en la que la persona está. Repetir la misma acción no falla. */
-export function cerrarParada(ctx: Ctx, paradaId: string, accion: 'COMPLETADA' | 'OMITIDA', motivo?: string, ocurridaAt?: string) {
+export function cerrarParada(ctx: Ctx, paradaId: string, accion: 'COMPLETADA' | 'OMITIDA', motivo?: string, ocurridaAt?: string, entrega?: CompletarParada) {
   return enTx(async (tx) => {
     const persona = await personaDeSesion(tx, ctx.usuarioId);
     const [p] = await tx`
-      SELECT pa.estado, pa.hoja_ruta_id, h.estado AS hoja_estado, q.activo AS en_cuadrilla
+      SELECT pa.estado, pa.hoja_ruta_id, h.estado AS hoja_estado, q.activo AS en_cuadrilla, pa.receptor_nombre, pa.receptor_cargo, o.lleva_remision
       FROM hoja_ruta_parada pa
       JOIN hoja_ruta h ON h.id = pa.hoja_ruta_id
+      JOIN orden_trabajo o ON o.id = pa.orden_trabajo_id
       LEFT JOIN hoja_ruta_persona q ON q.hoja_ruta_id = h.id AND q.persona_id = ${persona.id}
       WHERE pa.id = ${paradaId} FOR UPDATE OF pa
     `;
     if (!p) throw new ErrorApp(404, 'Parada no encontrada');
     if (!p.en_cuadrilla) throw new ErrorApp(403, 'No estás en la cuadrilla de esta hoja de ruta');
-    if (p.estado === accion) return { id: paradaId, estado: accion, repetida: true };
+    const receptor = entrega?.receptorNombre?.trim() || null;
+    const cargo = entrega?.receptorCargo?.trim() || null;
+    if (p.estado === accion) {
+      // Loop 17: la cola puede reenviar el mismo "Hecha"; otra persona como receptor no pisa lo cargado.
+      if (accion === 'COMPLETADA' && p.receptor_nombre && (receptor !== p.receptor_nombre || cargo !== p.receptor_cargo)) {
+        throw new ErrorApp(409, `La entrega ya está cargada: recibió ${p.receptor_nombre}`);
+      }
+      return { id: paradaId, estado: accion, repetida: true };
+    }
     if (p.estado !== 'PENDIENTE') throw new ErrorApp(409, `La parada ya está ${p.estado}`);
     if (p.hoja_estado === 'FINALIZADA') throw new ErrorApp(409, 'La hoja de ruta está finalizada');
     if (accion === 'OMITIDA' && !motivo?.trim()) throw new ErrorApp(400, 'Omitir una parada requiere motivo');
     const h = await horaDeAccion(tx, ocurridaAt);
+    if (accion === 'COMPLETADA') {
+      if (!receptor || receptor.length < 2) throw new ErrorApp(400, 'Falta el nombre de quien recibió');
+      if (p.lleva_remision && !entrega?.remisionEnCelular && !h.sinSenal) {
+        // La foto viaja por su propia cola: si ya está en el celular (o se cerró sin señal) se acepta y queda "por llegar".
+        const [f] = await tx`SELECT 1 FROM archivo WHERE parada_id = ${paradaId} AND tipo = 'REMISION_PARADA' AND estado = 'SUBIDO'`;
+        if (!f) throw new ErrorApp(400, 'Falta la foto de la remisión firmada');
+      }
+    }
     await tx`
       UPDATE hoja_ruta_parada SET estado = ${accion}, motivo_omision = ${accion === 'OMITIDA' ? motivo!.trim() : null}, cierre_sin_senal = ${h.sinSenal},
+             receptor_nombre = ${accion === 'COMPLETADA' ? receptor : null}, receptor_cargo = ${accion === 'COMPLETADA' ? cargo : null},
+             completada_por = ${accion === 'COMPLETADA' ? ctx.usuarioId : null},
              completada_at = ${accion === 'COMPLETADA' ? sql`coalesce(${h.hora}::timestamptz, clock_timestamp())` : null}
       WHERE id = ${paradaId}
     `;
@@ -33,7 +53,7 @@ export function cerrarParada(ctx: Ctx, paradaId: string, accion: 'COMPLETADA' | 
     `;
     if (pendientes === 0) await tx`UPDATE hoja_ruta SET estado = 'FINALIZADA' WHERE id = ${p.hoja_ruta_id}`;
     await auditar(
-      { usuarioId: ctx.usuarioId, accion: accion === 'COMPLETADA' ? 'parada.completar' : 'parada.omitir', recurso: 'hoja_ruta_parada', recursoId: paradaId, ip: ctx.ip, metadata: { motivo: motivo ?? null } },
+      { usuarioId: ctx.usuarioId, accion: accion === 'COMPLETADA' ? 'parada.completar' : 'parada.omitir', recurso: 'hoja_ruta_parada', recursoId: paradaId, ip: ctx.ip, metadata: { motivo: motivo ?? null, receptor: entrega?.receptorNombre?.trim() || null, remisionEnCelular: entrega?.remisionEnCelular ?? false } },
       tx
     );
     return { id: paradaId, estado: accion, repetida: false, hoja_finalizada: pendientes === 0 };
@@ -54,7 +74,8 @@ export async function miDiaEnCampo(ctx: Ctx) {
           'id', pa.id, 'orden', pa.orden_secuencia, 'tipo', pa.tipo, 'estado', pa.estado,
           'hora_estimada', pa.hora_estimada::text, 'orden_trabajo_id', o.id, 'codigo_ot', o.codigo_ot, 'titulo', o.titulo,
           'cliente', c.nombre, 'sucursal', s.nombre, 'direccion', s.direccion,
-          'gps_lat', s.gps_lat::float8, 'gps_lng', s.gps_lng::float8
+          'gps_lat', s.gps_lat::float8, 'gps_lng', s.gps_lng::float8,
+          'lleva_remision', o.lleva_remision, 'receptor_nombre', pa.receptor_nombre
         ) ORDER BY pa.orden_secuencia)
         FROM hoja_ruta_parada pa JOIN orden_trabajo o ON o.id = pa.orden_trabajo_id JOIN cliente c ON c.id = o.cliente_id
         LEFT JOIN sucursal s ON s.id = o.sucursal_id WHERE pa.hoja_ruta_id = h.id

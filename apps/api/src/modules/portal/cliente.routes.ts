@@ -54,8 +54,14 @@ export const portalClienteRoutes = new Hono<{ Variables: Variables }>()
     const p = pagina(c.req.query('pagina'));
     const [{ total }] = await sql`SELECT count(*)::int AS total FROM orden_trabajo WHERE cliente_id = ${clienteId}`;
     const items = await sql`
-      SELECT o.id, o.codigo_ot, o.titulo, s.nombre AS sucursal, o.estado, o.fecha_prometida::text AS fecha_prometida, o.created_at, o.updated_at
+      SELECT o.id, o.codigo_ot, o.titulo, s.nombre AS sucursal, o.estado, o.fecha_prometida::text AS fecha_prometida, o.created_at, o.updated_at,
+             CASE WHEN en.receptor_nombre IS NULL THEN NULL ELSE json_build_object(
+               'entregada_at', en.completada_at, 'receptor_nombre', en.receptor_nombre, 'receptor_cargo', en.receptor_cargo) END AS entrega
       FROM orden_trabajo o LEFT JOIN sucursal s ON s.id = o.sucursal_id
+      -- Loop 17: la última entrega (cuándo y quién recibió); la foto de la remisión es interna.
+      LEFT JOIN LATERAL (SELECT pa.completada_at, pa.receptor_nombre, pa.receptor_cargo FROM hoja_ruta_parada pa
+        WHERE pa.orden_trabajo_id = o.id AND pa.estado = 'COMPLETADA' AND pa.receptor_nombre IS NOT NULL
+        ORDER BY pa.completada_at DESC LIMIT ${1}) en ON true
       WHERE o.cliente_id = ${clienteId} ORDER BY o.created_at DESC, o.id LIMIT ${TAM_PAGINA} OFFSET ${desplazamiento(p)}
     `;
     return c.json(armarPagina([...items], total, p));

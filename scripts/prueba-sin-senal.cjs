@@ -82,6 +82,11 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
       await page.getByRole('button', { name: /Iniciar viaje/ }).click();
       await page.getByText(/inicio del viaje está guardado sin señal/).waitFor();
       await page.getByRole('button', { name: /Hecha/ }).click();
+      // Loop 17: "Hecha" pide la constancia de entrega (foto de la remisión firmada y quién recibió).
+      await page.getByLabel('Foto de la remisión firmada').setInputFiles(FOTO_JPEG);
+      await page.getByText('Foto lista').waitFor();
+      await page.getByLabel(/Recibió/).fill('zz_test María');
+      await page.getByRole('button', { name: 'Confirmar entrega' }).click();
       await page.getByText(/se envía cuando vuelva la señal/).waitFor();
       await page.getByTestId('estado-conexion').getByText(/3 acciones guardadas/).waitFor();
       // La próxima marcación ya es "salida" (la entrada está guardada).

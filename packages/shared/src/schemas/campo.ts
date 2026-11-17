@@ -77,7 +77,15 @@ export const cerrarViajeSchema = z.object({
   ocurridaAt,
 });
 export const omitirParadaSchema = z.object({ motivo: texto(1000), ocurridaAt });
-export const completarParadaSchema = z.object({ ocurridaAt });
+/** Loop 17: "Hecha" lleva quién recibió (la API exige receptor y, si la OT lleva remisión, la foto). */
+export const completarParadaSchema = z.object({
+  ocurridaAt,
+  receptorNombre: z.string().trim().max(120).optional(),
+  receptorCargo: z.string().trim().max(60).optional().transform((v) => (v ? v : undefined)),
+  /** La foto de la remisión se sacó y espera señal para subir (va por otra cola). */
+  remisionEnCelular: z.boolean().optional(),
+});
+export type CompletarParada = z.infer<typeof completarParadaSchema>;
 
 export const marcarAsistenciaSchema = z.object({
   tipo: z.enum(['ENTRADA', 'SALIDA']),

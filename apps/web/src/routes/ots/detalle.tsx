@@ -12,6 +12,7 @@ import { Skeleton } from '../../components/ui/skeleton.js';
 import { ModalEditarOT } from '../../components/modals/ModalEditarOT.js';
 import { ModalTransicionOT } from '../../components/modals/ModalTransicionOT.js';
 import { SeccionHojaRuta } from '../../components/ots/SeccionHojaRuta.js';
+import { SeccionEntregaOT } from '../../components/ots/SeccionEntregaOT.js';
 import { SeccionDisenoOT } from '../../components/disenos/SeccionDisenoOT.js';
 import { SeccionMaterialOT } from '../../components/insumos/SeccionMaterialOT.js';
 import { SeccionCosteoOT } from '../../components/costeo/SeccionCosteoOT.js';
@@ -153,6 +154,8 @@ export function OTsDetallePage() {
       </div>
 
       <SeccionHojaRuta ot={ot} otFinalizada={final} onCambioOT={() => void refetch()} />
+
+      <SeccionEntregaOT otId={ot.id} />
 
       <SeccionDisenoOT otId={ot.id} otFinalizada={final} />
 

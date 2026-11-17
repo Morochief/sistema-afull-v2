@@ -50,7 +50,8 @@ describe('Loop 4 (L4.E4) — acciones cargadas sin señal', () => {
     expect(s.sin_senal).toBe(false);
 
     const v = await e.op('POST', '/api/campo/viajes/iniciar', { vehiculoId: e.vehiculo, hojaRutaId: e.hoja, kmInicio: 500, claveIdempotencia: uuid(), ocurridaAt: hace(40) });
-    expect((await e.op('POST', `/api/campo/paradas/${e.parada}/completar`, { ocurridaAt: hace(20) })).status).toBe(200);
+    // Loop 17: "Hecha" lleva quién recibió; sin señal la foto de la remisión no se exige (va por otra cola).
+    expect((await e.op('POST', `/api/campo/paradas/${e.parada}/completar`, { ocurridaAt: hace(20), receptorNombre: 'zz_test María' })).status).toBe(200);
     const cierre = await e.op('POST', `/api/campo/viajes/${v.j.id as string}/cerrar`, { kmFin: 530, motivoDesvio: 'zz_test', claveIdempotencia: uuid(), ocurridaAt: hace(5) });
     expect(cierre.status).toBe(200);
     const [vi] = await admin`

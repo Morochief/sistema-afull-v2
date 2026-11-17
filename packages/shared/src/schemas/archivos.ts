@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Fotos y archivos (Loop 4, L4.E3). Cada tipo cuelga de una sola cosa. */
-export const TIPOS_ARCHIVO = ['ODOMETRO_INICIO', 'ODOMETRO_FIN', 'EVIDENCIA_PARADA', 'MUESTRA_TAREA', 'COMPROBANTE_PERMISO', 'FOTO_PEDIDO'] as const;
+export const TIPOS_ARCHIVO = ['ODOMETRO_INICIO', 'ODOMETRO_FIN', 'EVIDENCIA_PARADA', 'REMISION_PARADA', 'MUESTRA_TAREA', 'COMPROBANTE_PERMISO', 'FOTO_PEDIDO'] as const;
 export type TipoArchivo = (typeof TIPOS_ARCHIVO)[number];
 
 export const MIMES_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -13,7 +13,7 @@ export const MAX_BYTES_IMAGEN = 5 * 1024 * 1024;
 export const MAX_BYTES_PDF = 10 * 1024 * 1024;
 /** Cuántos archivos subidos admite cada cosa (una foto de odómetro por momento; el resto, varias). */
 export const MAX_POR_REFERENCIA: Record<TipoArchivo, number> = {
-  ODOMETRO_INICIO: 1, ODOMETRO_FIN: 1, EVIDENCIA_PARADA: 10, MUESTRA_TAREA: 10, COMPROBANTE_PERMISO: 3, FOTO_PEDIDO: 3,
+  ODOMETRO_INICIO: 1, ODOMETRO_FIN: 1, EVIDENCIA_PARADA: 10, REMISION_PARADA: 1, MUESTRA_TAREA: 10, COMPROBANTE_PERMISO: 3, FOTO_PEDIDO: 3,
 };
 
 export const maxBytesDe = (mime: string) => (mime === MIME_PDF ? MAX_BYTES_PDF : MAX_BYTES_IMAGEN);

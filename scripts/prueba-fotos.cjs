@@ -118,6 +118,11 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
     await paso('montador: dos fotos del montaje en la parada; cierra el viaje con su foto', async () => {
       for (let i = 0; i < 2; i++) await page.getByLabel('Foto del montaje').setInputFiles(FOTO_JPEG);
       await page.getByRole('button', { name: /Hecha/ }).click();
+      // Loop 17: "Hecha" pide la constancia de entrega (foto de la remisión firmada y quién recibió).
+      await page.getByLabel('Foto de la remisión firmada').setInputFiles(FOTO_JPEG);
+      await page.getByText('Foto lista').waitFor();
+      await page.getByLabel(/Recibió/).fill('zz_test María');
+      await page.getByRole('button', { name: 'Confirmar entrega' }).click();
       await page.locator('#kmOdometro').fill('5012');
       await page.getByLabel('Foto del odómetro').setInputFiles(FOTO_JPEG);
       await page.getByTestId('foto-odometro-lista').waitFor();

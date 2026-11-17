@@ -5,7 +5,9 @@ import { queryListado, type FiltrosListado } from './api-presupuestos.js';
 // ---------- Lado del cliente (portal público): token en el header, sin cookies ni redirección al login ----------
 
 export type PortalYo = { cliente: string; para: string; expira_at: string; sucursales: { id: string; nombre: string }[] };
-export type PortalOT = { id: string; codigo_ot: string; titulo: string; sucursal: string | null; estado: string; fecha_prometida: string | null; created_at: string };
+export type PortalOT = { id: string; codigo_ot: string; titulo: string; sucursal: string | null; estado: string; fecha_prometida: string | null; created_at: string;
+  /** Loop 17: cuándo se entregó y quién recibió (sin la foto, que es interna). */
+  entrega?: { entregada_at: string; receptor_nombre: string; receptor_cargo: string | null } | null };
 export type PortalPedido = {
   id: string; numero: string; sucursal: string | null; descripcion: string; foto_url: string | null; estado: 'NUEVO' | 'CONVERTIDO' | 'DESCARTADO';
   motivo_descarte: string | null; created_at: string; codigo_ot: string | null; estado_ot: string | null; presupuesto_numero: string | null; presupuesto_estado: string | null; fotos: number;

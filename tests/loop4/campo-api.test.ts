@@ -77,9 +77,12 @@ describe('Loop 4 — campo y flota', () => {
   it('CA-4.6: omitir sin motivo → 400; completar la última parada finaliza la hoja', async () => {
     const e = await escenario();
     expect((await e.op('POST', `/api/campo/paradas/${e.parada}/omitir`, { motivo: '' })).status).toBe(400);
-    const r = await e.op('POST', `/api/campo/paradas/${e.parada}/completar`);
+    // Loop 17 (decisión del usuario): "Hecha" exige quién recibió; la remisión, subida o todavía en el celular.
+    expect((await e.op('POST', `/api/campo/paradas/${e.parada}/completar`)).status).toBe(400);
+    const entrega = { receptorNombre: 'zz_test María', remisionEnCelular: true };
+    const r = await e.op('POST', `/api/campo/paradas/${e.parada}/completar`, entrega);
     expect(r.j.hoja_finalizada).toBe(true);
-    expect((await e.op('POST', `/api/campo/paradas/${e.parada}/completar`)).j.repetida).toBe(true);
+    expect((await e.op('POST', `/api/campo/paradas/${e.parada}/completar`, entrega)).j.repetida).toBe(true);
     await expect(admin`UPDATE hoja_ruta_parada SET estado = 'OMITIDA' WHERE id = ${e.parada}`).rejects.toMatchObject({ code: '23514' });
   });
 

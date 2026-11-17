@@ -22,7 +22,7 @@ export const campoRoutes = new Hono()
   .post('/viajes/:id/cerrar', async (c) => c.json(await cerrarViaje(ctxDe(c), idDe(c), cerrarViajeSchema.parse(await cuerpo(c)))))
   .post('/paradas/:id/completar', async (c) => {
     const b = completarParadaSchema.parse((await cuerpo(c)) ?? {});
-    return c.json(await cerrarParada(ctxDe(c), idDe(c), 'COMPLETADA', undefined, b.ocurridaAt));
+    return c.json(await cerrarParada(ctxDe(c), idDe(c), 'COMPLETADA', undefined, b.ocurridaAt, b));
   })
   .post('/paradas/:id/omitir', async (c) => {
     const b = omitirParadaSchema.parse(await cuerpo(c));

@@ -1,6 +1,6 @@
 import { ESTADO_OT_CLIENTE, estadoPedidoCliente } from '@afull/shared';
 import type { PortalOT, PortalPedido } from '../../lib/api-portal.js';
-import { formatearDia } from '../../lib/fechas.js';
+import { formatearFechaHora, formatearDia } from '../../lib/fechas.js';
 import { Badge, type BadgeVariant } from '../ui/badge.js';
 import { FotosPedidoPortal } from './FotosPedidoPortal.js';
 
@@ -15,6 +15,11 @@ export function ListaTrabajos({ ots }: { ots: PortalOT[] }) {
           <div>
             <div className="font-medium text-white">{o.titulo}</div>
             <div className="text-xs text-neutral-400">{o.codigo_ot}{o.sucursal && ` · ${o.sucursal}`}{o.fecha_prometida && ` · para el ${formatearDia(o.fecha_prometida)}`}</div>
+            {o.entrega && (
+              <div className="text-xs text-[#22c55e]">
+                Entregado el {formatearFechaHora(o.entrega.entregada_at)} · Recibió: {o.entrega.receptor_nombre}{o.entrega.receptor_cargo ? ` (${o.entrega.receptor_cargo})` : ''}
+              </div>
+            )}
           </div>
           <Badge variant={colorOT(o.estado)}>{ESTADO_OT_CLIENTE[o.estado] ?? o.estado}</Badge>
         </li>

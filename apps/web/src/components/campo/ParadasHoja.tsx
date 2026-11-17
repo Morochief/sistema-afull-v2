@@ -11,6 +11,7 @@ import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { ModalCargarMaterial } from '../insumos/ModalCargarMaterial.js';
 import { FotoMontaje } from './FotoMontaje.js';
+import { ModalEntregaParada } from './ModalEntregaParada.js';
 
 type Hoja = MiDiaCampo['hojas'][number];
 
@@ -19,16 +20,15 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
   const [omitiendo, setOmitiendo] = useState<string | null>(null);
   const [motivo, setMotivo] = useState('');
   const [material, setMaterial] = useState<Hoja['paradas'][number] | null>(null);
+  const [entregando, setEntregando] = useState<Hoja['paradas'][number] | null>(null);
   const { pendientes } = useColaOffline();
   const porEnviar = (id: string) => pendientes.find((p) => p.url.startsWith(`/api/campo/paradas/${id}/`));
 
-  const accion = async (id: string, completar: boolean) => {
+  // "Hecha" pasa por la constancia de entrega (Loop 17); acá queda omitir.
+  const omitir = async (id: string) => {
     try {
       const parada = hoja.paradas.find((x) => x.id === id);
-      const etiqueta = `${completar ? 'Parada hecha' : 'Parada omitida'}: ${parada?.codigo_ot ?? ''}`;
-      const envio = completar
-        ? await enviarOEncolar<{ hoja_finalizada?: boolean }>(etiqueta, `/api/campo/paradas/${id}/completar`)
-        : await enviarOEncolar<{ hoja_finalizada?: boolean }>(etiqueta, `/api/campo/paradas/${id}/omitir`, { motivo: motivo.trim() });
+      const envio = await enviarOEncolar<{ hoja_finalizada?: boolean }>(`Parada omitida: ${parada?.codigo_ot ?? ''}`, `/api/campo/paradas/${id}/omitir`, { motivo: motivo.trim() });
       if (envio.encolada) toast.info('Guardado sin señal: se envía solo cuando vuelva.');
       else if (envio.respuesta.hoja_finalizada) toast.success('¡Salida terminada!');
       setOmitiendo(null);
@@ -56,6 +56,7 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <Button size="sm" variant="ghost" className="h-8 gap-1 text-[11px]" onClick={() => setMaterial(p)} aria-label={`Material ${p.codigo_ot}`}><Package className="h-3.5 w-3.5" /> Material</Button>
+                {p.estado === 'COMPLETADA' && p.receptor_nombre && <span className="text-[11px] text-neutral-400">Recibió {p.receptor_nombre}</span>}
                 {p.estado !== 'PENDIENTE' && <Badge variant={p.estado === 'COMPLETADA' ? 'success' : 'danger'}>{p.estado === 'COMPLETADA' ? 'Hecha' : 'Omitida'}</Badge>}
               </div>
             </div>
@@ -63,7 +64,7 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
             {p.estado === 'PENDIENTE' && porEnviar(p.id) && <p className="text-amber-300">{porEnviar(p.id)!.url.endsWith('/completar') ? 'Hecha' : 'Omitida'} · se envía cuando vuelva la señal</p>}
             {p.estado === 'PENDIENTE' && !porEnviar(p.id) && (
               omitiendo === p.id ? (
-                <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (motivo.trim()) void accion(p.id, false); }}>
+                <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (motivo.trim()) void omitir(p.id); }}>
                   <Input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="¿Por qué no se hizo?" className="h-10 text-xs" autoFocus />
                   <Button type="submit" className="h-10 text-xs" disabled={!motivo.trim()}>Omitir</Button>
                 </form>
@@ -75,13 +76,15 @@ export function ParadasHoja({ hoja, onCambio }: { hoja: Hoja; onCambio: () => vo
                     </a>
                   ) : <span />}
                   <Button variant="outline" className="min-h-[40px] gap-1 text-xs" onClick={() => setOmitiendo(p.id)}><XCircle className="h-3.5 w-3.5" /> Omitir</Button>
-                  <Button className="min-h-[40px] gap-1 text-xs" onClick={() => void accion(p.id, true)}><CheckCircle2 className="h-3.5 w-3.5" /> Hecha</Button>
+                  <Button className="min-h-[40px] gap-1 text-xs" onClick={() => setEntregando(p)}><CheckCircle2 className="h-3.5 w-3.5" /> Hecha</Button>
                 </div>
               )
             )}
           </div>
         );
       })}
+      <ModalEntregaParada parada={entregando} onCerrar={() => setEntregando(null)}
+        onHecha={(terminada) => { if (terminada) toast.success('¡Salida terminada!'); setEntregando(null); onCambio(); }} />
       {material && <ModalCargarMaterial otId={material.orden_trabajo_id} titulo={`${material.codigo_ot} · ${material.titulo}`} onCerrar={() => setMaterial(null)} />}
     </section>
   );
