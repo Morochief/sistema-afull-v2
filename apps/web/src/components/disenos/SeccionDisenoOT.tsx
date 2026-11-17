@@ -13,7 +13,7 @@ import { Input } from '../ui/input.js';
 import { ModalSubirDiseno } from './ModalSubirDiseno.js';
 
 
-/** Diseño de la OT: versiones con su enlace de Drive, verificación (Juan o Sofi) y carga de una versión nueva. */
+/** Diseño de la OT: versiones con su enlace de Drive, verificación (oficina o la diseñadora, Loop 19) y carga de una versión nueva. */
 export function SeccionDisenoOT({ otId, otFinalizada }: { otId: string; otFinalizada: boolean }) {
   const qc = useQueryClient();
   const { data: versiones = [] } = useQuery({ queryKey: ['disenos', 'ot', otId], queryFn: () => versionesDiseno(otId) });
@@ -55,10 +55,16 @@ export function SeccionDisenoOT({ otId, otFinalizada }: { otId: string; otFinali
             </a>
           </div>
           {v.notas && <p className="text-neutral-300">{v.notas}</p>}
+          {v.motivo_cambio && <p className="text-neutral-400">Por qué cambió: {v.motivo_cambio}</p>}
+          {v.estado === 'ANULADA' && <p className="text-neutral-500">Anulada: {v.motivo_anulacion} · {formatearFechaHora(v.anulada_at)}</p>}
           {v.revisado_por_nombre && (
-            <p className="text-neutral-500">{v.estado === 'APROBADO' ? 'Aprobó' : 'Observó'} {v.revisado_por_nombre} · {formatearFechaHora(v.revisado_at)}{v.observacion && `: ${v.observacion}`}</p>
+            <p className="text-neutral-500">
+              {v.autoverificada ? `Verificó la diseñadora ${v.revisado_por_nombre}` : `${v.estado === 'APROBADO' ? 'Aprobó' : 'Observó'} ${v.revisado_por_nombre}`} · {formatearFechaHora(v.revisado_at)}
+              {v.observado_por_nombre ? ` · Observó ${v.observado_por_nombre}: ${v.observacion}` : v.observacion && `: ${v.observacion}`}
+            </p>
           )}
-          {v.estado === 'PENDIENTE' && !otFinalizada && (
+          {/* Loop 19: la oficina puede observar después lo que verificó la diseñadora (solo la última versión). */}
+          {(v.estado === 'PENDIENTE' || (v.estado === 'APROBADO' && v.autoverificada && v.id === versiones[0]?.id)) && !otFinalizada && (
             observando === v.id ? (
               <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (motivo.trim()) void revisar(v, false); }}>
                 <Input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Qué hay que corregir (medidas, textos…)" className="h-8 text-xs" autoFocus />
@@ -67,7 +73,7 @@ export function SeccionDisenoOT({ otId, otFinalizada }: { otId: string; otFinali
               </form>
             ) : (
               <div className="flex gap-2">
-                <Button size="sm" className="h-7 text-xs" onClick={() => void revisar(v, true)}>Aprobar (medidas verificadas)</Button>
+                {v.estado === 'PENDIENTE' && <Button size="sm" className="h-7 text-xs" onClick={() => void revisar(v, true)}>Aprobar (medidas verificadas)</Button>}
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setObservando(v.id)}>Observar</Button>
               </div>
             )

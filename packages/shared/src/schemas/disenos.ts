@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const ORIGENES_DISENO = ['CLIENTE', 'DISENADORA'] as const;
 export type OrigenDiseno = (typeof ORIGENES_DISENO)[number];
-export type EstadoDiseno = 'PENDIENTE' | 'APROBADO' | 'OBSERVADO';
+export type EstadoDiseno = 'PENDIENTE' | 'APROBADO' | 'OBSERVADO' | 'ANULADA';
 
 /** El archivo vive en Google Drive: solo se guarda el enlace (https://drive.google.com/… o docs.google.com/…). */
 export const subirDisenoSchema = z.object({
@@ -13,6 +13,10 @@ export const subirDisenoSchema = z.object({
     .max(500)
     .regex(/^https:\/\/(drive|docs)\.google\.com\//, 'Pegá el enlace de Google Drive del archivo original'),
   notas: z.string().trim().max(1000).optional(),
+  /** Loop 19: la diseñadora ya verificó medidas, textos y colores: queda aprobada en el acto. */
+  verificada: z.boolean().optional(),
+  /** Por qué se reemplaza la versión anterior ("Edu vio un error en el teléfono"). */
+  motivoCambio: z.string().trim().max(500).optional(),
 });
 
 export const observarDisenoSchema = z.object({
@@ -32,6 +36,13 @@ export type DisenoVersion = {
   revisado_por_nombre: string | null;
   revisado_at: string | null;
   observacion: string | null;
+  /** Loop 19: aprobada por la diseñadora (la oficina todavía puede observarla). */
+  autoverificada: boolean;
+  motivo_cambio: string | null;
+  motivo_anulacion: string | null;
+  anulada_at: string | null;
+  observado_por_nombre: string | null;
+  observado_at: string | null;
 };
 
 /** Fila de las colas (por revisar / para producir): la versión más la OT y el cliente. */

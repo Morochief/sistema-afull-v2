@@ -9,10 +9,16 @@ import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Label } from '../ui/label.js';
 
-type Props = { otId: string | null; puedeElegirOrigen: boolean; onCerrar: () => void };
+type Props = { otId: string | null; puedeElegirOrigen: boolean; onCerrar: () => void; reemplaza?: boolean };
 
-/** Cargar el enlace de Drive del diseño. Comercial elige si es del cliente o de la diseñadora; Nachi sube como diseñadora. */
-export function ModalSubirDiseno({ otId, puedeElegirOrigen, onCerrar }: Props) {
+/**
+ * Cargar el enlace de Drive del diseño. Comercial elige si es del cliente o de la diseñadora; Nachi sube como diseñadora.
+ * Loop 19: Nachi puede tildar "Ya lo verifiqué" (Edu lo ve enseguida) y, si reemplaza una versión, dice qué cambió.
+ */
+export function ModalSubirDiseno({ otId, puedeElegirOrigen, onCerrar, reemplaza = false }: Props) {
+  const disenadora = !puedeElegirOrigen;
+  const [verificada, setVerificada] = useState(false);
+  const [motivo, setMotivo] = useState('');
   const qc = useQueryClient();
   const [origen, setOrigen] = useState<OrigenDiseno>(puedeElegirOrigen ? 'CLIENTE' : 'DISENADORA');
   const [url, setUrl] = useState('');
@@ -36,8 +42,9 @@ export function ModalSubirDiseno({ otId, puedeElegirOrigen, onCerrar }: Props) {
     }
     setCargando(true);
     try {
-      const r = await subirDiseno(otId, { origen, driveUrl: url.trim(), notas: notas.trim() || undefined });
-      toast.success(`Diseño v${r.version} cargado: queda esperando la verificación de Juan o Sofi.`);
+      const datos = { origen, driveUrl: url.trim(), notas: notas.trim() || undefined };
+      const r = await subirDiseno(otId, disenadora ? { ...datos, verificada, motivoCambio: motivo.trim() || undefined } : datos);
+      toast.success(verificada ? `Diseño v${r.version} verificado: Edu ya lo ve en Diseños.` : `Diseño v${r.version} cargado: queda por verificar.`);
       void qc.invalidateQueries({ queryKey: ['disenos'] });
       cerrar();
     } catch (er) {
@@ -51,7 +58,7 @@ export function ModalSubirDiseno({ otId, puedeElegirOrigen, onCerrar }: Props) {
     <Dialog abierto onCerrar={cerrar}>
       <DialogHeader>
         <DialogTitle>Cargar diseño</DialogTitle>
-        <DialogDescription>Edu lo ve recién cuando Juan o Sofi verifiquen medidas y demás.</DialogDescription>
+        <DialogDescription>Edu lo ve recién cuando esté verificado (medidas, textos y colores).</DialogDescription>
       </DialogHeader>
       <form onSubmit={enviar} className="space-y-4">
         {puedeElegirOrigen && (
@@ -71,6 +78,18 @@ export function ModalSubirDiseno({ otId, puedeElegirOrigen, onCerrar }: Props) {
           <Label htmlFor="disenoNotas">Notas (medidas, material, qué cambió)</Label>
           <Input id="disenoNotas" value={notas} onChange={(e) => setNotas(e.target.value)} maxLength={1000} />
         </div>
+        {disenadora && reemplaza && (
+          <div>
+            <Label htmlFor="disenoMotivo">Qué cambió (por qué la reemplazás)</Label>
+            <Input id="disenoMotivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} placeholder="Ej. Edu vio un error en el teléfono" />
+          </div>
+        )}
+        {disenadora && (
+          <label className="flex items-start gap-2 rounded border border-[#1f2937] p-2 text-xs text-neutral-200">
+            <input type="checkbox" checked={verificada} onChange={(e) => setVerificada(e.target.checked)} className="mt-0.5" />
+            <span>Ya lo verifiqué (medidas, textos y colores): Edu lo ve enseguida.</span>
+          </label>
+        )}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={cerrar} disabled={cargando}>Volver</Button>
           <Button type="submit" disabled={cargando}>{cargando ? 'Cargando...' : 'Cargar diseño'}</Button>

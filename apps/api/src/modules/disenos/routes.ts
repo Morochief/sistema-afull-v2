@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { subirDisenoSchema, observarDisenoSchema } from '@afull/shared';
 import { requireSesion, requireCapacidad, requireAlgunaCapacidad } from '../auth/middleware.js';
 import { ipDe } from '../../lib/ip.js';
-import { versionesDeOT, subirVersion, revisarVersion, pendientesDeRevision, colaDeProduccion } from './service.js';
+import { versionesDeOT, subirVersion, revisarVersion, verificarVersion, pendientesDeRevision, colaDeProduccion } from './service.js';
 
 const ctxDe = (c: Context) => ({ usuarioId: c.get('usuario').id as string, ip: ipDe(c), capacidades: c.get('usuario').capacidades as string[] });
 const uuid = (c: Context, n: string) => z.string().uuid().parse(c.req.param(n));
@@ -21,6 +21,8 @@ export const disenosRoutes = new Hono()
   )
   .get('/pendientes', requireCapacidad('comercial'), async (c) => c.json(await pendientesDeRevision()))
   .get('/cola', requireAlgunaCapacidad('taller', 'comercial'), async (c) => c.json(await colaDeProduccion()))
+  // Loop 19: la diseñadora verifica su propia versión (o Comercial la aprueba).
+  .post('/:id/verificar', requireAlgunaCapacidad('comercial', 'diseno'), async (c) => c.json(await verificarVersion(ctxDe(c), uuid(c, 'id'))))
   .post('/:id/aprobar', requireCapacidad('comercial'), async (c) => c.json(await revisarVersion(ctxDe(c), uuid(c, 'id'), true)))
   .post('/:id/observar', requireCapacidad('comercial'), async (c) => {
     const b = observarDisenoSchema.parse(await cuerpo(c));

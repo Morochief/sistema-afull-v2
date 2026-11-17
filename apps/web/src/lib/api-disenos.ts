@@ -5,8 +5,11 @@ const json = (body: unknown) => ({ body: JSON.stringify(body) });
 
 export const versionesDiseno = (otId: string) => apiFetch<DisenoVersion[]>(`/api/disenos/ot/${otId}`);
 
-export const subirDiseno = (otId: string, d: { origen: OrigenDiseno; driveUrl: string; notas?: string }) =>
+export const subirDiseno = (otId: string, d: { origen: OrigenDiseno; driveUrl: string; notas?: string; verificada?: boolean; motivoCambio?: string }) =>
   apiFetch<{ id: string; version: number }>(`/api/disenos/ot/${otId}`, { method: 'POST', ...json(d) });
+
+/** Loop 19: la diseñadora verifica su propia versión. */
+export const verificarDiseno = (id: string) => apiFetch<{ id: string }>(`/api/disenos/${id}/verificar`, { method: 'POST' });
 
 export const aprobarDiseno = (id: string) => apiFetch<{ id: string }>(`/api/disenos/${id}/aprobar`, { method: 'POST' });
 

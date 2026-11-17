@@ -5,4 +5,5 @@ export const ESTADO_DISENO: Record<DisenoVersion['estado'], { texto: string; var
   PENDIENTE: { texto: 'Por verificar', variant: 'warning' },
   APROBADO: { texto: 'Aprobado', variant: 'success' },
   OBSERVADO: { texto: 'Observado', variant: 'danger' },
+  ANULADA: { texto: 'Anulada', variant: 'neutral' },
 };

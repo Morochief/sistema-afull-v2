@@ -233,6 +233,8 @@ export type MiTrabajoTarea = {
   } | null;
   /** Loop 12: si es la tarea principal de una tanda abierta, las tareas que reparte (la principal primero). */
   tanda: { id: string; tareas: { tarea_id: string; orden_trabajo_id: string; codigo_ot: string; cliente_nombre: string; m2: number }[] } | null;
+  /** Loop 19: en tareas de diseño, la última versión cargada en la OT. */
+  ultimo_diseno?: { id: string; version: number; estado: 'PENDIENTE' | 'APROBADO' | 'OBSERVADO' | 'ANULADA'; autoverificada: boolean; observacion: string | null } | null;
   updated_at: string;
 };
 

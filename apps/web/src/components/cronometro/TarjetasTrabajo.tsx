@@ -64,7 +64,7 @@ export function TarjetaTareaActiva({
           <CheckCircle2 className="h-4 w-4 mr-2" /> Finalizar
         </Button>
       </div>
-      {tarea.tipo === 'DISENO' ? <BotonSubirDiseno otId={tarea.orden_trabajo_id} /> : <AccionesMaterial tarea={tarea} />}
+      {tarea.tipo === 'DISENO' ? <BotonSubirDiseno tarea={tarea} /> : <AccionesMaterial tarea={tarea} />}
       {tarea.tipo !== 'DISENO' && <MuestrasTarea tareaId={tarea.id} descripcion={tarea.descripcion} />}
     </div>
   );
@@ -109,7 +109,7 @@ export function TarjetaTareaAsignada({
         <Play className="h-4 w-4 fill-white" />
         {tarea.estado === 'PAUSADA' ? 'Reanudar Trabajo' : 'Iniciar Trabajo'}
       </Button>
-      {tarea.tipo === 'DISENO' ? <BotonSubirDiseno otId={tarea.orden_trabajo_id} /> : <AccionesMaterial tarea={tarea} />}
+      {tarea.tipo === 'DISENO' ? <BotonSubirDiseno tarea={tarea} /> : <AccionesMaterial tarea={tarea} />}
     </div>
   );
 }

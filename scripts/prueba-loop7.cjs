@@ -84,7 +84,7 @@ const DRIVE = 'https://drive.google.com/file/d/zz_test_ruleta/view?usp=drive_lin
       await page.locator('#disenoUrl').fill(DRIVE);
       await page.locator('#disenoNotas').fill('Ruleta 60 cm de diámetro');
       await page.getByRole('button', { name: /^Cargar diseño$/ }).click();
-      await page.getByText(/esperando la verificación/).waitFor();
+      await page.getByText(/queda por verificar/).waitFor();
     });
 
     await paso('Edu todavía no lo ve en "Para producir"', async () => {

@@ -188,6 +188,8 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 
 | `0020_tanda_compartida` | (Loop 12) `tanda` y `tanda_tarea` (inmutables), `tarea_intervalo.tanda_id` (inmutable por trigger) y vista `v_mano_obra` (`security_invoker`): mano de obra por tramo cerrado y tarea, repartida por m² en las tandas. Toda consulta de costo de mano de obra lee de la vista. |
 
+| `0021_diseno_autoverificacion` | (Loop 19) `diseno_version`: `autoverificada`, `motivo_cambio`, `anulada_por/at`, `motivo_anulacion`, `observado_por/at`, estado `ANULADA`; trigger de revisión ampliado (pendiente → aprobada/observada/anulada una vez; autoverificada → observada por la oficina una vez). |
+
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
 
 ---
@@ -353,7 +355,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al bloqueo (2026-11-03, decisión del usuario):** se importa el catálogo real de insumos en `afull-dev` (solo dev). `afull-prod` y el resto de los datos reales siguen bloqueados.
 
-0. **Reunión con Sofi (10/11, notas del 17/11): primero lo de la reunión.** Loop 18 (cm y medida total de Edu) en `main`; sigue Loop 19 (Nachi verifica y reemplaza su diseño, `docs/LOOP_19_NACHI_VERIFICA_DISENO.md`). Después 13 a 17.
+0. **Reunión con Sofi (10/11, notas del 17/11): primero lo de la reunión.** Loops 18 (cm y medida total de Edu) y 19 (Nachi verifica y reemplaza su diseño, `0021`) en `main`. Siguen 13 a 17.
 0. **Loop 12 (tanda compartida) en `main` con `0020`.**
 0. **Loops 12 a 17 diseñados (2026-11-10, decisión del usuario, en este orden):** 12 horas de máquina compartidas (`docs/LOOP_12_HORAS_COMPARTIDAS_DISENO.md`), 13 corregir y cargar horas a mano, 14 panel de Gerardo, 15 historial de terminadas del operario, 16 asistencia de cuadrilla y marcación remota, 17 constancia de entrega. Cada diseño tiene sus supuestos a confirmar. Después: reportes exportables (planilla de horas para pagar y pre-factura). Loop 11 y `0019` ya en `afull-dev` y `afull-demo`.
 0. **Después de la demo (2026-11-09):** `search_path` fijo en las 14 funciones de trigger; prueba en celulares reales; backup de `afull-demo` si se sigue usando; Vercel Pro y Supabase Pro antes de operar con datos reales; sincronizar `D:\sistema-afull`.
@@ -368,6 +370,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 | Fecha | Commit | Resumen | Verificación |
 | :--- | :--- | :--- | :--- |
+| 2026-11-17 | Loop 19 | Nachi verifica su propio diseño (Edu lo ve enseguida) y sube versiones corregidas con motivo; la oficina puede observar lo autoverificado. Migración `0021`. | API 6/6, web 5/5, recorrido 6/6; totales API 215/216 (anon), web 198/198 |
 | 2026-11-17 | Loop 18 | Edu carga en cm la medida total del material y las piezas de cada trabajo; desperdicio calculado y repartido por m². "Medidas (cm)" reemplaza a Merma y Compartido en la tarjeta. | API 7/7, web 3/3, recorrido 5/5; totales API 209/210 (anon), web 193/193 |
 | 2026-11-10 | Loop 12 | Tanda compartida: un reloj para varias OTs; el tiempo de máquina se reparte por m² (`v_mano_obra`). Migración `0020`. | API 7/7, web 4/4, recorrido 6/6; totales API 202/203 (anon), web 190/190 |
 | 2026-11-10 | Loop 11 | Hoja de ruta de Gerardo en cada OT: Borrador → Activa (o por WhatsApp) → Cerrada; tareas con día, cantidad y tiempo; "Mi trabajo" por día; "Hojas de ruta" de la camioneta pasa a "Salidas". Migración `0019`. | API 4/4, web 10/10, recorrido 7/7; totales API 195/196 (anon), web 186/186 |

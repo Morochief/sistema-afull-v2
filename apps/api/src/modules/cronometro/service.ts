@@ -84,6 +84,8 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
            FROM tanda_tarea x JOIN tarea t2 ON t2.id = x.tarea_id JOIN orden_trabajo o2 ON o2.id = t2.orden_trabajo_id JOIN cliente c2 ON c2.id = o2.cliente_id
            WHERE x.tanda_id = ta.id))
          FROM tanda ta WHERE ta.tarea_principal_id = t.id ORDER BY ta.created_at DESC LIMIT 1) AS tanda,
+        (SELECT json_build_object('id', d.id, 'version', d.version, 'estado', d.estado, 'autoverificada', d.autoverificada, 'observacion', d.observacion)
+         FROM diseno_version d WHERE t.tipo = 'DISENO' AND d.orden_trabajo_id = t.orden_trabajo_id ORDER BY d.version DESC LIMIT 1) AS ultimo_diseno,
         t.updated_at
       FROM tarea t
       JOIN orden_trabajo ot ON ot.id = t.orden_trabajo_id

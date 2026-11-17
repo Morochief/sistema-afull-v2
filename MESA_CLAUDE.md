@@ -693,3 +693,13 @@ La primera versión del Inicio salió sin diseño previo y con un test superfici
 **Observación sobre la foto:** las cuatro piezas (87 × 330, 46 × 686, 90 × 303, 25 × 386) suman 9,7186 m², más que el adhesivo (9,4667 m²); probablemente la franja de bob (46) incluye la de mogul (25). El sistema lo frena con "Las piezas suman X m² y el material Y m²". A confirmar con Edu.
 
 **Evidencia (local):** `tests/loop18/corte.test.ts` **7/7** (con el código anterior 7 fallas: no existía la fórmula ni el endpoint); `ModalCorte.test.tsx` **3/3**; `scripts/prueba-corte.cjs` (celular + oficina) **5/5** con el ejemplo de la reunión. Sin regresión: loop5 7/7 (actualizado a cm), tanda 6/6, loop2 9/9, reloj 5/5. Totales: API 209/210 (solo `anon.test.ts`), web 193/193, lint 0, `pnpm typecheck` 0, build 0.
+
+---
+
+## 2026-11-17 — Loop 19: Nachi verifica su diseño y lo corrige sin esperar a la oficina
+
+**Pedido** (reunión con Sofi del 10/11): Nachi marca su diseño como verificado y Edu lo ve enseguida; si hay un error, ella reemplaza la versión sin pedir autorización. **Decisión del usuario (17/11):** la oficina igual puede observar después lo que verificó Nachi. **Diseño:** `docs/LOOP_19_NACHI_VERIFICA_DISENO.md`.
+
+**Migración `0021_diseno_autoverificacion`:** `diseno_version` suma `autoverificada`, `motivo_cambio`, `anulada_por/at`, `motivo_anulacion`, `observado_por/at` y el estado `ANULADA`. El trigger permite PENDIENTE → APROBADO | OBSERVADO | ANULADA (una vez) y APROBADO autoverificada → OBSERVADO por la oficina (una vez); nada más cambia; sin DELETE. **API:** subir acepta `verificada` y `motivoCambio`; una pendiente **de la diseñadora** se anula al subir la corregida (la oficina mantiene el 409); `POST /api/disenos/:id/verificar` (diseñadora sobre lo suyo, o Comercial); observar sobre una autoverificada; `GET /api/mi-trabajo` trae `ultimo_diseno`. **Web:** en la tarjeta de Nachi, estado de su última versión, "Marcar como verificado", "Subir versión corregida" con "Qué cambió" y el tilde "Ya lo verifiqué"; en la OT, "Verificó la diseñadora …", Observar sobre la última autoverificada, versiones anuladas con su motivo.
+
+**Evidencia (local):** `tests/loop19/nachi.test.ts` **6/6** (con el código anterior 6 fallas). El test del Loop 7 "Sofi sube dos veces → 409" falló con la primera versión del cambio (reemplazaba también la pendiente de la oficina, fuera del diseño): se corrigió el código, no el test. `Nachi.test.tsx` **5/5**. `scripts/prueba-nachi.cjs` (celulares de Nachi y Edu) **6/6**. Sin regresión: loop7 5/5 (texto del aviso actualizado), loop2 9/9, hoja de ruta 7/7. Totales: API 215/216 (solo `anon.test.ts`), web 198/198, lint 0, `pnpm typecheck` 0, build 0.
