@@ -40,3 +40,8 @@ export const UNIDAD_CORTA: Record<UnidadInsumo, string> = {
   UNIDAD: 'u.', METRO: 'm', M2: 'm²', PLANCHA: 'plancha', LITRO: 'l', KG: 'kg', ROLLO: 'rollo', LATA: 'lata',
   BOLSA: 'bolsa', PAR: 'par', TIRA: 'tira', MINUTO: 'min', KM: 'km',
 };
+
+/** Loop 18: corte en cm (medida total del material y piezas de cada trabajo). */
+export type TrabajoCorte = { otId: string; tareaId?: string; piezas: { anchoCm: number; altoCm: number; cantidad: number }[] };
+export const cargarCorte = (d: { insumoId: string; insumoDesperdicioId?: string; anchoCm: number; largoCm: number; trabajos: TrabajoCorte[]; claveIdempotencia: string }) =>
+  apiFetch<{ m2Piezas: number; m2Desperdicio: number; aprovechamientoPct: number }>('/api/consumos/corte', { method: 'POST', ...json(d) });

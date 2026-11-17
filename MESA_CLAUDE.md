@@ -681,3 +681,15 @@ La primera versión del Inicio salió sin diseño previo y con un test superfici
 - `ModalTanda.test.tsx` **4/4**.
 - `scripts/prueba-tanda.cjs` (celular 375 px) **6/6**: el tiempo queda en proporción 2 : 1,5 exacta entre las OTs. Sin regresión: compartido 4/4, reloj acumulado 5/5, hoja de ruta 7/7, loop2 9/9.
 - Totales: API 202/203 (solo `anon.test.ts`, necesita Supabase), web 190/190, lint 0, `pnpm typecheck` 0, build 0.
+
+---
+
+## 2026-11-17 — Loop 18: Edu carga medidas en cm con la medida total del material
+
+**Pedido** (reunión con Sofi del 10/11, notas y foto en el chat del 17/11): Edu mide en centímetros y anota la medida total del material (ej. adhesivo 137 × 691 cm) y las piezas de cada trabajo. **Diseño:** `docs/LOOP_18_MEDIDAS_CM_DISENO.md`.
+
+**Qué cambió:** fórmula `calcularCorte` (cm con 2 decimales, exacta con BigInt; el desperdicio se reparte por m² de piezas y cierra exacto con lo usado), `POST /api/consumos/corte` (1 a 30 trabajos, solo insumos M2, idempotente; por OT una línea de piezas y una de desperdicio, mismo grupo). En la tarjeta de máquina, **Medidas (cm)** reemplaza a Merma y Compartido (los endpoints viejos siguen; la oficina conserva su Merma en metros en la OT). Ventana con anchos rápidos 137 y 152, varios trabajos (arranca con la OT o con toda la tanda), varias piezas por trabajo y resumen en vivo con el reparto. Se quitó `ModalCompartido` y su recorrido (reemplazados). Sin migración.
+
+**Observación sobre la foto:** las cuatro piezas (87 × 330, 46 × 686, 90 × 303, 25 × 386) suman 9,7186 m², más que el adhesivo (9,4667 m²); probablemente la franja de bob (46) incluye la de mogul (25). El sistema lo frena con "Las piezas suman X m² y el material Y m²". A confirmar con Edu.
+
+**Evidencia (local):** `tests/loop18/corte.test.ts` **7/7** (con el código anterior 7 fallas: no existía la fórmula ni el endpoint); `ModalCorte.test.tsx` **3/3**; `scripts/prueba-corte.cjs` (celular + oficina) **5/5** con el ejemplo de la reunión. Sin regresión: loop5 7/7 (actualizado a cm), tanda 6/6, loop2 9/9, reloj 5/5. Totales: API 209/210 (solo `anon.test.ts`), web 193/193, lint 0, `pnpm typecheck` 0, build 0.

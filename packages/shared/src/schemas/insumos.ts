@@ -49,4 +49,20 @@ export const compartidoSchema = z.object({
   claveIdempotencia: clave,
 });
 
+/** Loop 18: centímetros con hasta 2 decimales (Edu mide en cm). */
+const cm = z.number().refine((n) => Number.isFinite(n) && Math.abs(n * 100 - Math.round(n * 100)) < 1e-6, 'Centímetros con hasta 2 decimales')
+  .pipe(z.number().positive('Tiene que ser mayor a 0').max(100_000));
+export const corteSchema = z.object({
+  insumoId: z.string().uuid(),
+  insumoDesperdicioId: z.string().uuid().optional(),
+  anchoCm: cm,
+  largoCm: cm,
+  trabajos: z.array(z.object({
+    otId: z.string().uuid(),
+    tareaId: z.string().uuid().optional(),
+    piezas: z.array(z.object({ anchoCm: cm, altoCm: cm, cantidad: z.number().int().min(1).max(10_000) })).min(1).max(100),
+  })).min(1).max(30),
+  claveIdempotencia: clave,
+});
+
 export const anularConsumoSchema = z.object({ motivo: z.string().trim().min(3).max(500), claveIdempotencia: clave });

@@ -1,12 +1,12 @@
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import {
-  puedeVerCostos, nuevoInsumoSchema, patchInsumoSchema, nuevoPrecioSchema, consumoSchema, mermaSchema, compartidoSchema, anularConsumoSchema,
+  puedeVerCostos, nuevoInsumoSchema, patchInsumoSchema, nuevoPrecioSchema, consumoSchema, mermaSchema, compartidoSchema, corteSchema, anularConsumoSchema,
 } from '@afull/shared';
 import { requireSesion, requireCapacidad, requireAlgunaCapacidad } from '../auth/middleware.js';
 import { ipDe } from '../../lib/ip.js';
 import { buscarInsumos, crearInsumo, editarInsumo, nuevoPrecio } from './catalogo.service.js';
-import { registrarConsumo, registrarMerma, registrarCompartido, anularConsumo, consumosDeOT } from './consumos.service.js';
+import { registrarConsumo, registrarMerma, registrarCompartido, registrarCorte, anularConsumo, consumosDeOT } from './consumos.service.js';
 
 const ctxDe = (c: Context) => ({ usuarioId: c.get('usuario').id as string, ip: ipDe(c), capacidades: c.get('usuario').capacidades as string[] });
 const idDe = (c: Context, n = 'id') => z.string().uuid().parse(c.req.param(n));
@@ -38,6 +38,10 @@ export const consumosRoutes = new Hono()
   })
   .post('/merma', async (c) => {
     const r = await registrarMerma(ctxDe(c), mermaSchema.parse(await cuerpo(c)));
+    return c.json(r, r.repetido ? 200 : 201);
+  })
+  .post('/corte', async (c) => {
+    const r = await registrarCorte(ctxDe(c), corteSchema.parse(await cuerpo(c)));
     return c.json(r, r.repetido ? 200 : 201);
   })
   .post('/compartido', async (c) => {

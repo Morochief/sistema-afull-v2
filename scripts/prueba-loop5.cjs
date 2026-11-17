@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* global require, console, process, document */
 /**
- * Recorrido del Loop 5 en navegador: Juan da de alta dos insumos → Edu, desde "Mi trabajo", carga la merma de una
+ * Recorrido del Loop 5 en navegador: Juan da de alta dos insumos → Edu, desde "Mi trabajo", carga las medidas (cm, Loop 18) de una
  * impresión (vista previa 65,8 %) y unos ojales sin ver ningún precio → Juan ve el material en la OT (total y desperdicio exactos),
  * corrige una línea con motivo y cambia un precio sin que cambie lo ya cargado.
  *
@@ -100,20 +100,20 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
       await page.getByRole('button', { name: new RegExp(nombre) }).first().click();
     };
 
-    await paso('Edu carga la merma desde Mi trabajo: 1,52 × 2 m, 2 piezas de 1 × 1 → 65,8 % aprovechado', async () => {
+    await paso('Edu carga las medidas en cm desde Mi trabajo: 152 × 200 cm, 2 piezas de 100 × 100 → 65,8 % aprovechado', async () => {
       await entrar(`zz_test_edu_${s}`);
       await page.waitForURL(/\/mi-trabajo/);
-      await page.getByRole('button', { name: /Merma/ }).first().click();
+      await page.getByRole('button', { name: /Medidas \(cm\)/ }).first().click();
       await elegir(LONA);
-      await page.locator('#mermaAncho').fill('1,52');
-      await page.locator('#mermaLargo').fill('2');
-      await page.getByLabel('Ancho pieza 1').fill('1');
-      await page.getByLabel('Alto pieza 1').fill('1');
-      await page.getByLabel('Cantidad pieza 1').fill('2');
-      await page.getByTestId('resultado-merma').getByText('65.8 %').waitFor();
+      await page.locator('#corteAncho').fill('152');
+      await page.locator('#corteLargo').fill('200');
+      await page.getByLabel(/^Ancho pieza 1 de /).fill('100');
+      await page.getByLabel(/^Alto pieza 1 de /).fill('100');
+      await page.getByLabel(/^Cantidad pieza 1 de /).fill('2');
+      await page.getByTestId('resumen-corte').getByText('65,8 %').waitFor();
       if (await page.getByRole('dialog').getByText(/Gs\./).count()) throw new Error('Edu ve precios');
-      await page.getByRole('button', { name: 'Cargar consumo' }).click();
-      await page.getByText(/65\.8 % aprovechado/).waitFor();
+      await page.getByRole('dialog').getByRole('button', { name: 'Cargar', exact: true }).click();
+      await page.getByText(/65,8 % aprovechado/).waitFor();
     });
 
     await paso('Edu carga 10 ojales con "Material"', async () => {

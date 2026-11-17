@@ -1,5 +1,5 @@
 import type { TransactionSql } from 'postgres';
-import { calcularMerma, repartirCantidad, esEstadoFinal, type EstadoOT, type Pieza } from '@afull/shared';
+import { calcularCorte, calcularMerma, repartirCantidad, esEstadoFinal, type EstadoOT, type Pieza, type PiezaCm } from '@afull/shared';
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
@@ -103,6 +103,42 @@ export function registrarCompartido(ctx: Ctx, d: { insumoId: string; cantidadTot
     }
     await auditar({ usuarioId: ctx.usuarioId, accion: 'consumo.compartido', recurso: 'insumo', recursoId: d.insumoId, ip: ctx.ip, metadata: { partes } }, tx);
     return { repetido: false, partes };
+  });
+}
+
+/**
+ * Corte en cm (Loop 18): la medida total del material y las piezas de cada trabajo (una o varias OTs).
+ * Por OT: una línea con sus m² de piezas y otra con su parte del desperdicio (mismo grupo para todo el corte).
+ */
+type TrabajoCorte = { otId: string; tareaId?: string; piezas: PiezaCm[] };
+export function registrarCorte(ctx: Ctx, d: { insumoId: string; insumoDesperdicioId?: string; anchoCm: number; largoCm: number; trabajos: TrabajoCorte[]; claveIdempotencia: string }) {
+  return enTx(async (tx) => {
+    let r;
+    try {
+      r = calcularCorte(d.anchoCm, d.largoCm, d.trabajos);
+    } catch (e) {
+      throw new ErrorApp(400, (e as Error).message);
+    }
+    const p = await previo(tx, d.claveIdempotencia);
+    if (p) return { ...r, repetido: true };
+    if (new Set(d.trabajos.map((t) => t.otId)).size !== d.trabajos.length) throw new ErrorApp(400, 'Cada OT va una sola vez en el corte');
+    for (const id of new Set([d.insumoId, d.insumoDesperdicioId ?? d.insumoId])) {
+      const [i] = await tx`SELECT unidad FROM insumo WHERE id = ${id}`;
+      if (i && i.unidad !== 'M2') throw new ErrorApp(400, 'Este material no se mide en m²: cargalo con Material');
+    }
+    const persona = await personaDe(tx, ctx.usuarioId);
+    const grupoId = crypto.randomUUID();
+    const nota = `Corte ${d.anchoCm} × ${d.largoCm} cm · ${d.trabajos.length} ${d.trabajos.length === 1 ? 'trabajo' : 'trabajos'} · aprovechamiento ${String(r.aprovechamientoPct).replace('.', ',')} %`;
+    for (const [i, t] of d.trabajos.entries()) {
+      await otAbierta(tx, t.otId);
+      const parte = r.porTrabajo[i];
+      await insertar(tx, ctx, persona, { otId: t.otId, tareaId: t.tareaId, insumoId: d.insumoId, cantidad: parte.m2Piezas, esDesperdicio: false, nota, grupoId, clave: i === 0 ? d.claveIdempotencia : crypto.randomUUID() });
+      if (parte.m2Desperdicio > 0) {
+        await insertar(tx, ctx, persona, { otId: t.otId, tareaId: t.tareaId, insumoId: d.insumoDesperdicioId ?? d.insumoId, cantidad: parte.m2Desperdicio, esDesperdicio: true, nota, grupoId, clave: crypto.randomUUID() });
+      }
+    }
+    await auditar({ usuarioId: ctx.usuarioId, accion: 'consumo.corte', recurso: 'insumo', recursoId: d.insumoId, ip: ctx.ip, metadata: { anchoCm: d.anchoCm, largoCm: d.largoCm, ...r } }, tx);
+    return { ...r, repetido: false };
   });
 }
 
