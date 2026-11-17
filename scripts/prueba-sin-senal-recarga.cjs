@@ -37,7 +37,7 @@ require('dotenv').config({ path: ['.env', '.env.test'] });
   await ctx.setOffline(true);
   await page.reload();
   await page.getByText(/Sin señal: mostrando lo bajado/).waitFor({ timeout: 15000 });
-  await page.getByRole('button', { name: /Marcar entrada/ }).waitFor();
+  await page.getByRole('button', { name: 'Marcar entrada', exact: true }).waitFor();
   console.log('\n>>> RECARGA SIN SEÑAL EN VERDE: la app abrió y mostró lo último bajado <<<\n');
   } finally {
     await b.close();

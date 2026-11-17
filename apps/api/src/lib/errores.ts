@@ -1,7 +1,8 @@
 export type HttpStatusError = 400 | 401 | 403 | 404 | 409 | 429 | 503;
 
 export class ErrorApp extends Error {
-  constructor(public status: HttpStatusError, message: string) {
+  /** `codigo`: para que el cliente reconozca el caso sin leer el texto (ej. FUERA_DE_ZONA, Loop 16). */
+  constructor(public status: HttpStatusError, message: string, public codigo?: string) {
     super(message);
     this.name = 'ErrorApp';
   }

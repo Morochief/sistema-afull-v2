@@ -23,6 +23,7 @@
     { "idx": 18, "version": "7", "when": 1793000018000, "tag": "0019_hoja_ruta_ot", "breakpoints": true },
     { "idx": 19, "version": "7", "when": 1793000019000, "tag": "0020_tanda_compartida", "breakpoints": true },
     { "idx": 20, "version": "7", "when": 1793000020000, "tag": "0021_diseno_autoverificacion", "breakpoints": true },
-    { "idx": 21, "version": "7", "when": 1793000021000, "tag": "0022_correccion_horas", "breakpoints": true }
+    { "idx": 21, "version": "7", "when": 1793000021000, "tag": "0022_correccion_horas", "breakpoints": true },
+    { "idx": 22, "version": "7", "when": 1793000022000, "tag": "0023_asistencia_cuadrilla", "breakpoints": true }
   ]
 }

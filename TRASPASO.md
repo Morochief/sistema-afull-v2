@@ -9,6 +9,8 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
+> **2026-11-17, Loop 16 (`0023`):** el conductor marca entrada/salida por su cuadrilla desde "En la calle"; fuera de zona el celular pide el motivo (queda REMOTO); RR.HH. ve quién marcó y por qué. Lo guardado sin señal nunca se rechaza por la geocerca.
+
 > **2026-11-17, Loop 15:** Mi trabajo tiene pestañas **Pendientes** y **Terminadas**: el operario ve lo que terminó, cuánto le llevó y sus horas de la semana. Sin migración.
 
 > **2026-11-17, Loop 14:** menú **Panel** (Gerardo): quién vino y no tiene nada en marcha, quién trabaja y quién está en pausa, y "Asignar tarea" en el momento. Crear tarea, activar la hoja y marcar asistencia ahora avisan en vivo. Sin migración.
@@ -196,6 +198,7 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 
 | `0021_diseno_autoverificacion` | (Loop 19) `diseno_version`: `autoverificada`, `motivo_cambio`, `anulada_por/at`, `motivo_anulacion`, `observado_por/at`, estado `ANULADA`; trigger de revisión ampliado (pendiente → aprobada/observada/anulada una vez; autoverificada → observada por la oficina una vez). |
 
+| `0023_asistencia_cuadrilla` | (Loop 16) `marcacion_asistencia`: `origen` (PROPIA/CUADRILLA/REMOTO), `marcada_por`, `hoja_ruta_id`, `motivo_remoto`; CHECK por origen. Sigue inmutable; permisos sin cambios. |
 | `0022_correccion_horas` | (Loop 13) `tarea_intervalo`: `origen` (RELOJ/MANUAL), `cargado_por`, `motivo_manual`, `cerrado_por`, `motivo_correccion`, motivo de cierre `CORRECCION`; tabla inmutable `intervalo_correccion` (solo acorta, una por tramo); vista `v_tramo` (hora de fin efectiva) y `v_mano_obra` sobre ella. Toda consulta de tiempo lee `v_tramo` / `v_mano_obra`. |
 
 Notas de `0004`: `cliente` no lleva `token_portal` todavía (es del Loop 8; guardarlo **hasheado**, como las sesiones). `orden_trabajo` no lleva `presupuesto_id` ni `pedido_id` todavía; se agregan con `ALTER TABLE` cuando existan esas tablas. Verificar que `pg_trgm` en el esquema `extensions` funcione en el proyecto.
@@ -363,7 +366,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al bloqueo (2026-11-03, decisión del usuario):** se importa el catálogo real de insumos en `afull-dev` (solo dev). `afull-prod` y el resto de los datos reales siguen bloqueados.
 
-0. **Reunión con Sofi (10/11, notas del 17/11): primero lo de la reunión.** Loops 18 (cm, medida total y L18.E2 desperdicio aprovechado) y 19 (Nachi, `0021`) en `main`. **Orden del usuario (17/11):** 13 corregir horas (hecho, `0022`) → planilla de horas para pagar y pre-factura en Excel (Loop 20, hecho, sin migración) → 14 panel de Gerardo (hecho, sin migración) → 15 historial (hecho, sin migración) → 16 cuadrilla → 17 constancia de entrega. La calculadora de adhesivo del viejo queda cubierta por el Loop 18.
+0. **Reunión con Sofi (10/11, notas del 17/11): primero lo de la reunión.** Loops 18 (cm, medida total y L18.E2 desperdicio aprovechado) y 19 (Nachi, `0021`) en `main`. **Orden del usuario (17/11):** 13 corregir horas (hecho, `0022`) → planilla de horas para pagar y pre-factura en Excel (Loop 20, hecho, sin migración) → 14 panel de Gerardo (hecho, sin migración) → 15 historial (hecho, sin migración) → 16 cuadrilla (hecho, `0023`) → 17 constancia de entrega. La calculadora de adhesivo del viejo queda cubierta por el Loop 18.
 0. **Loop 12 (tanda compartida) en `main` con `0020`.**
 0. **Loops 12 a 17 diseñados (2026-11-10, decisión del usuario, en este orden):** 12 horas de máquina compartidas (`docs/LOOP_12_HORAS_COMPARTIDAS_DISENO.md`), 13 corregir y cargar horas a mano, 14 panel de Gerardo, 15 historial de terminadas del operario, 16 asistencia de cuadrilla y marcación remota, 17 constancia de entrega. Cada diseño tiene sus supuestos a confirmar. Después: reportes exportables (planilla de horas para pagar y pre-factura). Loop 11 y `0019` ya en `afull-dev` y `afull-demo`.
 0. **Después de la demo (2026-11-09):** `search_path` fijo en las 14 funciones de trigger; prueba en celulares reales; backup de `afull-demo` si se sigue usando; Vercel Pro y Supabase Pro antes de operar con datos reales; sincronizar `D:\sistema-afull`.
@@ -378,6 +381,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 | Fecha | Commit | Resumen | Verificación |
 | :--- | :--- | :--- | :--- |
+| 2026-11-17 | Loop 16 | Cuadrilla: el conductor marca por los de su salida; fuera de zona pide motivo (REMOTO); RR.HH. ve origen y motivo. Migración `0023`. | API 7/7, web 5/5, recorrido 5/5; totales API 248/249 (anon), web 218/218 |
 | 2026-11-17 | Loop 15 | Mi trabajo → Terminadas: tareas terminadas con su tiempo (tanda y corrección incluidas) y "Esta semana trabajaste…". Sin migración. | API 4/4, web 5/5, recorrido 4/4; totales API 241/242 (anon), web 213/213 |
 | 2026-11-17 | Loop 14 | Panel de Gerardo (`/panel`): sin tarea, trabajando, en pausa, no marcaron; asignar tarea activando la hoja; eventos en vivo de tarea, hoja y asistencia. Sin migración. | API 6/6, web 3/3, recorrido 5/5; totales API 237/238 (anon), web 208/208 |
 | 2026-11-17 | Loop 20 | Menú Reportes: registros como el Excel de Juan con descarga `.xlsx`, horas para pagar (rrhh) y pre-factura con margen, IVA e impresión A4. Sin migración. | API 7/7, web 3/3, recorrido 6/6; totales API 231/232 (anon), web 205/205 |

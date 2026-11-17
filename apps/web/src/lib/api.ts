@@ -7,13 +7,16 @@ export class ErrorApi extends Error {
   status: number;
   mensaje: string;
   detalle?: ZodDetalleIssue[];
+  /** Código estable de la API para casos que el cliente resuelve (ej. FUERA_DE_ZONA). */
+  codigo?: string;
 
-  constructor(status: number, mensaje: string, detalle?: ZodDetalleIssue[]) {
+  constructor(status: number, mensaje: string, detalle?: ZodDetalleIssue[], codigo?: string) {
     super(mensaje);
     this.name = 'ErrorApi';
     this.status = status;
     this.mensaje = mensaje;
     this.detalle = detalle;
+    this.codigo = codigo;
   }
 }
 
@@ -106,7 +109,7 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesFetch = {}): P
       mensaje = cuerpo?.error || 'Conflicto: el registro fue modificado por otro usuario';
     }
 
-    throw new ErrorApi(status, mensaje, cuerpo?.detalle);
+    throw new ErrorApi(status, mensaje, cuerpo?.detalle, cuerpo?.codigo);
   }
 
   return cuerpo as T;

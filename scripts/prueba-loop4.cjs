@@ -82,7 +82,7 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
     await paso('el montador marca entrada dentro de la zona', async () => {
       await entrar(`zz_test_mont_${s}`);
       await page.goto(B + '/calle');
-      await page.getByRole('button', { name: /Marcar entrada/ }).click();
+      await page.getByRole('button', { name: 'Marcar entrada', exact: true }).click();
       await page.getByText(/Entrada registrada\./).waitFor();
     });
     await paso('inicia el viaje con 1000 km', async () => {

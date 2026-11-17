@@ -87,6 +87,21 @@ export const marcarAsistenciaSchema = z.object({
   dispositivoHash: z.string().regex(/^[0-9a-f]{16,64}$/i, 'Huella de dispositivo inválida'),
   claveIdempotencia: clave,
   ocurridaAt,
+  /** Loop 16: si la marcación cae fuera de toda geocerca, el porqué (queda REMOTO). */
+  motivoRemoto: z.string().trim().min(3, 'Contá en pocas palabras por qué marcás desde afuera').max(300).optional(),
+});
+
+/** Loop 16: el conductor marca por la cuadrilla de su salida de hoy (una clave por persona). */
+export const marcarCuadrillaSchema = z.object({
+  hojaRutaId: z.string().uuid(),
+  tipo: z.enum(['ENTRADA', 'SALIDA']),
+  gpsLat: lat,
+  gpsLng: lng,
+  precisionM: z.number().min(0).max(100_000).optional(),
+  dispositivoHash: z.string().regex(/^[0-9a-f]{16,64}$/i, 'Huella de dispositivo inválida'),
+  personas: z.array(z.object({ personaId: z.string().uuid(), claveIdempotencia: clave })).min(1, 'Elegí al menos una persona').max(30),
+  ocurridaAt,
+  motivoRemoto: z.string().trim().min(3, 'Contá en pocas palabras por qué marcás desde afuera').max(300).optional(),
 });
 
 export const filtroAsistenciaSchema = z.object({
@@ -97,3 +112,4 @@ export const filtroAsistenciaSchema = z.object({
   soloFuera: z.enum(['true', 'false']).optional(),
   pagina: z.coerce.number().int().min(1).default(1),
 });
+export type MarcarCuadrilla = z.infer<typeof marcarCuadrillaSchema>;

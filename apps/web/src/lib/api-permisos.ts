@@ -16,6 +16,8 @@ export type NuevaSolicitud = {
 export type Marcacion = {
   id: string; persona_nombre: string; tipo: string; marcada_at: string; dentro_geocerca: boolean;
   distancia_m: number | null; precision_m: number | null; sede_nombre: string | null; sin_senal?: boolean; recibida_at?: string;
+  /** Loop 16: PROPIA, CUADRILLA (el conductor) o REMOTO (fuera de zona con motivo). */
+  origen?: 'PROPIA' | 'CUADRILLA' | 'REMOTO'; marcada_por_nombre?: string | null; motivo_remoto?: string | null;
 };
 
 const json = (body: unknown) => ({ body: JSON.stringify(body) });

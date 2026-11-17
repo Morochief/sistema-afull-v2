@@ -35,6 +35,15 @@ export function AsistenciaPage() {
         </div>
       ),
     },
+    {
+      id: 'origen', encabezado: 'Quién marcó', ancho: 'w-56',
+      celda: (f) => (
+        <div className="text-[11px]">
+          <span className="text-neutral-300">{f.origen === 'CUADRILLA' ? `El conductor (${f.marcada_por_nombre ?? '?'})` : f.origen === 'REMOTO' ? 'Desde afuera' : 'Desde su celular'}</span>
+          {f.motivo_remoto && <div className="text-amber-300">"{f.motivo_remoto}"</div>}
+        </div>
+      ),
+    },
   ];
   return (
     <div className="space-y-4">

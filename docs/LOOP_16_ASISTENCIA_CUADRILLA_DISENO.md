@@ -40,3 +40,12 @@
 > Decisión: Solo el conductor marca por la cuadrilla.
 - Solo el **conductor** marca por los demás (no cualquier miembro).
 - El motivo remoto es texto libre (con 3 sugerencias rápidas).
+
+## 8. Ajustes al implementar (2026-11-17)
+- La migración es **`0023_asistencia_cuadrilla`** (la `0022` la usó el Loop 13).
+- **Motivo remoto, decidido por el servidor:** el celular no sabe dónde están las sedes. Si una marcación **en línea** cae fuera de toda geocerca (y hay al menos una sede activa) y no trae motivo, la API responde **400 con `codigo: FUERA_DE_ZONA`**; el celular pide el motivo (3 sugerencias o texto) y reenvía con la **misma clave**. Con motivo queda `REMOTO`.
+- **Sin señal no se rechaza nunca por esto:** lo encolado no puede preguntar, y un 400 al volver la señal lo mandaría a "rechazadas". Fuera de zona y sin motivo se guarda como hoy (`PROPIA`, fuera de geocerca); RR.HH. lo ve marcado "sin señal".
+- **Cuadrilla:** `marcada_por` = usuario del conductor, `hoja_ruta_id` = la salida. Si el conductor está fuera de zona también pide motivo (se guarda en cada marcación de la cuadrilla). La salida es "de hoy" según la fecha de Asunción de la marcación (la hora del celular si iba sin señal). Vale aunque la salida ya esté FINALIZADA (la salida del día se marca al volver).
+- **Reglas por persona (solo cuadrilla):** ENTRADA si su última marcación de hoy no es ENTRADA; SALIDA si su última de hoy es ENTRADA; tiene que ser de esa salida. Lo que no cumple va a `rechazadas` con el motivo y el resto se marca. Candado por persona en la transacción para no duplicar si la persona marca desde su celular al mismo tiempo.
+- `GET /api/asistencia/cuadrilla`: las salidas de hoy donde soy conductor, con la cuadrilla y la última marcación de hoy de cada uno (para los tildes).
+- El listado de RR.HH. muestra el origen (Propia / Por el conductor / Desde afuera), quién marcó y el motivo.

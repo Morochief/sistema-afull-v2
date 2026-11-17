@@ -83,10 +83,13 @@ describe('Loop 4 — campo y flota', () => {
     await expect(admin`UPDATE hoja_ruta_parada SET estado = 'OMITIDA' WHERE id = ${e.parada}`).rejects.toMatchObject({ code: '23514' });
   });
 
-  it('CA-4.4: marcación fuera de geocerca se guarda igual; reintento no duplica; tabla inmutable', async () => {
+  it('CA-4.4: marcación fuera de geocerca se guarda igual (con el motivo, Loop 16); reintento no duplica; tabla inmutable', async () => {
     const e = await escenario();
     const clave = uuid();
-    const datos = { tipo: 'ENTRADA', gpsLat: -25.33, gpsLng: -57.63, dispositivoHash: 'a1b2c3d4e5f60718', claveIdempotencia: clave };
+    // Loop 16 (CA-16.4, decisión del usuario): en línea y fuera de zona, primero pide el motivo; con el motivo se guarda, no se bloquea.
+    const sinMotivo = { tipo: 'ENTRADA', gpsLat: -25.33, gpsLng: -57.63, dispositivoHash: 'a1b2c3d4e5f60718', claveIdempotencia: clave };
+    expect((await e.op('POST', '/api/asistencia/marcar', sinMotivo)).j.codigo).toBe('FUERA_DE_ZONA');
+    const datos = { ...sinMotivo, motivoRemoto: 'zz_test salí desde casa' };
     const a = await e.op('POST', '/api/asistencia/marcar', datos);
     expect(a.status).toBe(201);
     expect(a.j.dentro_geocerca).toBe(false);

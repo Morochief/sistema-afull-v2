@@ -72,7 +72,7 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
     });
     await paso('el montador marca entrada en el celular → Gerardo lo ve "sin tarea", sin nada para hoy', async () => {
       await entrar(po, usuarios[1], '/calle');
-      await po.getByRole('button', { name: /Marcar entrada/ }).click();
+      await po.getByRole('button', { name: 'Marcar entrada', exact: true }).click();
       await po.getByText(/Entrada registrada\./).waitFor();
       await pg.reload();
       await tarjeta('sintarea').getByText('No tiene nada para hoy').waitFor();

@@ -66,7 +66,7 @@ app.route('/api/inicio', inicioRoutes);
 if (memoriaHabilitada()) app.route('/api/archivos-falso', archivosFalsoRoutes);
 
 app.onError((e, c) => {
-  if (e instanceof ErrorApp) return c.json({ error: e.message }, e.status);
+  if (e instanceof ErrorApp) return c.json(e.codigo ? { error: e.message, codigo: e.codigo } : { error: e.message }, e.status);
   if (e instanceof ZodError) return c.json({ error: 'Datos inválidos', detalle: e.issues }, 400);
   console.error(e);
   return c.json({ error: 'Error interno del servidor' }, 500);

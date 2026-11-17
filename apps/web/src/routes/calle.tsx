@@ -7,6 +7,7 @@ import { mensajeDeError, type ErrorApi } from '../lib/api.js';
 import { Skeleton } from '../components/ui/skeleton.js';
 import { Button } from '../components/ui/button.js';
 import { MarcacionCard } from '../components/campo/MarcacionCard.js';
+import { CuadrillaCard } from '../components/campo/CuadrillaCard.js';
 import { ViajeCard } from '../components/campo/ViajeCard.js';
 import { ParadasHoja } from '../components/campo/ParadasHoja.js';
 
@@ -35,6 +36,7 @@ export function CallePage() {
       <FotosPorSubir />
       {dia.sin_conexion && <p className="text-[11px] text-amber-300">Sin señal: mostrando lo bajado el {formatearFechaHora(dia.sin_conexion)}.</p>}
       <MarcacionCard ultima={dia.ultima_marcacion} onMarcado={recargar} />
+      <CuadrillaCard onMarcado={recargar} />
       <ViajeCard key={dia.viaje_abierto?.id ?? 'sin-viaje'} dia={dia} onCambio={recargar} />
       {dia.hojas.length === 0 ? (
         <p className="rounded-md border border-[#1f2937] bg-[#111318] p-4 text-center text-xs text-neutral-500">No tenés salidas para hoy.</p>

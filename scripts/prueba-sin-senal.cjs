@@ -74,7 +74,7 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
 
     await paso('sin señal: marca entrada, inicia el viaje y completa la parada; todo queda guardado', async () => {
       await ctx.setOffline(true);
-      await page.getByRole('button', { name: /Marcar entrada/ }).click();
+      await page.getByRole('button', { name: 'Marcar entrada', exact: true }).click();
       await page.getByText(/Entrada guardada sin señal/).waitFor();
       await page.locator('#kmOdometro').fill('2000');
       await page.getByLabel('Foto del odómetro').setInputFiles(FOTO_JPEG); // L4.E3: queda en el celular
@@ -85,7 +85,7 @@ const B = process.env.BASE_URL || 'http://localhost:5173';
       await page.getByText(/se envía cuando vuelva la señal/).waitFor();
       await page.getByTestId('estado-conexion').getByText(/3 acciones guardadas/).waitFor();
       // La próxima marcación ya es "salida" (la entrada está guardada).
-      await page.getByRole('button', { name: /Marcar salida/ }).waitFor();
+      await page.getByRole('button', { name: 'Marcar salida', exact: true }).waitFor();
       const [{ n: enBase }] = await sql`SELECT count(*)::int AS n FROM marcacion_asistencia WHERE persona_id = ${personaId}`;
       if (enBase !== 0) throw new Error('Llegó algo sin señal');
     });
