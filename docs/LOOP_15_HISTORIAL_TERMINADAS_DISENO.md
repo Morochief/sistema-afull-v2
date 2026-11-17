@@ -23,3 +23,9 @@ En **Mi trabajo**, arriba, dos pestañas: **Pendientes** (lo de hoy) y **Termina
 
 ## 4. Supuestos a confirmar
 - La "fecha de terminado" es la del evento LISTO en `tarea_evento`.
+
+## 5. Al implementar (2026-11-17)
+- Supuesto confirmado en el código: "terminada" = último evento LISTO de `tarea_evento`, en fecha de Asunción.
+- "Las propias" = asignadas a la persona **o** con algún tramo suyo (una tarea de otro que la persona ayudó a terminar también es suya).
+- La pestaña Terminadas vuelve a pedir los datos cada vez que se abre: la app guarda las consultas 30 s y, recién terminada una tarea, mostraba la lista vieja (lo encontró el recorrido).
+- Sin migración.

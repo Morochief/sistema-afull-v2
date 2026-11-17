@@ -35,3 +35,4 @@ export interface PanelRespuesta {
   sin_tarea: PanelSinTarea[];
   sin_marcar: PanelSinMarcar[];
 }
+

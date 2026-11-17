@@ -11,7 +11,7 @@ import { ClientesListaPage } from './routes/clientes/lista.js';
 import { ClientesDetallePage } from './routes/clientes/detalle.js';
 import { OTsListaPage } from './routes/ots/lista.js';
 import { OTsDetallePage } from './routes/ots/detalle.js';
-import { MiTrabajoPage } from './routes/mi-trabajo.js';
+import { MiTrabajoConPestanas } from './routes/mi-trabajo-pestanas.js';
 import { EnVivoPage } from './routes/en-vivo.js';
 import { PersonasPage } from './routes/personas.js';
 import { UsuariosPage } from './routes/usuarios.js';
@@ -100,7 +100,7 @@ const otsRoute = createRoute({
 
 const otsDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/ots/$id', component: OTsDetallePage });
 const inicioRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/inicio', component: InicioPage });
-const miTrabajoRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/mi-trabajo', component: MiTrabajoPage });
+const miTrabajoRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/mi-trabajo', component: MiTrabajoConPestanas });
 const enVivoRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/en-vivo', component: EnVivoPage });
 const personasRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/personas', component: PersonasPage });
 const usuariosRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/usuarios', component: UsuariosPage });

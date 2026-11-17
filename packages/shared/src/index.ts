@@ -9,6 +9,7 @@ export * from './schemas/presupuestos.js';
 export * from './types/api.js';
 export * from './types/live.js';
 export * from './types/panel.js';
+export * from './types/terminadas.js';
 export * from './types/usuarios.js';
 export * from './types/presupuestos.js';
 export * from './formulas/geo.js';

@@ -5,6 +5,11 @@ import { obtenerMiTrabajo, iniciarTarea } from './service.js';
 import { pausarTarea, finalizarTarea } from './mutaciones.service.js';
 import { iniciarTareaSchema, pausarTareaSchema, finalizarTareaSchema, tandaSchema } from '@afull/shared';
 import { crearTanda } from './tanda.service.js';
+import { misTerminadas } from './terminadas.service.js';
+import { paginaSchema } from '../../lib/paginacion.js';
+
+const fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha AAAA-MM-DD');
+const terminadasSchema = z.object({ desde: fecha, hasta: fecha, pagina: paginaSchema });
 import { ipDe } from '../../lib/ip.js';
 import type { Ctx } from '../clientes/service.js';
 
@@ -12,6 +17,7 @@ const ctxDe = (c: Context): Ctx => ({ usuarioId: c.get('usuario').id, ip: ipDe(c
 
 export const cronometroRoutes = new Hono()
   .use('*', requireSesion, requireAlgunaCapacidad('taller', 'montaje', 'diseno', 'comercial'))
+  .get('/terminadas', async (c) => c.json(await misTerminadas(c.get('usuario').id, terminadasSchema.parse(c.req.query()))))
   .get('/', async (c) => {
     return c.json(await obtenerMiTrabajo(ctxDe(c)));
   })
