@@ -58,9 +58,12 @@ describe('Loop 12 — tanda compartida', () => {
     const jefe = await login(['admin']);
     const costo = async (otId: string) => (await (await req('GET', `/api/costeo/ot/${otId}`, jefe.cookie)).json()) as { horas: number; mano_obra_gs: number };
     const [ca, cb] = [await costo(e.a.otId), await costo(e.b.otId)];
-    // 21.000 × 2/3,5 = 12.000 y 21.000 × 1,5/3,5 = 9.000 (+ los pocos ms del tramo pausado, que redondean a 0).
-    expect(ca.mano_obra_gs).toBe(12000);
-    expect(cb.mano_obra_gs).toBe(9000);
+    // 21.000 × 2/3,5 = 12.000 y 21.000 × 1,5/3,5 = 9.000, más el tramo pausado: ms en local, segundos contra la base
+    // remota (≈ 3,3 y 2,5 Gs. por segundo); se admite hasta 30 s.
+    expect(ca.mano_obra_gs).toBeGreaterThanOrEqual(12000);
+    expect(ca.mano_obra_gs).toBeLessThan(12100);
+    expect(cb.mano_obra_gs).toBeGreaterThanOrEqual(9000);
+    expect(cb.mano_obra_gs).toBeLessThan(9075);
     expect(ca.horas).toBeCloseTo(0.57, 2);
     expect(cb.horas).toBeCloseTo(0.43, 2);
   });

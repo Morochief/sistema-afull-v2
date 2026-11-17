@@ -100,5 +100,5 @@ describe('Loop 10 — Tablero de inicio (GET /api/inicio)', () => {
 
     // Deja el cronómetro cerrado (la base de dev es compartida).
     await ok(op.s, 'POST', `/api/mi-trabajo/tareas/${tarea.id}/pausar`, { motivo: 'FIN', claveIdempotencia: crypto.randomUUID() });
-  });
+  }, 300_000); // ~40 llamadas a la API: contra la base remota (CI diario) pasa los 120 s generales
 });

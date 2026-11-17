@@ -31,12 +31,15 @@ async function escenario() {
   return { coord, op, persona: p.id as string, vehiculo: v.id as string, hoja: hoja.id as string, parada: parada.id as string, ot: ot.id as string };
 }
 
-const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+// Todas las horas salen de un mismo instante: contra la base remota cada llamada tarda segundos y no deben sumarse.
+let t0 = Date.now();
+const hace = (min: number) => new Date(t0 - min * 60_000).toISOString();
 const gps = { gpsLat: -25.320588, gpsLng: -57.624181, dispositivoHash: 'ab'.repeat(16) };
 
 describe('Loop 4 (L4.E4) — acciones cargadas sin señal', () => {
   it('se guardan con la hora real del celular y quedan marcadas "sin señal"; sin hora, como siempre (CA-4.7)', async () => {
     const e = await escenario();
+    t0 = Date.now();
     const entrada = await e.op('POST', '/api/asistencia/marcar', { tipo: 'ENTRADA', ...gps, claveIdempotencia: uuid(), ocurridaAt: hace(45) });
     expect(entrada.status).toBe(201);
     const [m] = await admin`SELECT sin_senal, extract(epoch FROM recibida_at - marcada_at)::int AS atraso FROM marcacion_asistencia WHERE id = ${entrada.j.id as string}`;
@@ -54,10 +57,12 @@ describe('Loop 4 (L4.E4) — acciones cargadas sin señal', () => {
       SELECT inicio_sin_senal, cierre_sin_senal, extract(epoch FROM hora_fin - hora_inicio)::int AS duracion FROM viaje WHERE id = ${v.j.id as string}
     `;
     expect([vi.inicio_sin_senal, vi.cierre_sin_senal]).toEqual([true, true]);
-    expect(Math.abs(vi.duracion - 35 * 60)).toBeLessThan(5);
+    expect(vi.duracion).toBe(35 * 60);
     const [pa] = await admin`SELECT cierre_sin_senal, extract(epoch FROM now() - completada_at)::int AS hace FROM hoja_ruta_parada WHERE id = ${e.parada}`;
     expect(pa.cierre_sin_senal).toBe(true);
-    expect(Math.abs(pa.hace - 20 * 60)).toBeLessThan(10);
+    // 20 min + lo que tardó el test desde t0 (segundos contra la base remota).
+    expect(pa.hace - 20 * 60).toBeGreaterThanOrEqual(-2);
+    expect(pa.hace - 20 * 60).toBeLessThan((Date.now() - t0) / 1000 + 2);
     // RR.HH. lo ve marcado.
     const rrhh = await sesion(['rrhh']);
     const lista = (await rrhh('GET', `/api/asistencia?personaId=${e.persona}`)).j as { items: { sin_senal: boolean }[] };
