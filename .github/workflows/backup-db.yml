@@ -1,24 +1,28 @@
 name: Respaldo diario de la base
+# Loop 0 (cierre, docs/LOOP_0_RESPALDOS_DISENO.md). Plan free: Supabase no hace respaldos; este workflow es el único.
+# Cada día: pg_dump de afull-demo con el rol de solo lectura afull_respaldo → cifrado (GPG) → se DESCIFRA y se restaura ESE
+# archivo en un Postgres 17 limpio → verificaciones de estructura, datos y permisos → la API real sobre la copia restaurada →
+# artefacto de 90 días (máximo en repo público). Aparte, el respaldo de Storage (fotos, remisiones, comprobantes).
 on:
-  # Descomentar schedule cuando exista afull-prod y PROD_DATABASE_URL_BACKUP esté configurado:
-  # schedule:
-  #   - cron: '0 6 * * *' # 03:00 en Paraguay (UTC-3)
+  schedule:
+    - cron: '23 7 * * *' # 04:23 en Asunción; lejos del :00, cuando GitHub demora los crons
   workflow_dispatch:
     inputs:
       origen:
-        description: 'Entorno a respaldar (dev o prod)'
+        description: 'Base a respaldar (demo es la que usa Vercel)'
         required: true
-        default: 'dev'
+        default: 'demo'
         type: choice
         options:
+          - demo
           - dev
-          - prod
 
 permissions:
   contents: read
+  actions: write # para reactivar este mismo workflow (GitHub apaga los cron tras 60 días sin actividad en repos públicos)
 
 jobs:
-  respaldo:
+  base:
     runs-on: ubuntu-latest
     services:
       verif:
@@ -30,48 +34,24 @@ jobs:
           --health-cmd="pg_isready -U postgres"
           --health-interval=5s --health-timeout=5s --health-retries=10
     env:
-      EVENT_NAME: ${{ github.event_name }}
-      INPUT_ORIGEN: ${{ inputs.origen }}
-      PROD_URL: ${{ secrets.PROD_DATABASE_URL_BACKUP }}
+      ORIGEN: ${{ github.event_name == 'schedule' && 'demo' || inputs.origen }}
+      DEMO_URL: ${{ secrets.DEMO_DATABASE_URL_RESPALDO }}
       DEV_URL: ${{ secrets.DEV_DATABASE_URL_ADMIN }}
       PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
       VERIF: postgres://postgres:verif@localhost:5432/postgres
     steps:
-      - name: Determinar y validar origen y secretos
-        id: cfg
+      - name: Origen y secretos
         run: |
           set -euo pipefail
-          if [ "$EVENT_NAME" = "schedule" ]; then
-            ORIGEN="prod"
-          else
-            ORIGEN="${INPUT_ORIGEN:-dev}"
-          fi
-
-          if [ "$ORIGEN" = "prod" ]; then
-            if [ -z "$PROD_URL" ]; then
-              echo "ERROR: Respaldo de prod solicitado pero PROD_DATABASE_URL_BACKUP no está definido." >&2
-              exit 1
-            fi
-            echo "SRC=$PROD_URL" >> "$GITHUB_ENV"
-          elif [ "$ORIGEN" = "dev" ]; then
-            if [ -z "$DEV_URL" ]; then
-              echo "ERROR: Respaldo de dev solicitado pero DEV_DATABASE_URL_ADMIN no está definido." >&2
-              exit 1
-            fi
-            echo "SRC=$DEV_URL" >> "$GITHUB_ENV"
-          else
-            echo "ERROR: Origen inválido: $ORIGEN" >&2
-            exit 1
-          fi
-
-          if [ -z "$PASSPHRASE" ]; then
-            echo "ERROR: BACKUP_PASSPHRASE no está definido en GitHub Secrets." >&2
-            exit 1
-          fi
-
-          echo "ORIGEN=$ORIGEN" >> "$GITHUB_ENV"
-          echo "origen=$ORIGEN" >> "$GITHUB_OUTPUT"
-          echo "Respaldando entorno: $ORIGEN"
+          case "$ORIGEN" in
+            demo) [ -n "$DEMO_URL" ] || { echo "ERROR: falta el secreto DEMO_DATABASE_URL_RESPALDO (ver RESTAURAR.md)." >&2; exit 1; }
+                  echo "SRC=$DEMO_URL" >> "$GITHUB_ENV" ;;
+            dev)  [ -n "$DEV_URL" ] || { echo "ERROR: falta el secreto DEV_DATABASE_URL_ADMIN." >&2; exit 1; }
+                  echo "SRC=$DEV_URL" >> "$GITHUB_ENV" ;;
+            *)    echo "ERROR: origen inválido: $ORIGEN" >&2; exit 1 ;;
+          esac
+          [ -n "$PASSPHRASE" ] || { echo "ERROR: falta el secreto BACKUP_PASSPHRASE." >&2; exit 1; }
+          echo "Respaldando: $ORIGEN"
 
       - name: Cliente PostgreSQL 17
         run: |
@@ -83,20 +63,30 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update && sudo apt-get install -y postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
-          /usr/lib/postgresql/17/bin/pg_dump --version
-          /usr/lib/postgresql/17/bin/pg_restore --version
-          /usr/lib/postgresql/17/bin/psql --version
 
-      - name: Volcado (public + drizzle, con privilegios y sin owner)
+      - name: Volcado y cifrado (public + drizzle, sin owner)
         run: |
           set -euo pipefail
+          pg_dump --version
           pg_dump "$SRC" -Fc --schema=public --schema=drizzle --no-owner -f dump.pgdump
+          ARCHIVO="afull-db-${ORIGEN}-$(date -u +%F).pgdump.gpg"
+          printf '%s' "$PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 -o "$ARCHIVO" dump.pgdump
+          rm -f dump.pgdump
+          echo "ARCHIVO=$ARCHIVO" >> "$GITHUB_ENV"
+          ls -la "$ARCHIVO"
 
-      - name: Preparar base limpia y verificar restore
+      - name: Descifrar el archivo que se guarda (lo que se restaura es eso, no el volcado en claro)
+        run: |
+          set -euo pipefail
+          printf '%s' "$PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --decrypt -o verif.pgdump "$ARCHIVO"
+
+      - name: Restaurar en una base limpia y verificar
         run: |
           set -euo pipefail
 
-          # 1. Esquema de extensiones y roles base de Supabase + rol operativo afull_api (atributos de 0002)
+          # 1. Esquema de extensiones, roles base de Supabase, afull_api (0002) y afull_respaldo (0025)
           psql "$VERIF" -v ON_ERROR_STOP=1 <<'SQL'
           CREATE SCHEMA IF NOT EXISTS extensions;
           CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
@@ -113,32 +103,34 @@ jobs:
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'afull_api') THEN
               CREATE ROLE afull_api LOGIN NOINHERIT NOBYPASSRLS;
             END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'afull_respaldo') THEN
+              CREATE ROLE afull_respaldo NOLOGIN NOINHERIT BYPASSRLS;
+            END IF;
           END $$;
           ALTER ROLE afull_api SET statement_timeout = '15s';
           SQL
 
-          # 2. Crear dinámicamente cualquier otro rol presente en las ACL de origen
+          # 2. Cualquier otro rol que aparezca en los permisos de origen (desde el catálogo: lo ve también un rol de solo lectura)
           ROLES=$(psql "$SRC" -Atc "
-            SELECT DISTINCT grantee FROM information_schema.role_table_grants WHERE table_schema IN ('public', 'drizzle')
+            SELECT DISTINCT pg_get_userbyid(a.grantee) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace,
+                   aclexplode(c.relacl) a WHERE n.nspname IN ('public', 'drizzle') AND a.grantee <> 0
             UNION
-            SELECT DISTINCT grantee FROM information_schema.role_routine_grants WHERE routine_schema IN ('public', 'drizzle')
-          " | (grep -vE '^(PUBLIC|postgres|pg_database_owner)$' || true))
-
+            SELECT DISTINCT pg_get_userbyid(a.grantee) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace,
+                   aclexplode(p.proacl) a WHERE n.nspname IN ('public', 'drizzle') AND a.grantee <> 0
+          " | (grep -vE '^(postgres|pg_database_owner)$' || true))
           for r in $ROLES; do
-            if [ -n "$r" ]; then
-              echo "SELECT format('CREATE ROLE %I NOLOGIN', :'rol') WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'rol') \gexec" | psql "$VERIF" -v ON_ERROR_STOP=1 -v rol="$r"
-            fi
+            echo "SELECT format('CREATE ROLE %I NOLOGIN', :'rol') WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'rol') \gexec" \
+              | psql "$VERIF" -v ON_ERROR_STOP=1 -v rol="$r"
           done
 
-          # 3. Filtrar del TOC el CREATE/COMMENT SCHEMA public (ya existe) y los DEFAULT ACL de supabase_admin
-          pg_restore -l dump.pgdump \
+          # 3. Restaurar el archivo DESCIFRADO, sin el CREATE/COMMENT SCHEMA public y sin los DEFAULT ACL de supabase_admin
+          pg_restore -l verif.pgdump \
             | grep -vE '; [0-9]+ [0-9]+ SCHEMA - public ' \
             | grep -vE '; [0-9]+ [0-9]+ COMMENT - SCHEMA public ' \
             | grep -vE 'DEFAULT ACL.*supabase_admin' > restore.toc
+          pg_restore -L restore.toc --no-owner --exit-on-error -d "$VERIF" verif.pgdump
 
-          pg_restore -L restore.toc --no-owner --exit-on-error -d "$VERIF" dump.pgdump
-
-          # 3b. Verificar paridad de pg_default_acl (FOR ROLE postgres en public) antes de reaplicar cinturón de seguridad
+          # 3b. Paridad de pg_default_acl (FOR ROLE postgres en public)
           defacl_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM pg_default_acl WHERE defaclnamespace = 'public'::regnamespace AND defaclrole = 'postgres'::regrole")
           defacl_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM pg_default_acl WHERE defaclnamespace = 'public'::regnamespace AND defaclrole = 'postgres'::regrole")
           [ "$defacl_src" -eq "$defacl_dst" ]
@@ -150,70 +142,145 @@ jobs:
           ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM PUBLIC, anon, authenticated;
           SQL
 
-          # 3c. Verificación funcional de default privileges para funciones nuevas en la base restaurada (D5-1)
-          fn_defacl_test=$(psql "$VERIF" -v ON_ERROR_STOP=1 -Atc "BEGIN; CREATE FUNCTION public.zz_probe_defacl() RETURNS int LANGUAGE sql AS 'select 1'; SELECT has_function_privilege('anon', 'public.zz_probe_defacl()', 'EXECUTE'); ROLLBACK;")
-          fn_defacl_val=$(echo "$fn_defacl_test" | grep -E '^[tf]$')
-          echo "anon execute función nueva en base restaurada (D5-1): $fn_defacl_val"
+          # 3c. Funciones nuevas en la base restaurada: anon no las ejecuta (D5-1)
+          fn_defacl_val=$(psql "$VERIF" -v ON_ERROR_STOP=1 -Atc "BEGIN; CREATE FUNCTION public.zz_probe_defacl() RETURNS int LANGUAGE sql AS 'select 1'; SELECT has_function_privilege('anon', 'public.zz_probe_defacl()', 'EXECUTE'); ROLLBACK;" | grep -E '^[tf]$')
           [ "$fn_defacl_val" = "f" ]
 
-          # 4. Verificaciones estructurales (igualdad exacta origen = destino)
-          t_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
-          t_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
-          m_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM drizzle.__drizzle_migrations")
-          m_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM drizzle.__drizzle_migrations")
-          trg_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid WHERE p.proname = 'bloquear_modificacion_inmutable' AND NOT t.tgisinternal AND t.tgenabled = 'O'")
-          trg_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid WHERE p.proname = 'bloquear_modificacion_inmutable' AND NOT t.tgisinternal AND t.tgenabled = 'O'")
-
-          # 5. Conteos de datos (destino <= origen por si hubo inserciones en vivo después del dump)
-          u_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM usuario")
-          u_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM usuario")
-          c_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM cliente")
-          c_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM cliente")
-          ot_src=$(psql "$SRC"   -Atc "SELECT count(*) FROM orden_trabajo")
-          ot_dst=$(psql "$VERIF" -Atc "SELECT count(*) FROM orden_trabajo")
-
-          echo "tablas: $t_src -> $t_dst | migraciones: $m_src -> $m_dst | triggers_inmutables: $trg_src -> $trg_dst | defacl_postgres: $defacl_src -> $defacl_dst"
-          echo "usuarios: $u_src -> $u_dst | clientes: $c_src -> $c_dst | ots: $ot_src -> $ot_dst"
-
+          # 4. Estructura igual (origen = destino)
+          q() { psql "$1" -Atc "$2"; }
+          t_src=$(q "$SRC" "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
+          t_dst=$(q "$VERIF" "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
+          m_src=$(q "$SRC" "SELECT count(*) FROM drizzle.__drizzle_migrations")
+          m_dst=$(q "$VERIF" "SELECT count(*) FROM drizzle.__drizzle_migrations")
+          TRG="SELECT count(*) FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid WHERE p.proname = 'bloquear_modificacion_inmutable' AND NOT t.tgisinternal AND t.tgenabled = 'O'"
+          trg_src=$(q "$SRC" "$TRG"); trg_dst=$(q "$VERIF" "$TRG")
+          echo "tablas: $t_src -> $t_dst | migraciones: $m_src -> $m_dst | triggers inmutables: $trg_src -> $trg_dst | defacl: $defacl_src -> $defacl_dst"
           [ "$t_src" -eq "$t_dst" ]
-          [ "$m_src" -eq "$m_dst" ] && [ "$m_dst" -ge 5 ]
+          [ "$m_src" -eq "$m_dst" ] && [ "$m_dst" -ge 25 ]
           [ "$trg_src" -eq "$trg_dst" ] && [ "$trg_dst" -ge 4 ]
-          [ "$u_dst" -le "$u_src" ] && [ "$c_dst" -le "$c_src" ] && [ "$ot_dst" -le "$ot_src" ]
 
-          # 6. Verificación de privilegios restaurados conectando directamente como afull_api (no destructiva y exigiendo 42501)
+          # 5. Datos: cada tabla de public con las mismas filas o menos (por si se cargó algo después del volcado)
+          for t in $(q "$VERIF" "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY 1"); do
+            a=$(q "$SRC" "SELECT count(*) FROM public.\"$t\""); b=$(q "$VERIF" "SELECT count(*) FROM public.\"$t\"")
+            [ "$b" -le "$a" ] || { echo "ERROR: $t tiene $b filas restauradas y $a en origen" >&2; exit 1; }
+            [ "$a" -eq 0 ] || [ "$b" -gt 0 ] || { echo "ERROR: $t quedó vacía ($a en origen)" >&2; exit 1; }
+          done
+          echo "Filas: usuario $(q "$VERIF" 'SELECT count(*) FROM usuario') · cliente $(q "$VERIF" 'SELECT count(*) FROM cliente') · OT $(q "$VERIF" 'SELECT count(*) FROM orden_trabajo') · tramos $(q "$VERIF" 'SELECT count(*) FROM tarea_intervalo')"
+
+          # 6. Permisos restaurados: afull_api lee pero no borra (42501); anon nada
           psql "$VERIF" -v ON_ERROR_STOP=1 -c "ALTER ROLE afull_api WITH PASSWORD 'verif_api_pass';"
           VERIF_API="postgres://afull_api:verif_api_pass@localhost:5432/postgres"
-
           psql "$VERIF_API" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM usuario;" >/dev/null
-
-          api_sel=$(psql "$VERIF" -Atc "SELECT has_table_privilege('afull_api', 'usuario', 'SELECT')")
-          api_del=$(psql "$VERIF" -Atc "SELECT has_table_privilege('afull_api', 'cliente', 'DELETE')")
-          [ "$api_sel" = "t" ] && [ "$api_del" = "f" ]
-
+          [ "$(q "$VERIF" "SELECT has_table_privilege('afull_api', 'usuario', 'SELECT')")" = "t" ]
+          [ "$(q "$VERIF" "SELECT has_table_privilege('afull_api', 'cliente', 'DELETE')")" = "f" ]
           set +e
-          del_err=$(psql "$VERIF_API" -v ON_ERROR_STOP=1 -v VERBOSITY=verbose -Atc "BEGIN; DELETE FROM cliente WHERE false; ROLLBACK;" 2>&1)
-          del_rc=$?
+          del_err=$(psql "$VERIF_API" -v ON_ERROR_STOP=1 -Atc "BEGIN; DELETE FROM cliente WHERE false; ROLLBACK;" 2>&1); del_rc=$?
           set -e
-          echo "Resultado prueba DELETE como afull_api (rc=$del_rc): $del_err"
-          [ "$del_rc" -ne 0 ]
-          echo "$del_err" | grep -Eqi '42501|permission denied for table cliente'
+          [ "$del_rc" -ne 0 ] && echo "$del_err" | grep -Eqi '42501|permission denied for table cliente'
+          [ "$(q "$VERIF" "SELECT has_function_privilege('anon', 'siguiente_valor(varchar)', 'EXECUTE')")" = "f" ]
+          [ "$(q "$VERIF" "SELECT has_table_privilege('anon', 'usuario', 'SELECT')")" = "f" ]
+          echo "Permisos restaurados OK"
 
-          anon_fn=$(psql "$VERIF" -Atc "SELECT has_function_privilege('anon', 'siguiente_valor(varchar)', 'EXECUTE')")
-          anon_tbl=$(psql "$VERIF" -Atc "SELECT has_table_privilege('anon', 'usuario', 'SELECT')")
-          echo "afull_api select/delete: $api_sel/$api_del | anon execute siguiente_valor: $anon_fn | anon select usuario: $anon_tbl"
-          [ "$anon_fn" = "f" ] && [ "$anon_tbl" = "f" ]
+      - uses: actions/checkout@v4
+        with:
+          path: repo
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: repo/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: repo/pnpm-lock.yaml
 
-      - name: Cifrar con GPG (AES-256)
+      - name: La app funciona sobre la copia restaurada (login + clientes + reportes + panel)
+        working-directory: repo
         run: |
           set -euo pipefail
-          ARCHIVO="afull-db-${ORIGEN}-$(date -u +%F).pgdump.gpg"
-          printf '%s' "$PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
-            --symmetric --cipher-algo AES256 -o "$ARCHIVO" dump.pgdump
-          rm -f dump.pgdump restore.toc
-          echo "Archivo cifrado generado: $ARCHIVO"
+          pnpm install --frozen-lockfile
+          pnpm --filter @afull/shared build && pnpm --filter @afull/api build
+          CLAVE="zz-$(openssl rand -hex 12)A1"
+          HASH=$(node -e "import('./apps/api/dist/modules/auth/password.js').then(async m => console.log(await m.hashearPassword(process.argv[1])))" "$CLAVE")
+          psql "$VERIF" -v ON_ERROR_STOP=1 -v hash="$HASH" <<'SQL'
+          WITH u AS (INSERT INTO usuario (username, password_hash) VALUES ('zz_respaldo_verif', :'hash') RETURNING id)
+          INSERT INTO permiso_capacidad (usuario_id, capacidad) SELECT id, 'admin' FROM u;
+          SQL
+          DATABASE_URL="postgres://afull_api:verif_api_pass@localhost:5432/postgres" APP_ORIGIN="http://localhost:5173" PORT=3999 \
+            node apps/api/dist/dev.js > api.log 2>&1 &
+          for i in $(seq 1 30); do [ "$(curl -s -o /dev/null -w '%{http_code}' localhost:3999/api/auth/yo)" != "000" ] && break; sleep 1; done
+          O="Origin: http://localhost:5173"
+          code=$(curl -s -o login.json -w '%{http_code}' -c cj -H "$O" -H 'content-type: application/json' \
+            -d "{\"username\":\"zz_respaldo_verif\",\"password\":\"$CLAVE\"}" localhost:3999/api/auth/login)
+          [ "$code" = "200" ] || { echo "login: $code"; cat api.log; exit 1; }
+          DESDE=$(date -u +%Y-%m-01); HASTA=$(date -u +%F)
+          for ruta in "/api/clientes" "/api/reportes/registros?desde=$DESDE&hasta=$HASTA" "/api/panel"; do
+            code=$(curl -s -o r.json -w '%{http_code}' -b cj -H "$O" "localhost:3999$ruta")
+            node -e "JSON.parse(require('fs').readFileSync('r.json','utf8'))"
+            echo "$ruta -> $code"
+            [ "$code" = "200" ] || { cat r.json; cat api.log; exit 1; }
+          done
+          node -e "const p = JSON.parse(require('fs').readFileSync('r.json','utf8')); if (!p.servidor_ahora) process.exit(1)"
+          echo "La API responde sobre la copia restaurada."
 
       - uses: actions/upload-artifact@v4
         with:
-          name: respaldo-db-${{ steps.cfg.outputs.origen }}
+          name: respaldo-db-${{ env.ORIGEN }}
           path: afull-db-*.pgdump.gpg
-          retention-days: 30
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Mantener vivo el cron (GitHub lo apaga tras 60 días sin actividad en repos públicos)
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/backup-db.yml/enable" && echo "Workflow reactivado"
+
+  archivos:
+    # Storage de afull-demo: fotos de montaje y muestras, remisiones firmadas, comprobantes, fotos de pedidos.
+    if: github.event_name == 'schedule' || inputs.origen == 'demo'
+    runs-on: ubuntu-latest
+    env:
+      SRC: ${{ secrets.DEMO_DATABASE_URL_RESPALDO }}
+      SUPABASE_URL: https://gjjtmjmxgoylcwpkkjwf.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.DEMO_SUPABASE_SECRET_KEY }}
+      PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Qué archivos dice la base que hay
+        run: |
+          set -euo pipefail
+          [ -n "$SRC" ] && [ -n "$PASSPHRASE" ] || { echo "ERROR: faltan DEMO_DATABASE_URL_RESPALDO o BACKUP_PASSPHRASE." >&2; exit 1; }
+          sudo apt-get install -y postgresql-client >/dev/null
+          psql "$SRC" -Atc "SELECT ruta FROM archivo WHERE estado = 'SUBIDO' ORDER BY 1" > esperadas.txt
+          N=$(grep -c . esperadas.txt || true)
+          echo "Archivos SUBIDO en la base: $N"
+          echo "N=$N" >> "$GITHUB_ENV"
+      - name: Bajar, verificar y cifrar
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_SECRET_KEY" ]; then
+            if [ "$N" -gt 0 ]; then echo "ERROR: hay $N archivos y falta el secreto DEMO_SUPABASE_SECRET_KEY: no se respaldan." >&2; exit 1; fi
+            echo "::warning::Falta DEMO_SUPABASE_SECRET_KEY; hoy no hay archivos subidos, así que no se pierde nada."
+            exit 0
+          fi
+          node scripts/respaldo-archivos.mjs bajar --dir archivos
+          node scripts/respaldo-archivos.mjs verificar --dir archivos --esperadas esperadas.txt
+          ARCHIVO="afull-archivos-demo-$(date -u +%F).tar.gz.gpg"
+          tar -czf archivos.tar.gz archivos
+          printf '%s' "$PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --symmetric --cipher-algo AES256 -o "$ARCHIVO" archivos.tar.gz
+          # Lo que se guarda se puede abrir: se descifra y se compara el índice
+          printf '%s' "$PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --decrypt -o verif.tar.gz "$ARCHIVO"
+          mkdir verif && tar -xzf verif.tar.gz -C verif
+          node scripts/respaldo-archivos.mjs verificar --dir verif/archivos --esperadas esperadas.txt
+          rm -rf archivos archivos.tar.gz verif verif.tar.gz
+          ls -la "$ARCHIVO"
+      - uses: actions/upload-artifact@v4
+        if: env.SUPABASE_SECRET_KEY != ''
+        with:
+          name: respaldo-archivos-demo
+          path: afull-archivos-*.tar.gz.gpg
+          retention-days: 90
+          if-no-files-found: error

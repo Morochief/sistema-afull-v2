@@ -772,3 +772,30 @@ Sin regresión, todos los recorridos en verde: corte 5/5, fotos 8/8, hoja-proyec
 **Cambio de comportamiento aprobado:** "Hecha" ya no cierra la parada sin quién recibió. Se actualizaron los tests viejos CA-4.6 y CA-4.7 (con nota) y los recorridos `fotos`, `loop4` y `sin-senal`, que ahora completan la entrega.
 
 **Evidencia (local):** `tests/loop17/entrega.test.ts` **6/6** (con el código anterior, 5 fallas; "omitir no pide entrega" pasa en los dos, porque protege lo que no cambia). `Entrega.test.tsx` **4/4**. `scripts/prueba-entrega.cjs` **4/4**: Carlos intenta sin nombre ni foto y no lo deja; con la foto y "María (encargada)" queda entregada. Sofi ve en la OT la remisión, quién recibió, el cargo y quién lo cargó; el cliente lo ve en su portal, sin la foto. Sin regresión: los 26 recorridos en verde (incluye "sin señal": la entrega con la foto todavía en el celular llega bien al volver la señal). Totales: API 254/255 (solo `anon.test.ts`), web 222/222, lint 0, `pnpm typecheck` 0, build 0.
+
+## 2026-11-17 — Loop 0 (cierre): respaldos en plan free
+
+**Pedido:** "los respaldos (Loop 0)… todo el trabajo se mantendrá en plan free". **Diseño:** `docs/LOOP_0_RESPALDOS_DISENO.md`. **Hechos verificados hoy:** Supabase Free no tiene respaldos automáticos, permite 2 proyectos activos y pausa con poca actividad de la base en una semana. En repo público, GitHub guarda los artefactos 90 días como máximo y apaga los cron tras 60 días sin actividad.
+
+**Migración `0025_rol_respaldo`:** el rol `afull_respaldo` (`NOLOGIN NOINHERIT BYPASSRLS`) tiene `SELECT` en todo `public` y `drizzle` (tablas y secuencias), *default privileges* para las tablas futuras y nada más. La clave se pone por entorno. `GRANT … TO postgres WITH INHERIT FALSE, SET TRUE` permite probar la lectura con `SET ROLE` sin ponerle clave. Probada en `afull-dev` dentro de una transacción deshecha: con `SET ROLE` ve las 5106 filas de `usuario` (con RLS).
+
+**`backup-db.yml`:**
+- Cron diario a las 07:23 UTC (04:23 en Asunción) contra `afull-demo`; a mano, `demo` o `dev`.
+- Cifra, **descifra lo guardado y restaura eso** en Postgres 17 limpio. Verifica estructura, migraciones (≥ 25), triggers inmutables, las filas de **todas** las tablas y permisos.
+- Los roles salen del catálogo (`aclexplode`), así funciona con el rol de solo lectura.
+- **Levanta la API real sobre la copia** con un admin descartable y prueba login, `/api/clientes`, `/api/reportes/registros` y `/api/panel`.
+- Artefacto de 90 días. Se reactiva solo por API, por la regla de 60 días (**sin verificar** que eso reinicie el contador).
+- Trabajo `archivos`: baja todo el bucket con `scripts/respaldo-archivos.mjs` (bajar / verificar / subir, sin dependencias), lo compara con `archivo SUBIDO`, cifra, descifra y vuelve a verificar. Sin `DEMO_SUPABASE_SECRET_KEY`: falla si hay archivos y avisa si no hay (hoy demo tiene 0 objetos y 15 MB de base).
+
+**`RESTAURAR.md`:** qué se respalda, dónde y por cuánto; los 4 secretos; `afull_respaldo` en el Paso 2; Paso 7 nuevo (archivos); registro de CA-0.9 con la parte automática y la de una persona (pendiente, en Postgres local en `D:` porque no hay lugar para un tercer proyecto).
+
+**Evidencia (local):**
+- `tests/loop0/respaldo.test.ts` **4/4** (sin la migración, 4 fallas).
+- `tests/loop0/respaldo-archivos.test.ts` **4/4**: paginado por carpetas, sha256, faltantes, corruptos, restauración y bucket vacío.
+- **Ensayo local del workflow**: se ejecutaron los pasos tal como están en el YAML (`/tmp/ensayo.py` los extrae), con la base local como origen y una base vacía como destino. Resultado:
+  - archivo cifrado de 5,1 MB, descifrado y restaurado;
+  - 44 → 44 tablas, 25 → 25 migraciones, 41 → 41 triggers inmutables y filas de todas las tablas;
+  - la API sobre la copia respondió 200 a los 3 endpoints.
+- Sin regresión: API 262/263 (solo `anon.test.ts`), web 222/222, lint 0, `pnpm typecheck` 0, build 0 y los 26 recorridos en verde.
+
+**Falta (usuario):** cargar `DEMO_DATABASE_URL_RESPALDO` (le dejo el valor en un archivo en su compu, sin pasar por el chat) y `DEMO_SUPABASE_SECRET_KEY`; después, la primera corrida real y el simulacro de una persona.

@@ -9,6 +9,8 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
+> **2026-11-17, Loop 0 (cierre, `0025`):** respaldo diario automático de `afull-demo` en plan free: base cifrada, restaurada y probada con la API en cada corrida, más Storage, 90 días. Falta que el usuario cargue 2 secretos y haga el simulacro. Ver `RESTAURAR.md` §0.
+
 > **2026-11-17, Loop 17 (`0024`):** "Hecha" en la parada pide la constancia de entrega (foto de la remisión firmada y quién recibió); la OT la muestra y el portal dice quién recibió. **Con esto se cerró la lista del 17/11** (13, 20, 14, 15, 16 y 17).
 
 > **2026-11-17, Loop 16 (`0023`):** el conductor marca entrada/salida por su cuadrilla desde "En la calle"; fuera de zona el celular pide el motivo (queda REMOTO); RR.HH. ve quién marcó y por qué. Lo guardado sin señal nunca se rechaza por la geocerca.
@@ -54,8 +56,8 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 | Tests Loop 1A (Vitest) | **16/16 en verde contra Supabase `dev` y CI** (`busqueda.test.ts`, `clientes.test.ts`, `ot.test.ts`, `ot-api.test.ts`). **Loop 1A cerrado (CA-1.1 a CA-1.10)**. |
 | Tests Loop 1B (Vitest frontend + contrato) | **45/45 tests web en verde** (9 suites) y **6 tests de contrato/API adicionales**, más **15/15 pasos Playwright UI en verde contra Vercel**. **Loop 1B cerrado (CA-1.11 a CA-1.16)**. |
 | Tests Loop 2 (Vitest backend + web) | **Loop 2 CERRADO** (L2.E1 a L2.E4 + auditoría final): 65/65 tests backend en dev (63 en CI sin anon.test.ts), 76/76 tests web, Playwright CA-2.9 9/9 pasos OK contra Vercel. CA-0.3 y CA-2.1 a CA-2.9 cumplidos. |
-| Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**verificado en verde en corridas #2, #5 y #6 con D5-1 y migración 0006 con btree_gist comprobados**). |
-| `backup-storage.mjs` | Escrito de memoria, sin probar; **pospuesto al Loop 4** (hoy no se usa Storage). |
+| Workflows de GitHub Actions | `ci.yml` (en verde en cada push), `tests-dev.yml` (**escrito, sin ejecutar**; requiere secrets `DEV_*`), `backup-db.yml` (**desde 2026-11-17: cron diario contra `afull-demo` con `afull_respaldo`; restaura el archivo cifrado y prueba la API; Storage incluido; ensayado en local, falta la primera corrida real con los secretos del usuario**). |
+| `scripts/respaldo-archivos.mjs` | Reemplaza al `backup-storage.mjs` que nunca llegó al repo: bajar / verificar / subir, probado con un Storage en memoria (4/4). |
 | Proyectos Supabase `dev` y `prod` | `afull-dev` activo y verificado en São Paulo (`oxthxdnyxabupeebzwmn`); `prod` pendiente. |
 | Proyecto Vercel | **Desplegado en `gru1` (Node 22)**: API Hono + React 19 SPA (rewrite `/(.*) -> /index.html` funcional con HTTP 200 en rutas profundas `/ots/:id`), prueba de humo de 9 puntos en verde. |
 
@@ -200,6 +202,7 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 
 | `0021_diseno_autoverificacion` | (Loop 19) `diseno_version`: `autoverificada`, `motivo_cambio`, `anulada_por/at`, `motivo_anulacion`, `observado_por/at`, estado `ANULADA`; trigger de revisión ampliado (pendiente → aprobada/observada/anulada una vez; autoverificada → observada por la oficina una vez). |
 
+| `0025_rol_respaldo` | (Loop 0, cierre) rol `afull_respaldo` de solo lectura (`BYPASSRLS`, `SELECT` en `public` y `drizzle`, también en las tablas futuras) para `pg_dump`; sin clave en la migración. |
 | `0024_constancia_entrega` | (Loop 17) `hoja_ruta_parada`: `receptor_nombre`, `receptor_cargo`, `completada_por` (fijos una vez cargados, trigger); `orden_trabajo.lleva_remision`; `archivo` tipo `REMISION_PARADA` (una subida por parada). |
 | `0023_asistencia_cuadrilla` | (Loop 16) `marcacion_asistencia`: `origen` (PROPIA/CUADRILLA/REMOTO), `marcada_por`, `hoja_ruta_id`, `motivo_remoto`; CHECK por origen. Sigue inmutable; permisos sin cambios. |
 | `0022_correccion_horas` | (Loop 13) `tarea_intervalo`: `origen` (RELOJ/MANUAL), `cargado_por`, `motivo_manual`, `cerrado_por`, `motivo_correccion`, motivo de cierre `CORRECCION`; tabla inmutable `intervalo_correccion` (solo acorta, una por tramo); vista `v_tramo` (hora de fin efectiva) y `v_mano_obra` sobre ella. Toda consulta de tiempo lee `v_tramo` / `v_mano_obra`. |
@@ -296,8 +299,8 @@ Limitaciones conocidas: la búsqueda trigram no ignora acentos ("Cañete" ≠ "C
 - [x] Si `pg_dump` conecta desde runners de GitHub (IPv4): **VERIFICADO en corrida #2 de GitHub Actions (`cbd4a7c`)**. Conecta al Session Pooler puerto 5432 sin errores.
 - [ ] Rutas y respuestas de la API de Storage en `backup-storage.mjs`. **Desde L4.E3 la app sube archivos**: el respaldo de Storage pasa a ser necesario antes de producción (sigue sin probar).
 - [x] L4.E3 contra Supabase real (2026-11-09, desde el navegador sobre Vercel con un usuario `zz_test_`): subida firmada 200, confirmación con tamaño real, descarga firmada 200 `image/jpeg`; URL pública del objeto → 400 (bucket privado); 6 MB declarados como 1000 bytes → 400 y objeto borrado. Pendiente: `scripts/prueba-fotos.cjs` completo contra Vercel (desde acá la red no llega a `vercel.app`).
-- [ ] Cuota de almacenamiento de artifacts de GitHub en cuenta gratuita.
-- [ ] Que el proyecto Supabase no se pause en un feriado largo (el backup diario debería bastar; confirmar o agregar un `SELECT 1` programado).
+- [x] Artefactos en repo público: Actions sin costo y retención máxima de 90 días (docs de GitHub, verificado 2026-11-17). **Ojo:** en repo público los cron se apagan tras 60 días sin actividad; `backup-db.yml` se reactiva solo por API (sin verificar que alcance).
+- [ ] Que el proyecto Supabase no se pause en un feriado largo: el respaldo diario de demo hace consultas reales todos los días (Supabase cuenta la actividad de la base); `afull-dev` tiene la corrida diaria de `tests-dev.yml`. Confirmar después de un feriado.
 - [ ] Limitar el esquema expuesto de la API de datos de Supabase (la app no usa PostgREST): tercera barrera, ver dónde está la opción en el panel.
 - [ ] Hacer un restore manual completo y escribir `RESTAURAR.md`: `RESTAURAR.md` y `.github/workflows/backup-db.yml` implementados; corridas automáticas verificadas; pendiente simulacro manual en Supabase `afull-restore-drill`.
 - **Dato conocido de `pg_default_acl` en Supabase:** el default ACL de `postgres` para tablas en `public` incluye `service_role=Dxtm` (`DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN`, además de ignorar RLS). No afecta a `afull_api` (que no tiene `DELETE`) y el `TRUNCATE` sobre tablas inmutables sigue bloqueado por triggers, pero confirma que la `service_role key` jamás debe salir de GitHub Secrets.
@@ -369,7 +372,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 > **Excepción al bloqueo (2026-11-03, decisión del usuario):** se importa el catálogo real de insumos en `afull-dev` (solo dev). `afull-prod` y el resto de los datos reales siguen bloqueados.
 
-0. **Reunión con Sofi (10/11, notas del 17/11): primero lo de la reunión.** Loops 18 (cm, medida total y L18.E2 desperdicio aprovechado) y 19 (Nachi, `0021`) en `main`. **Orden del usuario (17/11):** 13 corregir horas (hecho, `0022`) → planilla de horas para pagar y pre-factura en Excel (Loop 20, hecho, sin migración) → 14 panel de Gerardo (hecho, sin migración) → 15 historial (hecho, sin migración) → 16 cuadrilla (hecho, `0023`) → 17 constancia de entrega (hecho, `0024`). **Lista completa.** Siguen: actualizar la guía de uso, backups (Loop 0), `search_path` de los triggers viejos y Vercel/Supabase Pro antes de datos reales. La calculadora de adhesivo del viejo queda cubierta por el Loop 18.
+0. **Reunión con Sofi (10/11, notas del 17/11): primero lo de la reunión.** Loops 18 (cm, medida total y L18.E2 desperdicio aprovechado) y 19 (Nachi, `0021`) en `main`. **Orden del usuario (17/11):** 13 corregir horas (hecho, `0022`) → planilla de horas para pagar y pre-factura en Excel (Loop 20, hecho, sin migración) → 14 panel de Gerardo (hecho, sin migración) → 15 historial (hecho, sin migración) → 16 cuadrilla (hecho, `0023`) → 17 constancia de entrega (hecho, `0024`). **Lista completa.** Guía de uso al día (17/11). Loop 0 de respaldos hecho en código (`0025`); faltan los 2 secretos del usuario, la primera corrida real y su simulacro. **Decisión del usuario (17/11): todo sigue en plan free** (no Vercel/Supabase Pro). Siguen: `search_path` de los triggers viejos. La calculadora de adhesivo del viejo queda cubierta por el Loop 18.
 0. **Loop 12 (tanda compartida) en `main` con `0020`.**
 0. **Loops 12 a 17 diseñados (2026-11-10, decisión del usuario, en este orden):** 12 horas de máquina compartidas (`docs/LOOP_12_HORAS_COMPARTIDAS_DISENO.md`), 13 corregir y cargar horas a mano, 14 panel de Gerardo, 15 historial de terminadas del operario, 16 asistencia de cuadrilla y marcación remota, 17 constancia de entrega. Cada diseño tiene sus supuestos a confirmar. Después: reportes exportables (planilla de horas para pagar y pre-factura). Loop 11 y `0019` ya en `afull-dev` y `afull-demo`.
 0. **Después de la demo (2026-11-09):** `search_path` fijo en las 14 funciones de trigger; prueba en celulares reales; backup de `afull-demo` si se sigue usando; Vercel Pro y Supabase Pro antes de operar con datos reales; sincronizar `D:\sistema-afull`.
@@ -384,6 +387,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 | Fecha | Commit | Resumen | Verificación |
 | :--- | :--- | :--- | :--- |
+| 2026-11-17 | Loop 0 (cierre) | Respaldos en plan free: rol `afull_respaldo` (`0025`), cron diario de demo que restaura el archivo cifrado y prueba la API, respaldo de Storage, `RESTAURAR.md` al día. | Tests 4/4 + 4/4, ensayo local del workflow en verde; totales API 262/263 (anon), web 222/222 |
 | 2026-11-17 | Loop 17 | Constancia de entrega: "Hecha" pide remisión firmada (desmarcable por OT) y quién recibió; sección Entrega en la OT; el portal muestra quién recibió. Migración `0024`. | API 6/6, web 4/4, recorrido 4/4; totales API 254/255 (anon), web 222/222 |
 | 2026-11-17 | Loop 16 | Cuadrilla: el conductor marca por los de su salida; fuera de zona pide motivo (REMOTO); RR.HH. ve origen y motivo. Migración `0023`. | API 7/7, web 5/5, recorrido 5/5; totales API 248/249 (anon), web 218/218 |
 | 2026-11-17 | Loop 15 | Mi trabajo → Terminadas: tareas terminadas con su tiempo (tanda y corrección incluidas) y "Esta semana trabajaste…". Sin migración. | API 4/4, web 5/5, recorrido 4/4; totales API 241/242 (anon), web 213/213 |

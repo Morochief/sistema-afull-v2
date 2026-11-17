@@ -2,6 +2,26 @@
 
 Este documento describe el procedimiento exacto para restaurar un respaldo cifrado de la base de datos de **Sistema aFull** en un proyecto nuevo de Supabase o en una instancia limpia de PostgreSQL 17, cumpliendo el criterio **CA-0.9**.
 
+## 0. Qué se respalda, dónde y por cuánto (plan free, desde el 2026-11-17)
+
+| Qué | Cómo | Dónde queda | Cuánto dura |
+| :--- | :--- | :--- | :--- |
+| La base de `afull-demo` (la que usa Vercel) | `pg_dump` diario a las 04:23 de Asunción con el rol de solo lectura `afull_respaldo`, cifrado con `BACKUP_PASSPHRASE` | GitHub → Actions → **Respaldo diario de la base** → artefacto `respaldo-db-demo` | 90 días (máximo de GitHub en repo público) |
+| Los archivos de Storage (fotos, remisiones, comprobantes) | Se bajan todos, se comparan con la tabla `archivo` y se cifran | Mismo run → artefacto `respaldo-archivos-demo` | 90 días |
+
+Cada corrida **descifra lo que guardó y lo restaura** en una base limpia: compara tablas, filas, triggers y permisos, levanta la API sobre esa copia y prueba login, clientes, reportes y panel. Si algo falla, la corrida queda en rojo y GitHub manda un mail.
+
+Supabase Free no hace respaldos propios: **este es el único**. Conviene bajar una copia por mes a `D:` (el `.gpg` va cifrado: sin la clave no sirve).
+
+### Secretos en GitHub (Settings → Secrets and variables → Actions)
+
+| Secreto | Qué es |
+| :--- | :--- |
+| `BACKUP_PASSPHRASE` | La clave con la que se cifra. **Guardala también fuera de GitHub** (gestor de contraseñas): sin ella los respaldos no se abren |
+| `DEMO_DATABASE_URL_RESPALDO` | `postgresql://afull_respaldo.<ref>:<clave>@aws-1-sa-east-1.pooler.supabase.com:5432/postgres` (solo lectura) |
+| `DEMO_SUPABASE_SECRET_KEY` | La *secret key* de `afull-demo` (Supabase → Project Settings → API Keys). Sin ella no se respaldan los archivos |
+| `DEV_DATABASE_URL_ADMIN` | Para respaldar `afull-dev` a mano (opcional) |
+
 > **Regla de seguridad:** Nunca incluir contraseñas reales, cadenas de conexión completas ni `BACKUP_PASSPHRASE` en este archivo. `BACKUP_PASSPHRASE` debe estar guardada tanto en GitHub Secrets como en un gestor de contraseñas externo del administrador.
 
 ---
@@ -36,8 +56,8 @@ postgresql://postgres.<project-ref>:<password>@aws-1-sa-east-1.pooler.supabase.c
 
 ### Paso 1 — Obtener y descifrar el respaldo
 
-1. En GitHub → **Actions → Respaldo diario de la base**, ejecutar `Run workflow` eligiendo el entorno (`dev` o `prod`), o elegir la última corrida verde.
-2. Descargar el artefacto `respaldo-db-<origen>` y descomprimir el `.zip` de GitHub en una carpeta temporal en `D:` (por ejemplo `D:\restore-temp\`), obteniendo `afull-db-<origen>-YYYY-MM-DD.pgdump.gpg`.
+1. En GitHub → **Actions → Respaldo diario de la base**, elegir la última corrida verde (o `Run workflow` con `demo`).
+2. Descargar el artefacto `respaldo-db-demo` y descomprimir el `.zip` de GitHub en una carpeta temporal en `D:` (por ejemplo `D:\restore-temp\`), obteniendo `afull-db-<origen>-YYYY-MM-DD.pgdump.gpg`.
 3. Descifrar el archivo con `gpg` (usando `--pinentry-mode loopback` sin `--passphrase` para que `gpg` pida la clave de forma interactiva sin eco, sin alterar caracteres por el pipe de PowerShell y sin dejarla en el historial de `PSReadLine`):
    ```powershell
    Set-Location D:\restore-temp
@@ -74,6 +94,9 @@ BEGIN
   END LOOP;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'afull_api') THEN
     CREATE ROLE afull_api LOGIN NOINHERIT NOBYPASSRLS;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'afull_respaldo') THEN
+    CREATE ROLE afull_respaldo NOLOGIN NOINHERIT BYPASSRLS;
   END IF;
 END $$;
 
@@ -159,11 +182,34 @@ psql "$env:DEST_URL" -v ON_ERROR_STOP=1 -Atc "BEGIN; CREATE FUNCTION public.zz_p
    Remove-Item Env:\DEST_URL, Env:\DEST_API_URL -ErrorAction SilentlyContinue
    ```
 
+### Paso 7 — Los archivos (fotos, remisiones, comprobantes)
+
+1. Descargar el artefacto `respaldo-archivos-demo` de la misma corrida y descifrarlo como en el Paso 1:
+   ```powershell
+   & "C:\Program Files\Git\usr\bin\gpg.exe" --pinentry-mode loopback --decrypt -o archivos.tar.gz afull-archivos-demo-YYYY-MM-DD.tar.gz.gpg
+   tar -xzf archivos.tar.gz
+   ```
+   Queda la carpeta `archivos\` con un `indice.json` (ruta, tamaño, tipo y sha256 de cada archivo).
+2. Comprobar que no falte ninguno (en la carpeta del repo, con Node 22):
+   ```powershell
+   psql "$env:DEST_URL" -Atc "SELECT ruta FROM archivo WHERE estado = 'SUBIDO' ORDER BY 1" | Set-Content esperadas.txt
+   node scripts\respaldo-archivos.mjs verificar --dir D:\restore-temp\archivos --esperadas esperadas.txt
+   ```
+3. Subirlos al Storage del proyecto restaurado (crear antes el bucket privado `afull-archivos`):
+   ```powershell
+   $env:SUPABASE_URL = "https://<ref-destino>.supabase.co"
+   $sec = Read-Host -Prompt "Secret key del proyecto destino" -AsSecureString
+   $env:SUPABASE_SECRET_KEY = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
+   node scripts\respaldo-archivos.mjs subir --dir D:\restore-temp\archivos
+   Remove-Item Env:\SUPABASE_SECRET_KEY
+   ```
+
 ---
 
 ## 4. Registro del Simulacro Manual de Restauración (CA-0.9)
 
-- **Estado:** Pendiente de ejecución manual por el usuario.
+- **Parte automática (todos los días):** cada corrida descifra el archivo guardado, lo restaura en Postgres 17 limpio, verifica estructura, filas y permisos, y prueba la API (login, clientes, reportes, panel). Ensayado en local el 2026-11-17 (44 tablas, 25 migraciones, 41 triggers inmutables; la API respondió 200). Falta la primera corrida real contra `afull-demo`, que necesita los secretos `DEMO_DATABASE_URL_RESPALDO` y `DEMO_SUPABASE_SECRET_KEY`.
+- **Parte de una persona — Estado:** Pendiente de ejecución manual por el usuario. Con el plan free no hay lugar para un tercer proyecto Supabase: el destino recomendado es un PostgreSQL 17 local en `D:` (Paso 2).
 - **Fecha de ejecución:** *(completar)*
 - **Artefacto restaurado:** *(nombre del archivo `.pgdump.gpg` y ID del run de GitHub Actions)*
 - **Destino utilizado:** *(ej. proyecto temporal Supabase `afull-restore-drill` o PostgreSQL 17 local en `D:`)*
