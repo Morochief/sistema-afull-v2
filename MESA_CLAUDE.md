@@ -839,3 +839,12 @@ Sin regresión, todos los recorridos en verde: corte 5/5, fotos 8/8, hoja-proyec
 - `scripts/prueba-recibos.cjs` **7/7**: Juan carga los datos de aFull; Sofía carga la factura, la cobra con retención y ve el A4; el cliente lo ve en el portal; Sofía lo anula y la factura vuelve a Pendiente.
 - PDF A4 revisado a ojo.
 - Totales: API 284/285 (solo `anon.test.ts`, que pasa solo en CI), web 225/225, lint 0, `pnpm typecheck` 0, build 0.
+
+**Después del push:** el CI de `efd751d` pasó (run `44339203792`). `0026` está aplicada en `afull-dev` y en `afull-demo` en una sola transacción, junto con la fila del journal (hash `04e0aaa6…`, `when` 1793000025000). `D:\sistema-afull` quedó en `efd751d`. **Vercel** (demo), con el usuario temporal `zz_test_loop21_vercel` (comercial, ya desactivado):
+- login 200;
+- `GET /api/cobranzas/facturas` 200 (0 facturas), `/recibos` 200 y `/empresa` 200 (vacío);
+- `PUT /empresa` como comercial 403;
+- factura con número mal formado 400;
+- la pantalla `/cobranzas` carga con sus pestañas y filtros.
+
+En demo no se cargaron facturas ni recibos de prueba.
