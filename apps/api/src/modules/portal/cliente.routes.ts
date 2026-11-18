@@ -8,6 +8,7 @@ import { SEGUIMIENTO_PEDIDO } from './seguimiento.js';
 import { sql } from '../../db/client.js';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import { TAM_PAGINA, desplazamiento, armarPagina } from '../../lib/paginacion.js';
+import { listarRecibos, obtenerRecibo } from '../cobranzas/consultas.service.js';
 
 export const hashTokenPortal = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
 const PEDIDOS_POR_DIA = 30;
@@ -120,4 +121,9 @@ export const portalClienteRoutes = new Hono<{ Variables: Variables }>()
   .get('/archivos', async (c) => {
     const pedidoId = z.string().uuid().parse(c.req.query('pedidoId'));
     return c.json(await listarArchivos(actorPortal(c.get('portal')), { pedidoId }));
-  });
+  })
+  // Loop 21: sus recibos de dinero (para ver e imprimir). Sin nota interna ni quién lo emitió.
+  .get('/recibos', async (c) =>
+    c.json(await listarRecibos({ clienteId: c.get('portal').clienteId, estado: 'TODOS', pagina: pagina(c.req.query('pagina')) })))
+  .get('/recibos/:id', async (c) =>
+    c.json(await obtenerRecibo(z.string().uuid().parse(c.req.param('id')), { clienteId: c.get('portal').clienteId })));

@@ -5,11 +5,12 @@ import { ErrorApi } from '../lib/api.js';
 import { FormPedido } from '../components/portal/FormPedido.js';
 import { ListaPedidos, ListaTrabajos } from '../components/portal/ListasPortal.js';
 import { Skeleton } from '../components/ui/skeleton.js';
+import { RecibosPortal } from '../components/portal/RecibosPortal.js';
 
 /** Portal del cliente (público, por enlace). No usa la sesión interna ni redirige al login. */
 export function PortalPage() {
   const [token] = useState(tomarTokenDelEnlace);
-  const [pestana, setPestana] = useState<'pedidos' | 'trabajos'>('pedidos');
+  const [pestana, setPestana] = useState<'pedidos' | 'trabajos' | 'recibos'>('pedidos');
   const yo = useQuery({ queryKey: ['portal', 'yo'], queryFn: () => portalYo(token!), enabled: Boolean(token), retry: false });
   const pedidos = useQuery({ queryKey: ['portal', 'pedidos'], queryFn: () => portalPedidos(token!), enabled: Boolean(yo.data) });
   const ots = useQuery({ queryKey: ['portal', 'ots'], queryFn: () => portalOTs(token!), enabled: Boolean(yo.data) && pestana === 'trabajos' });
@@ -32,10 +33,10 @@ export function PortalPage() {
         ) : (
           <>
             <div className="inline-flex rounded-md border border-[#1f2937] bg-[#111318] p-0.5 text-sm" role="tablist">
-              {(['pedidos', 'trabajos'] as const).map((p) => (
+              {(['pedidos', 'trabajos', 'recibos'] as const).map((p) => (
                 <button key={p} role="tab" aria-selected={pestana === p} type="button" onClick={() => setPestana(p)}
                   className={`rounded px-4 py-1.5 ${pestana === p ? 'bg-[#ea580c] text-white' : 'text-neutral-300'}`}>
-                  {p === 'pedidos' ? 'Mis pedidos' : 'Trabajos'}
+                  {p === 'pedidos' ? 'Mis pedidos' : p === 'trabajos' ? 'Trabajos' : 'Recibos'}
                 </button>
               ))}
             </div>
@@ -44,6 +45,8 @@ export function PortalPage() {
                 <FormPedido token={token!} yo={yo.data} onEnviado={() => void pedidos.refetch()} />
                 {pedidos.isLoading ? <p className="text-sm text-neutral-500">Cargando tus pedidos…</p> : <ListaPedidos pedidos={pedidos.data?.items ?? []} token={token!} onCambio={() => void pedidos.refetch()} />}
               </div>
+            ) : pestana === 'recibos' ? (
+              <RecibosPortal token={token!} />
             ) : ots.isLoading ? (
               <p className="text-sm text-neutral-500">Cargando tus trabajos…</p>
             ) : (

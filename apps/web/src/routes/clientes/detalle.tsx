@@ -13,6 +13,7 @@ import { ModalEditarCliente } from '../../components/modals/ModalEditarCliente.j
 import { ModalSucursal } from '../../components/modals/ModalSucursal.js';
 import { ModalContacto } from '../../components/modals/ModalContacto.js';
 import { SeccionPortalCliente } from '../../components/portal/SeccionPortalCliente.js';
+import { SaldoCliente } from '../../components/cobranzas/SaldoCliente.js';
 import { ModalMarca } from '../../components/modals/ModalMarca.js';
 
 export function ClientesDetallePage() {
@@ -203,6 +204,8 @@ export function ClientesDetallePage() {
           {cliente.marcas.length === 0 && <p className="text-xs text-neutral-500 italic">Sin marcas registradas.</p>}
         </div>
       </div>
+
+      <SaldoCliente clienteId={id} nombre={cliente.nombre} />
 
       <SeccionPortalCliente clienteId={id} />
 

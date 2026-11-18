@@ -20,6 +20,10 @@ import { PresupuestoDetallePage } from './routes/presupuestos/detalle.js';
 import { PresupuestoImprimirPage } from './routes/presupuestos/imprimir.js';
 import { ReportesPage } from './routes/reportes.js';
 import { PanelPage } from './routes/panel.js';
+import { CobranzasFacturasPage } from './routes/cobranzas/facturas.js';
+import { CobranzasRecibosPage } from './routes/cobranzas/recibos.js';
+import { CobranzasEmpresaPage } from './routes/cobranzas/empresa.js';
+import { ReciboPage } from './routes/cobranzas/recibo.js';
 import { PreFacturaImprimirPage } from './routes/reportes/prefactura-imprimir.js';
 import { ProyectosListaPage } from './routes/proyectos/lista.js';
 import { ProyectoDetallePage } from './routes/proyectos/detalle.js';
@@ -153,6 +157,11 @@ const permisosRoute = createRoute({ ...listado(), path: '/permisos', component: 
 const permisoDetalleRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/permisos/$id', component: PermisoDetallePage });
 const asistenciaRoute = createRoute({ ...listado(), path: '/asistencia', component: AsistenciaPage });
 const pedidosRoute = createRoute({ ...listado(), path: '/pedidos', component: PedidosListaPage });
+// Loop 21: cobranzas. El recibo va fuera del AppLayout (hoja A4 para imprimir).
+const cobranzasRoute = createRoute({ ...listado(), path: '/cobranzas', component: CobranzasFacturasPage });
+const cobranzasRecibosRoute = createRoute({ ...listado(), path: '/cobranzas/recibos', component: CobranzasRecibosPage });
+const cobranzasEmpresaRoute = createRoute({ getParentRoute: () => appLayoutRoute, path: '/cobranzas/empresa', component: CobranzasEmpresaPage });
+const reciboRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cobranzas/recibos/$id', component: ReciboPage });
 // Público (fuera del AppLayout): el cliente entra con su enlace, sin usuario.
 const portalRoute = createRoute({ getParentRoute: () => rootRoute, path: '/portal', component: PortalPage });
 
@@ -185,6 +194,10 @@ const routeTree = rootRoute.addChildren([
     insumosRoute,
     reportesRoute,
     panelRoute,
+    cobranzasRoute,
+    cobranzasRecibosRoute,
+    cobranzasEmpresaRoute,
+    reciboRoute,
     rentabilidadRoute,
     permisosRoute,
     permisoDetalleRoute,

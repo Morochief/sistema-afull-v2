@@ -802,3 +802,40 @@ Sin regresión, todos los recorridos en verde: corte 5/5, fotos 8/8, hoja-proyec
 
 **Primera corrida real del workflow nuevo** (a mano, origen `dev`, run `44184376014`, `bac74fd`) **en verde**. El archivo cifrado `afull-db-dev-2026-11-17.pgdump.gpg` (3,4 MB) se descifró y se restauró: `tablas: 44 -> 44 | migraciones: 25 -> 25 | triggers inmutables: 41 -> 41 | defacl: 3 -> 3`; `Filas: usuario 5106 · cliente 2791 · OT 3209 · tramos 874`; `Permisos restaurados OK`. Sobre la copia: `/api/clientes -> 200`, `/api/reportes/registros… -> 200`, `/api/panel -> 200`. Artefacto `respaldo-db-dev` subido (ID 14372569521). El trabajo `archivos` se salteó, como corresponde con `dev`. CI de `bac74fd` en verde. `0025` aplicada en `afull-dev` y `afull-demo` (fila 25 del journal, hash `96e55784…`).
 **`afull_respaldo` en demo:** login habilitado con un verificador SCRAM generado en la compu del usuario (la clave no pasó por el chat ni por este espacio). La URL quedó en `D:\sistema-afull\Documentos\PEGAR_EN_GITHUB_DEMO_DATABASE_URL_RESPALDO__BORRAR_DESPUES.txt`, carpeta ignorada por git. Host del pooler `aws-1-sa-east-1`, el mismo que dev; se confirma en la primera corrida de demo.
+
+## 2026-11-18 — Loop 21: recibos de dinero y cobranzas (como el de Prosegur)
+
+**Pedido (Juan, por audio, vía el usuario):** "¿complicado es adelantar el recibo electrónico?… yo factura electrónica ya tengo… este es el que me envía Prosegur". Confirmado por el usuario: quiere un recibo **como el de Prosegur**. **Diseño:** `docs/LOOP_21_RECIBOS_DISENO.md`. El recibo de dinero no es comprobante timbrado (consulta DNIT). El "Recibo Electrónico de Dinero" del SIFEN (Decreto 872/2023) es otro proyecto y **no** se hace.
+
+**Migración `0026_recibos`:**
+- `empresa_dato` (una sola fila): datos de aFull para el encabezado.
+- `factura_cliente`: las facturas que aFull ya emite con su sistema. Número `^\d{3}-\d{3}-\d{7}$` único. `afull_api` solo puede hacer `UPDATE` en las columnas de anulación.
+- `recibo`: `REC-AAAA-NNNN` con `siguiente_valor`, clave de idempotencia, cobrador (nombre guardado al emitir). Mismo límite de `UPDATE`.
+- `recibo_aplicacion`: inmutable. FK compuestas `(recibo, cliente)` y `(factura, cliente)`, así un recibo no paga facturas de otro cliente.
+- Trigger `BEFORE INSERT`: bloquea la factura (`FOR UPDATE`) y rechaza si está anulada o si lo cobrado vigente pasa su monto. Otro trigger: una anulación no se deshace, y no se anula una factura con cobros vigentes.
+- Vista `v_factura_saldo` (`security_invoker`): cobrado, saldo, estado (PENDIENTE / PARCIAL / PAGADA / ANULADA). Sin `DELETE` en ninguna.
+
+**API `/api/cobranzas` (comercial; `PUT /empresa` solo admin):**
+- empresa (GET / PUT);
+- facturas: listar (paginado, filtros, saldo total), cargar (409 número repetido, 400 mal formado), anular (409 con cobros vigentes);
+- recibos: listar, ver (con aplicaciones, cliente, empresa y `monto_letras`), emitir, anular.
+- Emitir: importe = Σ aplicaciones − retenciones (> 0). Bloquea las facturas en orden fijo; 400 si pasa el saldo o la factura es de otro cliente; misma clave → 200 con el mismo recibo.
+- `GET /clientes/:id/saldo`.
+- Portal: `GET /api/portal/recibos` y `/:id`, solo del propio cliente (si no, 404) y sin nota ni quién emitió.
+
+**`packages/shared`:** `montoEnLetras()` (apócope un / veintiún / treinta y un, cien / ciento, mil, millón de, mil millones) y los esquemas de cobranzas.
+
+**Web:**
+- Menú **Cobranzas** con pestañas: **Facturas a cobrar** (por defecto "Con saldo", con el saldo total, "Cobrar" y "Anular"), **Recibos** y **Datos de aFull** (solo admin).
+- **Nuevo recibo**: facturas con saldo para tildar (cada una con su monto, por defecto el saldo), medio, banco, nº de operación, retenciones y comprobante, nota interna. Muestra el importe y las letras.
+- Recibo A4 `/cobranzas/recibos/:id`, armado como el de Prosegur: RUC y número, Recibimos de, RUC/C.I., Guaraníes X, medio y banco, importe en número y letras, retenciones, facturas, TOTAL, lugar y fecha, Cobrador Autorizado. Marca **ANULADO** si corresponde. Botón Imprimir / Guardar PDF.
+- Pestaña **Recibos** en el portal.
+- Línea "Saldo por cobrar" en la ficha del cliente.
+
+**Evidencia (local):**
+- `tests/loop21/cobranzas.test.ts` **6/6**; con el código anterior, 6 fallas. Incluye dos recibos simultáneos sobre el mismo saldo → `[201, 400]`, y como `afull_api` directo: no puede pasar el monto, no mezcla clientes, `permission denied` al cambiar importes o borrar.
+- `tests/loop21/letras.test.ts` **16/16**.
+- `Cobranzas.test.tsx` **3/3**.
+- `scripts/prueba-recibos.cjs` **7/7**: Juan carga los datos de aFull; Sofía carga la factura, la cobra con retención y ve el A4; el cliente lo ve en el portal; Sofía lo anula y la factura vuelve a Pendiente.
+- PDF A4 revisado a ojo.
+- Totales: API 284/285 (solo `anon.test.ts`, que pasa solo en CI), web 225/225, lint 0, `pnpm typecheck` 0, build 0.

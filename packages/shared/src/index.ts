@@ -16,6 +16,8 @@ export * from './formulas/geo.js';
 export * from './schemas/campo.js';
 export * from './schemas/disenos.js';
 export * from './formulas/material.js';
+export * from './formulas/letras.js';
+export * from './schemas/cobranzas.js';
 export * from './schemas/insumos.js';
 export * from './permisos.js';
 export * from './schemas/costeo.js';
