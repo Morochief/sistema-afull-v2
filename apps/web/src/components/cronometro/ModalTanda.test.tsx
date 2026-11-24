@@ -10,8 +10,9 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import { ModalTanda } from './ModalTanda.js';
 import { EtiquetaTanda } from './EtiquetaTanda.js';
 
+// Loop 22 (cambio aprobado): la tanda se guía por `con_medidas` del proceso, no por una lista fija de tipos.
 const t = (id: string, extra: Partial<MiTrabajoTarea>): MiTrabajoTarea => ({
-  id, orden_trabajo_id: 'ot-' + id, codigo_ot: 'OT-' + id, ot_titulo: 'Lona', cliente_nombre: 'Cliente ' + id, tipo: 'TALLER_IMPRESION',
+  id, orden_trabajo_id: 'ot-' + id, codigo_ot: 'OT-' + id, ot_titulo: 'Lona', cliente_nombre: 'Cliente ' + id, tipo: 'TALLER_IMPRESION', con_medidas: true,
   descripcion: 'Imprimir', estado: 'PENDIENTE', minutos_trabajados_hoy: 0, segundos_acumulados: 0, intervalo_abierto: null, tanda: null,
   fecha_trabajo: null, cantidad: null, unidad: null, minutos_estimados: null, updated_at: '', ...extra,
 } as MiTrabajoTarea);
@@ -19,7 +20,7 @@ const t = (id: string, extra: Partial<MiTrabajoTarea>): MiTrabajoTarea => ({
 const tareas = [
   t('10', { cantidad: 2, unidad: 'm2' }),
   t('11', { cantidad: 1.5, unidad: 'm2', estado: 'PAUSADA' }),
-  t('12', { tipo: 'MONTAJE_CALLE' }),
+  t('12', { tipo: 'MONTAJE_CALLE', con_medidas: false }),
   t('13', { estado: 'EN_CURSO' }),
 ];
 const montar = () =>

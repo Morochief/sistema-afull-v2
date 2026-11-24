@@ -2,7 +2,7 @@ import type { TransactionSql } from 'postgres';
 import { sql } from '../../db/client.js';
 import { auditar } from '../auditoria/service.js';
 import { publicarLive } from '../live/publicar.js';
-import { TIPOS_CON_MERMA, esEstadoFinal, type EstadoOT } from '@afull/shared';
+import { esEstadoFinal, type EstadoOT } from '@afull/shared';
 import { ErrorApp, traducirErrorPg } from '../../lib/errores.js';
 import type { Ctx } from '../clientes/service.js';
 
@@ -68,14 +68,15 @@ export async function crearTanda(ctx: Ctx, items: Item[], claveIdempotencia: str
       const ots = new Set<string>();
       // Se bloquean en orden de id para no cruzarse con otra transacción.
       for (const it of [...items].sort((a, b) => a.tareaId.localeCompare(b.tareaId))) {
-        const [t] = await tx<{ persona_asignada_id: string | null; estado: string; tipo: string; orden_trabajo_id: string; ot_estado: string; hoja_estado: string }[]>`
-          SELECT t.persona_asignada_id, t.estado, t.tipo, t.orden_trabajo_id, ot.estado AS ot_estado, ot.hoja_estado
+        const [t] = await tx<{ persona_asignada_id: string | null; estado: string; tipo: string; orden_trabajo_id: string; ot_estado: string; hoja_estado: string; con_medidas: boolean }[]>`
+          SELECT t.persona_asignada_id, t.estado, t.tipo, t.orden_trabajo_id, ot.estado AS ot_estado, ot.hoja_estado,
+                 coalesce((SELECT tt.con_medidas FROM tipo_tarea tt WHERE tt.codigo = t.tipo), false) AS con_medidas
           FROM tarea t JOIN orden_trabajo ot ON ot.id = t.orden_trabajo_id
           WHERE t.id = ${it.tareaId} FOR UPDATE OF t FOR SHARE OF ot`;
         if (!t) throw new ErrorApp(404, 'Tarea no encontrada');
         if (t.persona_asignada_id !== persona.id) throw new ErrorApp(403, 'Solo puedes operar tareas asignadas a tu persona');
         if (await tandaAbiertaDe(tx, it.tareaId)) throw new ErrorApp(409, 'Una de las tareas ya está en otra tanda');
-        if (!(TIPOS_CON_MERMA as readonly string[]).includes(t.tipo)) throw new ErrorApp(400, 'La tanda es solo para impresión, ploteo, corte o refilado');
+        if (!t.con_medidas) throw new ErrorApp(400, 'La tanda es solo para procesos con medidas en cm (impresión, ploteo, corte…)');
         if (!['PENDIENTE', 'PAUSADA'].includes(t.estado)) throw new ErrorApp(400, `Una tarea está ${t.estado}: solo entran pendientes o pausadas`);
         if (esEstadoFinal(t.ot_estado as EstadoOT)) throw new ErrorApp(409, `Una OT ya está ${t.ot_estado}`);
         if (t.hoja_estado === 'BORRADOR') throw new ErrorApp(409, 'La hoja de ruta de una de las OTs todavía está en borrador');

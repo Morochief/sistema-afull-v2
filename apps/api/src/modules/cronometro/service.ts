@@ -57,6 +57,7 @@ export async function obtenerMiTrabajo(ctx: Ctx): Promise<MiTrabajoRespuesta> {
         ot.titulo AS ot_titulo,
         c.nombre AS cliente_nombre,
         t.tipo,
+        coalesce((SELECT tt.con_medidas FROM tipo_tarea tt WHERE tt.codigo = t.tipo), false) AS con_medidas,
         t.descripcion,
         t.estado,
         coalesce(

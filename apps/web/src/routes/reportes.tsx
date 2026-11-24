@@ -3,8 +3,9 @@ import { useSesion } from '../hooks/useSesion.js';
 import { TabRegistros } from '../components/reportes/TabRegistros.js';
 import { TabHoras } from '../components/reportes/TabHoras.js';
 import { TabPreFactura } from '../components/reportes/TabPreFactura.js';
+import { TabAreas } from '../components/reportes/TabAreas.js';
 
-type Pestana = 'registros' | 'horas' | 'prefactura';
+type Pestana = 'registros' | 'horas' | 'areas' | 'prefactura';
 
 /** Loop 20: Reportes. Registros y pre-factura para la oficina (comercial); horas para pagar para RR.HH. */
 export function ReportesPage() {
@@ -12,6 +13,7 @@ export function ReportesPage() {
   const pestanas = ([
     ['registros', 'Registros', tieneCapacidad('comercial')],
     ['horas', 'Horas para pagar', tieneCapacidad('rrhh')],
+    ['areas', 'Horas por área', tieneCapacidad('comercial')],
     ['prefactura', 'Pre-factura', tieneCapacidad('comercial')],
   ] as [Pestana, string, boolean][]).filter(([, , v]) => v);
   const [activa, setActiva] = useState<Pestana | null>(null);
@@ -20,7 +22,7 @@ export function ReportesPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-white">Reportes</h1>
-        <p className="text-xs text-neutral-400">Mano de obra, insumos y viajes por período, horas para pagar y pre-factura. Todo se descarga en Excel o se imprime.</p>
+        <p className="text-xs text-neutral-400">Mano de obra, insumos y viajes por período, horas para pagar, horas por área y pre-factura. Todo se descarga en Excel o se imprime.</p>
       </div>
       <div role="tablist" className="flex gap-1 border-b border-[#1f2937]">
         {pestanas.map(([id, texto]) => (
@@ -30,6 +32,7 @@ export function ReportesPage() {
       </div>
       {actual === 'registros' && <TabRegistros />}
       {actual === 'horas' && <TabHoras />}
+      {actual === 'areas' && <TabAreas />}
       {actual === 'prefactura' && <TabPreFactura />}
       {!actual && <p className="text-xs text-neutral-400">No tenés permiso para ver reportes.</p>}
     </div>

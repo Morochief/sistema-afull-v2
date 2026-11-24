@@ -27,6 +27,7 @@
     { "idx": 22, "version": "7", "when": 1793000022000, "tag": "0023_asistencia_cuadrilla", "breakpoints": true },
     { "idx": 23, "version": "7", "when": 1793000023000, "tag": "0024_constancia_entrega", "breakpoints": true },
     { "idx": 24, "version": "7", "when": 1793000024000, "tag": "0025_rol_respaldo", "breakpoints": true },
-    { "idx": 25, "version": "7", "when": 1793000025000, "tag": "0026_recibos", "breakpoints": true }
+    { "idx": 25, "version": "7", "when": 1793000025000, "tag": "0026_recibos", "breakpoints": true },
+    { "idx": 26, "version": "7", "when": 1793000026000, "tag": "0027_areas_trabajo", "breakpoints": true }
   ]
 }

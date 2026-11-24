@@ -8,12 +8,12 @@ const n = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
 /** Snapshot guardado → misma forma que el cálculo en vivo. */
 function desdeSnapshot(s: Record<string, unknown>): Costeo {
-  const d = (s.detalle ?? {}) as Partial<Pick<Costeo, 'mano_obra' | 'viajes' | 'alertas'>>;
+  const d = (s.detalle ?? {}) as Partial<Pick<Costeo, 'mano_obra' | 'viajes' | 'alertas' | 'areas'>>;
   return {
     horas: Number(s.horas), mano_obra_gs: Number(s.mano_obra_gs), material_gs: Number(s.material_gs),
     desperdicio_gs: Number(s.desperdicio_gs), km: Number(s.km), km_gs: Number(s.km_gs), total_gs: Number(s.total_gs),
     monto_presupuestado_gs: n(s.monto_presupuestado_gs), margen_pct: n(s.margen_pct),
-    mano_obra: d.mano_obra ?? [], viajes: d.viajes ?? [], alertas: d.alertas ?? [],
+    mano_obra: d.mano_obra ?? [], viajes: d.viajes ?? [], alertas: d.alertas ?? [], areas: d.areas ?? [],
   };
 }
 

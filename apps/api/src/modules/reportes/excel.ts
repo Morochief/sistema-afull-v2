@@ -6,7 +6,7 @@ export const seguro = (v: string | null | undefined) => (v && /^[=+\-@]/.test(v)
 const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(Math.round(min % 60)).padStart(2, '0')}`;
 const GS = '#,##0';
 
-function encabezado(h: ExcelJS.Worksheet, columnas: { header: string; key: string; width: number; fmt?: string }[]) {
+export function encabezado(h: ExcelJS.Worksheet, columnas: { header: string; key: string; width: number; fmt?: string }[]) {
   h.columns = columnas.map((c) => ({ header: c.header, key: c.key, width: c.width, style: c.fmt ? { numFmt: c.fmt } : {} }));
   h.getRow(1).font = { bold: true };
   h.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: columnas.length } };

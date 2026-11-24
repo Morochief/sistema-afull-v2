@@ -848,3 +848,38 @@ Sin regresión, todos los recorridos en verde: corte 5/5, fotos 8/8, hoja-proyec
 - la pantalla `/cobranzas` carga con sus pestañas y filtros.
 
 En demo no se cargaron facturas ni recibos de prueba.
+
+## 2026-11-24 — Loop 22: áreas de trabajo y procesos de aFull
+
+**Pedido:** José (aFull) mandó la lista de tareas comunes por área (imágenes) y respondió: quieren saber "cuánto dura x trabajo en el área de trabajo" y "en qué área se fueron más horas"; "Montaje" de Impresiones es el armado ("tetris") de Edu antes de imprimir; "Ploteo y lijado" es de Terminaciones y "Enduido y lijado" de Pintura; "Redes sociales" son publicaciones de aFull; medidas en cm también en Corte MDF, no en Despiece. **Diseño:** `docs/LOOP_22_AREAS_DISENO.md`.
+
+**Migración `0027_areas_trabajo`:**
+- `tipo_tarea.area` pasa a las áreas de aFull: TERMINACIONES, CARPINTERIA, PINTURA, IMPRESIONES, HERRERIA, LOGISTICA, más MONTAJE, DISENO, ADMINISTRACION y OTRO.
+- Nombre único **por área**. `con_medidas` reemplaza la lista fija `TIPOS_CON_MERMA`.
+- Renombres: Relevamiento, Corte adhesivo, Preparación de materiales, Fabricación (Herrería), Proceso de pintura, Carga de móvil, Retiro de materiales, Entrega de materiales.
+- El proceso "Carpintería" se desactiva.
+- 16 procesos nuevos, entre ellos Corte MDF (con medidas), Montaje de impresión, Redes sociales y Cobranza.
+
+**API:**
+- Procesos devuelve y acepta `con_medidas` / `conMedidas`. Un nombre repetido en otra área lleva el área en el código (`LIJADO_HERRERIA`).
+- Mi trabajo trae `con_medidas`. La tanda lo exige (400 si falta).
+- El costo de la OT trae `areas` (horas y costo por área), que también se guardan en el costo congelado.
+- `GET /api/reportes/areas` y `areas.xlsx` (comercial): por período, OT × área, con la tanda repartida por m² como en el costo.
+
+**Web:**
+- Procesos agrupados por área, con el interruptor "Con medidas en cm / Sin medidas" y la casilla al crear.
+- Medidas (cm) y Tanda se guían por la marca del proceso.
+- Costo real de la OT con una línea por área.
+- Reportes → **Horas por área**: columnas por área, totales, el área con más horas resaltada y Excel.
+
+**Cambios de comportamiento aprobados:**
+- `tests/loop3/procesos-api.test.ts`: el área `TALLER` ya no existe y pasa a `CARPINTERIA`.
+- `ModalTanda.test.tsx`: los datos de prueba llevan `con_medidas`.
+
+**Sin código:** el trabajo interno (Redes sociales, Limpieza, Carga de móvil) va en un cliente "aFull (interno)" con una OT por mes. Supuesto a confirmar: "Montaje e instalación" como área propia de la cuadrilla.
+
+**Evidencia (local):**
+- `tests/loop22/areas.test.ts` **5/5**; con el código anterior, 5 fallas.
+- `Areas.test.tsx` **3/3**.
+- `scripts/prueba-areas.cjs` **6/6**.
+- Totales: API 289/290 (solo `anon.test.ts`, que pasa solo en CI), web 228/228, lint 0, `pnpm typecheck` 0, build 0.

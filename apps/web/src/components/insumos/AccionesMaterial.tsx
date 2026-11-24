@@ -1,20 +1,19 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Package, Ruler, Timer } from 'lucide-react';
-import { TIPOS_CON_MERMA, type MiTrabajoTarea } from '@afull/shared';
+import type { MiTrabajoTarea } from '@afull/shared';
 import { obtenerMiTrabajo } from '../../lib/api-cronometro.js';
 import { ModalTanda } from '../cronometro/ModalTanda.js';
 import { Button } from '../ui/button.js';
 import { ModalCargarMaterial } from './ModalCargarMaterial.js';
 import { ModalCorte } from './ModalCorte.js';
 
-/** Procesos de máquina: Edu carga las medidas en cm (Loop 18) y puede armar una tanda (Loop 12). */
-const CON_MERMA = new Set<string>(TIPOS_CON_MERMA);
 
 /** Botones de material en cada tarjeta de "Mi trabajo". */
 export function AccionesMaterial({ tarea }: { tarea: MiTrabajoTarea }) {
   const [modal, setModal] = useState<'material' | 'medidas' | 'tanda' | null>(null);
-  const merma = CON_MERMA.has(tarea.tipo);
+  // Procesos con medidas en cm (Loop 18) y tanda (Loop 12): lo marca el proceso (Loop 22).
+  const merma = tarea.con_medidas === true;
   // Loop 12: una tanda se arma desde una tarea de máquina que todavía no corre ni está en otra tanda.
   const puedeTanda = merma && tarea.estado !== 'EN_CURSO' && !tarea.tanda;
   const { data } = useQuery({ queryKey: ['mi-trabajo'], queryFn: obtenerMiTrabajo, enabled: modal === 'tanda' || modal === 'medidas' });

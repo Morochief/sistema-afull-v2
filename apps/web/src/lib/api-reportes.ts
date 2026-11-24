@@ -48,3 +48,12 @@ export function mesActual() {
   const hoy = fechaAsuncion(new Date());
   return { desde: `${hoy.slice(0, 8)}01`, hasta: hoy };
 }
+
+/** Loop 22: horas de cada OT por área de trabajo. */
+export type ReporteAreas = {
+  areas: { codigo: string; nombre: string; segundos: number }[];
+  filas: { ot_id: string; ot_codigo: string; cliente: string; titulo: string; por_area: Record<string, number>; segundos: number }[];
+};
+export type FiltroAreas = { desde: string; hasta: string; clienteId?: string; proyectoId?: string };
+export const obtenerAreas = (f: FiltroAreas) => apiFetch<ReporteAreas>(`/api/reportes/areas?${query(f)}`);
+export const urlExcelAreas = (f: FiltroAreas) => `/api/reportes/areas.xlsx?${query(f)}`;

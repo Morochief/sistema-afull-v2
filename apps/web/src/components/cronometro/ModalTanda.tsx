@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { TIPOS_CON_MERMA, type MiTrabajoTarea } from '@afull/shared';
+import type { MiTrabajoTarea } from '@afull/shared';
 import { iniciarTanda } from '../../lib/api-cronometro.js';
 import { numero } from '../../lib/numero.js';
 import { mensajeDeError } from '../../lib/api.js';
@@ -10,7 +10,6 @@ import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Label } from '../ui/label.js';
 
-const ES_MAQUINA = new Set<string>(TIPOS_CON_MERMA);
 const esM2 = (u: string | null) => !!u && /^m(2|²)$/i.test(u.trim());
 
 /**
@@ -20,7 +19,7 @@ const esM2 = (u: string | null) => !!u && /^m(2|²)$/i.test(u.trim());
 export function ModalTanda({ origen, tareas, onCerrar }: { origen: MiTrabajoTarea; tareas: MiTrabajoTarea[]; onCerrar: () => void }) {
   const qc = useQueryClient();
   const candidatas = [origen, ...tareas.filter((t) => t.id !== origen.id)]
-    .filter((t) => ES_MAQUINA.has(t.tipo) && (t.estado === 'PENDIENTE' || t.estado === 'PAUSADA') && !t.tanda);
+    .filter((t) => t.con_medidas === true && (t.estado === 'PENDIENTE' || t.estado === 'PAUSADA') && !t.tanda);
   const [m2, setM2] = useState<Record<string, string>>(() =>
     Object.fromEntries(candidatas.map((t) => [t.id, t.cantidad !== null && esM2(t.unidad) ? String(t.cantidad).replace('.', ',') : ''])));
   const [cargando, setCargando] = useState(false);

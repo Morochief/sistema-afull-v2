@@ -1,15 +1,19 @@
 import type postgres from 'postgres';
+import { AREAS_PROCESO, type AreaProceso } from '@afull/shared';
 import { sql } from '../../db/client.js';
 
 type Q = postgres.Sql | postgres.TransactionSql;
 
-export type LineaManoObra = { persona: string; proceso: string; horas: number; tarifa_hora_gs: number | null; costo_gs: number; sin_tarifa: boolean };
+export type LineaManoObra = { persona: string; proceso: string; area: AreaProceso; horas: number; tarifa_hora_gs: number | null; costo_gs: number; sin_tarifa: boolean };
 export type LineaViaje = { viaje_id: string; fecha: string; chapa: string; km_viaje: number; ots_en_hoja: number; km_ot: number; costo_km_gs: number; costo_gs: number };
 export type Costeo = {
   horas: number; mano_obra_gs: number; material_gs: number; desperdicio_gs: number; km: number; km_gs: number; total_gs: number;
   monto_presupuestado_gs: number | null; margen_pct: number | null;
   mano_obra: LineaManoObra[]; viajes: LineaViaje[]; alertas: string[];
+  /** Loop 22: horas y costo de mano de obra por área de trabajo (no está en los cierres anteriores). */
+  areas: LineaArea[];
 };
+export type LineaArea = { area: AreaProceso; nombre: string; horas: number; costo_gs: number };
 
 /** Margen sobre la venta (como el presupuesto): (venta − costo) ÷ venta, con 2 decimales. Sin venta → null. */
 export function margenSobreVenta(ventaGs: number | null, costoGs: number): number | null {
@@ -27,7 +31,7 @@ export function margenSobreVenta(ventaGs: number | null, costoGs: number): numbe
  */
 export async function calcularCosteo(q: Q, otId: string): Promise<Costeo> {
   const mano = await q`
-    SELECT p.nombre AS persona, coalesce(tt.nombre, t.tipo) AS proceso,
+    SELECT p.nombre AS persona, coalesce(tt.nombre, t.tipo) AS proceso, coalesce(tt.area, 'OTRO') AS area,
            sum(v.segundos * v.peso / v.peso_total / 3600)::text AS horas,
            -- Si la tarifa cambió en el medio de la OT no hay una sola: se muestra vacía (el costo igual es exacto).
            CASE WHEN count(DISTINCT tf.tarifa_hora_gs) = 1 THEN max(tf.tarifa_hora_gs)::text END AS tarifa,
@@ -41,7 +45,7 @@ export async function calcularCosteo(q: Q, otId: string): Promise<Costeo> {
     LEFT JOIN tarifa_persona tf ON tf.persona_id = v.persona_id
       AND (v.hora_inicio AT TIME ZONE 'America/Asuncion')::date BETWEEN tf.fecha_inicio AND coalesce(tf.fecha_fin, 'infinity'::date)
     WHERE v.orden_trabajo_id = ${otId}
-    GROUP BY p.nombre, coalesce(tt.nombre, t.tipo)
+    GROUP BY p.nombre, coalesce(tt.nombre, t.tipo), coalesce(tt.area, 'OTRO')
     ORDER BY p.nombre, 2
   `;
   const [[mat], [{ abiertos }], viajes, [ot]] = await Promise.all([
@@ -72,8 +76,17 @@ export async function calcularCosteo(q: Q, otId: string): Promise<Costeo> {
 
   const suma = (xs: readonly { [k: string]: unknown }[], k: string) => xs.reduce((a, x) => a + Number(x[k]), 0);
   const manoObra: LineaManoObra[] = mano.map((m) => ({
-    persona: m.persona, proceso: m.proceso, horas: Math.round(Number(m.horas) * 100) / 100,
+    persona: m.persona, proceso: m.proceso, area: m.area, horas: Math.round(Number(m.horas) * 100) / 100,
     tarifa_hora_gs: m.tarifa === null ? null : Number(m.tarifa), costo_gs: Math.round(Number(m.costo)), sin_tarifa: m.sin_tarifa,
+  }));
+  // Por área: se suma lo exacto y se redondea una vez por área.
+  const exacto = new Map<AreaProceso, { horas: number; costo: number }>();
+  for (const m of mano) {
+    const a = exacto.get(m.area) ?? { horas: 0, costo: 0 };
+    exacto.set(m.area, { horas: a.horas + Number(m.horas), costo: a.costo + Number(m.costo) });
+  }
+  const areas: LineaArea[] = (Object.keys(AREAS_PROCESO) as AreaProceso[]).filter((k) => exacto.has(k)).map((k) => ({
+    area: k, nombre: AREAS_PROCESO[k], horas: Math.round(exacto.get(k)!.horas * 100) / 100, costo_gs: Math.round(exacto.get(k)!.costo),
   }));
   const lineasViaje: LineaViaje[] = viajes.map((v) => ({
     viaje_id: v.viaje_id, fecha: v.fecha, chapa: v.chapa, km_viaje: Number(v.km_viaje), ots_en_hoja: v.ots_en_hoja,
@@ -98,7 +111,7 @@ export async function calcularCosteo(q: Q, otId: string): Promise<Costeo> {
     material_gs: materialGs, desperdicio_gs: Math.round(Number(mat.desperdicio)),
     km: Math.round(suma(viajes, 'km_ot') * 10) / 10, km_gs: kmGs, total_gs: total,
     monto_presupuestado_gs: monto, margen_pct: margenSobreVenta(monto, total),
-    mano_obra: manoObra, viajes: lineasViaje, alertas,
+    mano_obra: manoObra, viajes: lineasViaje, alertas, areas,
   };
 }
 
@@ -109,7 +122,7 @@ export async function guardarSnapshot(tx: postgres.TransactionSql, otId: string,
     INSERT INTO ot_costeo (orden_trabajo_id, estado_final, horas, mano_obra_gs, material_gs, desperdicio_gs, km, km_gs, total_gs,
                            monto_presupuestado_gs, margen_pct, detalle, generado_por)
     VALUES (${otId}, ${estadoFinal}, ${c.horas}, ${c.mano_obra_gs}, ${c.material_gs}, ${c.desperdicio_gs}, ${c.km}, ${c.km_gs}, ${c.total_gs},
-            ${c.monto_presupuestado_gs}, ${c.margen_pct}, ${tx.json({ mano_obra: c.mano_obra, viajes: c.viajes, alertas: c.alertas })}, ${usuarioId})
+            ${c.monto_presupuestado_gs}, ${c.margen_pct}, ${tx.json({ mano_obra: c.mano_obra, viajes: c.viajes, alertas: c.alertas, areas: c.areas })}, ${usuarioId})
   `;
   return c;
 }

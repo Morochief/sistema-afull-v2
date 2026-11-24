@@ -9,6 +9,8 @@ Archivo canónico: `D:\sistema-afull\TRASPASO.md`. Se actualiza al cerrar cada t
 
 ## 0. LEER PRIMERO: qué está verificado y qué no
 
+> **2026-11-24, Loop 22 (`0027`): áreas de trabajo**, con la lista de tareas por área que mandó José (aFull). Los procesos se agrupan en las áreas de aFull (Terminaciones, Carpintería, Pintura, Impresiones, Herrería, Logística, Diseño, más Montaje, Administración y Otro), el mismo nombre puede estar en dos áreas, "Medidas en cm" (y tanda) pasa a ser una marca del proceso (se suma Corte MDF), el costo de la OT muestra horas por área y Reportes tiene **Horas por área** (OT × área, con Excel). Ver `docs/LOOP_22_AREAS_DISENO.md`.
+
 > **2026-11-18, Loop 21 (`0026`): recibos de dinero y cobranzas**, pedido de Juan con el recibo de Prosegur como modelo. Menú **Cobranzas**: se cargan las facturas que aFull ya emite con su sistema de factura electrónica, se cobran con un recibo `REC-AAAA-NNNN` (varias facturas, pago parcial, retenciones, medio y banco) y el recibo sale en A4 como el de Prosegur, con el importe en letras. El cliente lo ve en su portal. Anular no borra. **No es el "Recibo Electrónico" del SIFEN**, que es otro proyecto. Ver `docs/LOOP_21_RECIBOS_DISENO.md`.
 
 > **2026-11-17, Loop 0 (cierre, `0025`):** respaldo diario automático de `afull-demo` en plan free: base cifrada, restaurada y probada con la API en cada corrida, más Storage, 90 días. Falta que el usuario cargue 2 secretos y haga el simulacro. Ver `RESTAURAR.md` §0.
@@ -206,6 +208,7 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 
 | `0025_rol_respaldo` | (Loop 0, cierre) rol `afull_respaldo` de solo lectura (`BYPASSRLS`, `SELECT` en `public` y `drizzle`, también en las tablas futuras) para `pg_dump`; sin clave en la migración. |
 | `0024_constancia_entrega` | (Loop 17) `hoja_ruta_parada`: `receptor_nombre`, `receptor_cargo`, `completada_por` (fijos una vez cargados, trigger); `orden_trabajo.lleva_remision`; `archivo` tipo `REMISION_PARADA` (una subida por parada). |
+| `0027_areas_trabajo` | (Loop 22) `tipo_tarea.area` con las 10 áreas de aFull (`ck_tipo_tarea_area`), nombre único por área (`uq_tipo_tarea_area_nombre`), `con_medidas` (antes `TIPOS_CON_MERMA` en el código), renombres según la lista de José, "Carpintería" (proceso) desactivado y 16 procesos nuevos. |
 | `0026_recibos` | (Loop 21) `empresa_dato` (una fila: datos de aFull para el encabezado), `factura_cliente` (número `001-001-0000123` único; solo cambian las columnas de anulación), `recibo` (número `REC-AAAA-NNNN`, clave de idempotencia; solo cambian las de anulación) y `recibo_aplicacion` (inmutable; FK compuestas para no mezclar clientes). Trigger que no deja cobrar más que el monto de la factura ni cobrar una anulada; anular no se deshace; no se anula una factura con cobros vigentes. Vista `v_factura_saldo`. Sin `DELETE`. |
 | `0023_asistencia_cuadrilla` | (Loop 16) `marcacion_asistencia`: `origen` (PROPIA/CUADRILLA/REMOTO), `marcada_por`, `hoja_ruta_id`, `motivo_remoto`; CHECK por origen. Sigue inmutable; permisos sin cambios. |
 | `0022_correccion_horas` | (Loop 13) `tarea_intervalo`: `origen` (RELOJ/MANUAL), `cargado_por`, `motivo_manual`, `cerrado_por`, `motivo_correccion`, motivo de cierre `CORRECCION`; tabla inmutable `intervalo_correccion` (solo acorta, una por tramo); vista `v_tramo` (hora de fin efectiva) y `v_mano_obra` sobre ella. Toda consulta de tiempo lee `v_tramo` / `v_mano_obra`. |
@@ -390,6 +393,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 | Fecha | Commit | Resumen | Verificación |
 | :--- | :--- | :--- | :--- |
+| 2026-11-24 | Loop 22 | Áreas de trabajo de aFull, procesos de su lista, "Medidas en cm" por proceso, horas por área en la OT y reporte OT × área. Migración `0027`. | API 5/5, web 3/3, recorrido 6/6; totales API 289/290 (anon), web 228/228 |
 | 2026-11-18 | Loop 21 | Cobranzas: facturas emitidas con saldo, recibos de dinero como el de Prosegur (A4, importe en letras, retenciones, varias facturas), portal del cliente y saldo en la ficha. Migración `0026`. | API 6/6 + letras 16/16, web 3/3, recorrido 7/7; totales API 284/285 (anon), web 225/225 |
 | 2026-11-17 | Loop 0 (cierre) | Respaldos en plan free: rol `afull_respaldo` (`0025`), cron diario de demo que restaura el archivo cifrado y prueba la API, respaldo de Storage, `RESTAURAR.md` al día. | Tests 4/4 + 4/4, ensayo local del workflow en verde; totales API 262/263 (anon), web 222/222 |
 | 2026-11-17 | Loop 17 | Constancia de entrega: "Hecha" pide remisión firmada (desmarcable por OT) y quién recibió; sección Entrega en la OT; el portal muestra quién recibió. Migración `0024`. | API 6/6, web 4/4, recorrido 4/4; totales API 254/255 (anon), web 222/222 |

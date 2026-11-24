@@ -14,8 +14,23 @@ export type EstadoTarea = (typeof ESTADOS_TAREA)[number];
  */
 export const CODIGO_PROCESO = /^[A-Z][A-Z0-9_]{1,39}$/;
 export type TipoTarea = string;
-export type AreaProceso = 'TALLER' | 'CALLE' | 'DISENO' | 'COMERCIAL' | 'OTRO';
-export type Proceso = { codigo: string; nombre: string; area: AreaProceso; orden: number; activo: boolean };
+/** Loop 22: las áreas de trabajo de aFull (+ Montaje, Administración y Otro), en el orden en que se muestran. */
+export const AREAS_PROCESO = {
+  TERMINACIONES: 'Terminaciones',
+  CARPINTERIA: 'Carpintería',
+  PINTURA: 'Pintura',
+  IMPRESIONES: 'Impresiones',
+  HERRERIA: 'Herrería',
+  LOGISTICA: 'Logística',
+  MONTAJE: 'Montaje e instalación',
+  DISENO: 'Diseño',
+  ADMINISTRACION: 'Administración',
+  OTRO: 'Otro',
+} as const;
+export type AreaProceso = keyof typeof AREAS_PROCESO;
+export const CODIGOS_AREA = Object.keys(AREAS_PROCESO) as [AreaProceso, ...AreaProceso[]];
+/** `con_medidas`: la tarea tiene "Medidas (cm)" y puede ir en una tanda (Loop 22; antes, una lista fija). */
+export type Proceso = { codigo: string; nombre: string; area: AreaProceso; orden: number; activo: boolean; con_medidas: boolean };
 
 export const MOTIVOS_CIERRE_INTERVALO = [
   'PAUSA',

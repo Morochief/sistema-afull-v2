@@ -8,11 +8,12 @@ describe('0012 — catálogo de procesos y cronómetro para Comercial', () => {
   it('admin agrega un proceso, no se duplica, y desactivado ya no se puede asignar', async () => {
     const juan = await sesion(['admin']);
     const nombre = 'Zz test laminado ' + crypto.randomUUID().slice(0, 6);
-    const p = await juan('POST', '/api/procesos', { nombre, area: 'TALLER' });
+    // Loop 22 (cambio aprobado): las áreas son las de aFull; 'TALLER' ya no existe.
+    const p = await juan('POST', '/api/procesos', { nombre, area: 'CARPINTERIA' });
     expect(p.status).toBe(201);
     const codigo = String(p.j.codigo);
     expect(codigo).toMatch(/^ZZ_TEST_LAMINADO_/);
-    expect((await juan('POST', '/api/procesos', { nombre: nombre.toUpperCase(), area: 'TALLER' })).status).toBe(409);
+    expect((await juan('POST', '/api/procesos', { nombre: nombre.toUpperCase(), area: 'CARPINTERIA' })).status).toBe(409);
     const [c] = await admin`INSERT INTO cliente (codigo, nombre) VALUES (${'ZP' + codigo.slice(-6)}, 'zz_test_cli_proc') RETURNING id`;
     const ot = (await juan('POST', '/api/comercial/ot', { clienteId: c.id, titulo: 'zz_test', tareas: [{ tipo: codigo, descripcion: 'laminar' }] }));
     expect(ot.status).toBe(201);

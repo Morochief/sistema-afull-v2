@@ -1,14 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import type { AreaProceso } from '@afull/shared';
+import { AREAS_PROCESO, type AreaProceso } from '@afull/shared';
 import { listarProcesos } from '../../lib/api-procesos.js';
 
-export const AREAS: Record<AreaProceso, string> = {
-  TALLER: 'Taller',
-  CALLE: 'Calle',
-  DISENO: 'Diseño',
-  COMERCIAL: 'Comercial',
-  OTRO: 'Otro',
-};
+/** Loop 22: las áreas de trabajo de aFull, en su orden. */
+export const AREAS: Record<AreaProceso, string> = AREAS_PROCESO;
 
 /** Catálogo de procesos compartido (se cachea 5 min). */
 export function useProcesos() {

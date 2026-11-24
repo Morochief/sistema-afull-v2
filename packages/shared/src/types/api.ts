@@ -218,6 +218,8 @@ export type MiTrabajoTarea = {
   ot_titulo: string;
   cliente_nombre: string;
   tipo: TipoTarea;
+  /** Loop 22: el proceso tiene "Medidas (cm)" y tanda. */
+  con_medidas: boolean;
   descripcion: string;
   estado: EstadoTarea;
   minutos_trabajados_hoy: number;

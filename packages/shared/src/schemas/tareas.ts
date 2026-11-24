@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CODIGO_PROCESO, MOTIVOS_CIERRE_INTERVALO, ESTADOS_TAREA } from '../machines/tarea.js';
+import { CODIGO_PROCESO, CODIGOS_AREA, MOTIVOS_CIERRE_INTERVALO, ESTADOS_TAREA } from '../machines/tarea.js';
 
 const proceso = z.string().regex(CODIGO_PROCESO, 'Proceso inválido');
 
@@ -59,9 +59,6 @@ export const pausarTareaSchema = z.object({
   claveIdempotencia: z.string().uuid(),
 });
 
-/** Procesos de máquina: tienen Merma, Compartido y Tanda compartida (Loop 5 y Loop 12). */
-export const TIPOS_CON_MERMA = ['TALLER_IMPRESION', 'PLOTEO', 'TALLER_CORTE', 'REFILADO'] as const;
-
 /** Loop 12: una tanda de máquina para varias OTs; el tiempo se reparte por m² de piezas. */
 export const tandaSchema = z.object({
   tareas: z
@@ -78,7 +75,8 @@ export const finalizarTareaSchema = z.object({
 
 export const nuevoProcesoSchema = z.object({
   nombre: z.string().trim().min(2).max(60),
-  area: z.enum(['TALLER', 'CALLE', 'DISENO', 'COMERCIAL', 'OTRO']),
+  area: z.enum(CODIGOS_AREA),
+  conMedidas: z.boolean().optional(),
 });
 export const patchProcesoSchema = nuevoProcesoSchema.partial().extend({
   activo: z.boolean().optional(),

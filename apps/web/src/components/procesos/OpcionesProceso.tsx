@@ -10,7 +10,7 @@ export function OpcionesProceso({ actual }: { actual?: string }) {
   if (visibles.length === 0) return <option value={actual ?? ''}>{actual ?? 'Cargando procesos…'}</option>;
   return (
     <>
-      {[...porArea.entries()].map(([area, lista]) => (
+      {(Object.keys(AREAS) as AreaProceso[]).filter((a) => porArea.has(a)).map((area) => [area, porArea.get(area)!] as const).map(([area, lista]) => (
         <optgroup key={area} label={AREAS[area]}>
           {lista.map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
         </optgroup>

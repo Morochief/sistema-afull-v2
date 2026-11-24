@@ -17,7 +17,7 @@ export const codigoDesdeNombre = (nombre: string) =>
     .replace(/^_+|_+$/g, '')
     .slice(0, 40);
 
-const COLS = sql`codigo, nombre, area, orden, activo`;
+const COLS = sql`codigo, nombre, area, orden, activo, con_medidas`;
 
 /** Catálogo de procesos (tipos de tarea): lo lee cualquiera con sesión; lo administra admin (Juan). Nada se borra. */
 export const procesosRoutes = new Hono()
@@ -25,19 +25,23 @@ export const procesosRoutes = new Hono()
   .get('/', async (c) => c.json([...(await sql`SELECT ${COLS} FROM tipo_tarea ORDER BY activo DESC, orden, nombre`)]))
   .post('/', requireCapacidad('admin'), async (c: Context) => {
     const d = nuevoProcesoSchema.parse(await c.req.json().catch(() => null));
-    const codigo = codigoDesdeNombre(d.nombre);
-    if (!/^[A-Z][A-Z0-9_]{1,39}$/.test(codigo)) throw new ErrorApp(400, 'El nombre tiene que empezar con una letra');
+    const base = codigoDesdeNombre(d.nombre);
+    if (!/^[A-Z][A-Z0-9_]{1,39}$/.test(base)) throw new ErrorApp(400, 'El nombre tiene que empezar con una letra');
     try {
       const r = await sql.begin(async (tx) => {
+        // Loop 22: el mismo nombre puede estar en otra área ("Lijado" de Pintura → LIJADO_PINTURA).
+        const [usado] = await tx`SELECT 1 FROM tipo_tarea WHERE codigo = ${base}`;
+        const codigo = usado ? `${base.slice(0, 39 - d.area.length)}_${d.area}` : base;
         const [p] = await tx`
-          INSERT INTO tipo_tarea (codigo, nombre, area) VALUES (${codigo}, ${d.nombre}, ${d.area}) RETURNING ${COLS}
+          INSERT INTO tipo_tarea (codigo, nombre, area, con_medidas) VALUES (${codigo}, ${d.nombre}, ${d.area}, ${d.conMedidas ?? false})
+          RETURNING ${COLS}
         `;
-        await auditar({ usuarioId: c.get('usuario').id, accion: 'proceso.crear', recurso: 'tipo_tarea', ip: ipDe(c), metadata: { codigo } }, tx);
+        await auditar({ usuarioId: c.get('usuario').id, accion: 'proceso.crear', recurso: 'tipo_tarea', ip: ipDe(c), metadata: { codigo: p.codigo } }, tx);
         return p;
       });
       return c.json(r, 201);
     } catch (e) {
-      if ((e as { code?: string }).code === '23505') throw new ErrorApp(409, 'Ya existe un proceso con ese nombre');
+      if ((e as { code?: string }).code === '23505') throw new ErrorApp(409, 'Ya existe un proceso con ese nombre en esa área');
       traducirErrorPg(e);
     }
   })
@@ -50,7 +54,7 @@ export const procesosRoutes = new Hono()
         if (!a) throw new ErrorApp(404, 'Proceso no encontrado');
         const [p] = await tx`
           UPDATE tipo_tarea SET nombre = ${d.nombre ?? a.nombre}, area = ${d.area ?? a.area},
-                 orden = ${d.orden ?? a.orden}, activo = ${d.activo ?? a.activo}
+                 orden = ${d.orden ?? a.orden}, activo = ${d.activo ?? a.activo}, con_medidas = ${d.conMedidas ?? a.con_medidas}
           WHERE codigo = ${codigo} RETURNING ${COLS}
         `;
         await auditar({ usuarioId: c.get('usuario').id, accion: 'proceso.editar', recurso: 'tipo_tarea', ip: ipDe(c), metadata: { codigo, ...d } }, tx);
@@ -59,7 +63,7 @@ export const procesosRoutes = new Hono()
       return c.json(r);
     } catch (e) {
       if (e instanceof ErrorApp) throw e;
-      if ((e as { code?: string }).code === '23505') throw new ErrorApp(409, 'Ya existe un proceso con ese nombre');
+      if ((e as { code?: string }).code === '23505') throw new ErrorApp(409, 'Ya existe un proceso con ese nombre en esa área');
       traducirErrorPg(e);
     }
   });

@@ -48,6 +48,16 @@ export function SeccionCosteoOT({ otId, estado }: { otId: string; estado: string
           {c.alertas.map((a) => <li key={a} className="flex gap-1"><AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {a}</li>)}
         </ul>
       )}
+      {c.areas && c.areas.length > 0 && (
+        <div aria-label="Horas por área" className="flex flex-wrap gap-2">
+          {c.areas.map((a) => (
+            <div key={a.area} className="rounded border border-[#1f2937] bg-[#090a0f] px-3 py-1.5 text-xs">
+              <span className="text-neutral-400">{a.nombre}</span> <span className="font-mono text-white">{horas(a.horas)}</span>
+              <span className="ml-1 font-mono text-neutral-500">{formatearGs(a.costo_gs)}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {c.mano_obra.length > 0 && (
         <table className="w-full text-xs">
           <thead className="text-left text-neutral-500"><tr><th className="py-1">Persona</th><th>Proceso</th><th className="text-right">Horas</th><th className="text-right">Tarifa</th><th className="text-right">Costo</th></tr></thead>

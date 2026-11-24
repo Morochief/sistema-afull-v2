@@ -9,6 +9,8 @@ export type CosteoOT = {
   horas: number; mano_obra_gs: number; material_gs: number; desperdicio_gs: number; km: number; km_gs: number; total_gs: number;
   monto_presupuestado_gs: number | null; margen_pct: number | null;
   mano_obra: LineaManoObra[]; viajes: LineaViaje[]; alertas: string[];
+  /** Loop 22: horas y costo por área de trabajo (vacío en los cierres anteriores). */
+  areas?: { area: string; nombre: string; horas: number; costo_gs: number }[];
 };
 export type CosteoProyectoFila = {
   id: string; codigo_ot: string; titulo: string; estado: string; congelado: boolean;
