@@ -894,3 +894,11 @@ En demo no se cargaron facturas ni recibos de prueba.
   - `GET /api/reportes/areas` (1–25/11) 200, 6 OT;
   - área vieja `TALLER` 400.
 - `D:\sistema-afull` quedó en `a53e403`.
+
+## 2026-11-25 — Respaldo de demo funcionando (Loop 0, secretos cargados)
+
+El usuario cargó `DEMO_DATABASE_URL_RESPALDO` y `DEMO_SUPABASE_SECRET_KEY` en GitHub. Corrida manual `45620681827` (origen demo): **verde**.
+- **base:** `tablas: 49 -> 49 | migraciones: 27 -> 27 | triggers inmutables: 43 -> 43 | defacl: 3 -> 3`. Sobre la copia restaurada, `/api/clientes`, `/api/reportes/registros` y `/api/panel` → 200 ("La API responde sobre la copia restaurada"). El host del pooler anotado en la URL (`aws-1-sa-east-1`) quedó confirmado.
+- **archivos:** "Archivos en el respaldo: 0. Faltan: 0. Con sha256 distinto: 0". Demo no tiene archivos: `archivo` 0 filas, `storage.objects` 0. La clave secreta autentica bien.
+- Desde ahora el respaldo diario (07:23 UTC) también mantiene activa la base de demo, que el 25/11 estaba pausada por inactividad.
+- Falta: la restauración hecha a mano una vez por una persona (`RESTAURAR.md`).
