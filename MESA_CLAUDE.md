@@ -883,3 +883,14 @@ En demo no se cargaron facturas ni recibos de prueba.
 - `Areas.test.tsx` **3/3**.
 - `scripts/prueba-areas.cjs` **6/6**.
 - Totales: API 289/290 (solo `anon.test.ts`, que pasa solo en CI), web 228/228, lint 0, `pnpm typecheck` 0, build 0.
+
+**Después del push (25/11):**
+- CI de `a53e403` en verde.
+- `0027` aplicada en `afull-dev` y en `afull-demo`, en una transacción con la fila del journal (hash `1ac294c0…`, `when` 1793000026000).
+- **Demo estaba pausada** (Supabase Free, una semana sin actividad): se reactivó con el conector antes de migrar.
+- **Vercel**, con el usuario temporal `zz_test_loop22_vercel` (ya desactivado):
+  - login 200;
+  - `GET /api/procesos` 200, con los procesos activos de las 10 áreas (Terminaciones 10, Carpintería 4, Pintura 4…) y `CORTE_MDF` con medidas;
+  - `GET /api/reportes/areas` (1–25/11) 200, 6 OT;
+  - área vieja `TALLER` 400.
+- `D:\sistema-afull` quedó en `a53e403`.
