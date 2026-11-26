@@ -913,3 +913,10 @@ El usuario cargó `DEMO_DATABASE_URL_RESPALDO` y `DEMO_SUPABASE_SECRET_KEY` en G
 - `tests/loop22/montaje-logistica.test.ts` (CA-22.8) 1/1; con el código anterior, 1 falla.
 - Loop 22 completo y procesos del Loop 3: 8/8.
 - Totales: API 290/291 (solo `anon.test.ts`, que pasa solo en CI), web 228/228, lint 0, `pnpm typecheck` 0, build 0, recorridos 29/29.
+
+**Después del push:**
+- CI de `bc6ada4` en verde.
+- `0028` aplicada en `afull-dev` y en `afull-demo`, en una transacción con la fila del journal (hash `03beff94…`, `when` 1793000027000). En demo, Logística queda con: Cobranza, Desmontaje, Entrega de materiales, Entrega de recibo, Instalación, Montaje / colocación, Reparación y Retiro de materiales.
+- **Vercel:** el paquete publicado ya no trae el área "Montaje e instalación" y sí "Logística".
+- Desde el 25/11 no inicio sesión en Vercel con contraseña (regla de seguridad del entorno): los recorridos con usuario en Vercel los hace el usuario cargando la clave.
+- `D:\sistema-afull` quedó en `bc6ada4`.
