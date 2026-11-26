@@ -902,3 +902,14 @@ El usuario cargó `DEMO_DATABASE_URL_RESPALDO` y `DEMO_SUPABASE_SECRET_KEY` en G
 - **archivos:** "Archivos en el respaldo: 0. Faltan: 0. Con sha256 distinto: 0". Demo no tiene archivos: `archivo` 0 filas, `storage.objects` 0. La clave secreta autentica bien.
 - Desde ahora el respaldo diario (07:23 UTC) también mantiene activa la base de demo, que el 25/11 estaba pausada por inactividad.
 - Falta: la restauración hecha a mano una vez por una persona (`RESTAURAR.md`).
+
+## 2026-11-26 — Loop 22, ajuste: el montaje va en Logística (`0028`)
+
+**Pedido (José, 25/11):** "Entra en logística, pero también se tiene en cuenta que a veces la gente de producción ayuda en montaje y/o instalación… todos los de producción deberían tener ese apartado de logística (montaje/desmontaje/instalación)".
+
+**Cambio:** se saca el área Montaje e instalación. Montaje / colocación y Reparación pasan a Logística, y se suman Desmontaje e Instalación. Producción ya tiene ese apartado: la capacidad `taller` incluye En la calle, y cualquier persona puede recibir una tarea de montaje o ir en una salida. No cambia ningún permiso.
+
+**Evidencia (local):**
+- `tests/loop22/montaje-logistica.test.ts` (CA-22.8) 1/1; con el código anterior, 1 falla.
+- Loop 22 completo y procesos del Loop 3: 8/8.
+- Totales: API 290/291 (solo `anon.test.ts`, que pasa solo en CI), web 228/228, lint 0, `pnpm typecheck` 0, build 0, recorridos 29/29.

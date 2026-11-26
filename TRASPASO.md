@@ -208,6 +208,7 @@ Aplicarlas con `drizzle-kit migrate` (conexión admin), **no** pegándolas a man
 
 | `0025_rol_respaldo` | (Loop 0, cierre) rol `afull_respaldo` de solo lectura (`BYPASSRLS`, `SELECT` en `public` y `drizzle`, también en las tablas futuras) para `pg_dump`; sin clave en la migración. |
 | `0024_constancia_entrega` | (Loop 17) `hoja_ruta_parada`: `receptor_nombre`, `receptor_cargo`, `completada_por` (fijos una vez cargados, trigger); `orden_trabajo.lleva_remision`; `archivo` tipo `REMISION_PARADA` (una subida por parada). |
+| `0028_montaje_logistica` | (Loop 22, ajuste) el montaje va en Logística: Montaje / colocación y Reparación pasan a `LOGISTICA`, se suman Desmontaje e Instalación y sale el área `MONTAJE` del `CHECK`. |
 | `0027_areas_trabajo` | (Loop 22) `tipo_tarea.area` con las 10 áreas de aFull (`ck_tipo_tarea_area`), nombre único por área (`uq_tipo_tarea_area_nombre`), `con_medidas` (antes `TIPOS_CON_MERMA` en el código), renombres según la lista de José, "Carpintería" (proceso) desactivado y 16 procesos nuevos. |
 | `0026_recibos` | (Loop 21) `empresa_dato` (una fila: datos de aFull para el encabezado), `factura_cliente` (número `001-001-0000123` único; solo cambian las columnas de anulación), `recibo` (número `REC-AAAA-NNNN`, clave de idempotencia; solo cambian las de anulación) y `recibo_aplicacion` (inmutable; FK compuestas para no mezclar clientes). Trigger que no deja cobrar más que el monto de la factura ni cobrar una anulada; anular no se deshace; no se anula una factura con cobros vigentes. Vista `v_factura_saldo`. Sin `DELETE`. |
 | `0023_asistencia_cuadrilla` | (Loop 16) `marcacion_asistencia`: `origen` (PROPIA/CUADRILLA/REMOTO), `marcada_por`, `hoja_ruta_id`, `motivo_remoto`; CHECK por origen. Sigue inmutable; permisos sin cambios. |
@@ -393,6 +394,7 @@ Nunca en el repo. Locales en `.env` y `.env.test` (en `.gitignore`); en producci
 
 | Fecha | Commit | Resumen | Verificación |
 | :--- | :--- | :--- | :--- |
+| 2026-11-26 | Loop 22 (ajuste) | El montaje va en Logística (Montaje, Desmontaje, Instalación, Reparación), a pedido de José. Migración `0028`. | CA-22.8 1/1; API 290/291 (anon), web 228/228, recorridos 29/29 |
 | 2026-11-24 | Loop 22 | Áreas de trabajo de aFull, procesos de su lista, "Medidas en cm" por proceso, horas por área en la OT y reporte OT × área. Migración `0027`. | API 5/5, web 3/3, recorrido 6/6; totales API 289/290 (anon), web 228/228 |
 | 2026-11-18 | Loop 21 | Cobranzas: facturas emitidas con saldo, recibos de dinero como el de Prosegur (A4, importe en letras, retenciones, varias facturas), portal del cliente y saldo en la ficha. Migración `0026`. | API 6/6 + letras 16/16, web 3/3, recorrido 7/7; totales API 284/285 (anon), web 225/225 |
 | 2026-11-17 | Loop 0 (cierre) | Respaldos en plan free: rol `afull_respaldo` (`0025`), cron diario de demo que restaura el archivo cifrado y prueba la API, respaldo de Storage, `RESTAURAR.md` al día. | Tests 4/4 + 4/4, ensayo local del workflow en verde; totales API 262/263 (anon), web 222/222 |

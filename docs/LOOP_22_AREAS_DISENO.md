@@ -79,3 +79,16 @@
 ## Cambio de comportamiento aprobado
 
 `tests/loop3/procesos-api.test.ts` creaba procesos con el área `TALLER`, que ya no existe: pasa a `CARPINTERIA` / `OTRO`.
+
+## Ajuste 26/11 — el montaje va en Logística (`0028_montaje_logistica`)
+
+José (25/11): la cuadrilla "entra en logística, pero también la gente de producción ayuda en montaje y/o instalación";
+"todos los de producción deberían tener ese apartado de logística (montaje/desmontaje/instalación)".
+
+- Se saca el área **Montaje e instalación**: Montaje / colocación y Reparación pasan a **Logística**, y se suman
+  **Desmontaje** e **Instalación**.
+- Producción ya tiene ese apartado: la capacidad `taller` incluye **En la calle** y cualquier persona puede tener
+  una tarea de montaje o ir en una salida. No cambia ningún permiso.
+- **CA-22.8:** Logística tiene Montaje / colocación, Desmontaje, Instalación y Reparación; el área `MONTAJE` → 400 (API)
+  y `23514` (base). CA-22.1 pasa a buscar Montaje / colocación en Logística (cambio aprobado).
+- Los costos ya congelados guardan el área que tenían al cerrar.

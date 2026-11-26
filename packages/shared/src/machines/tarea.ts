@@ -14,7 +14,7 @@ export type EstadoTarea = (typeof ESTADOS_TAREA)[number];
  */
 export const CODIGO_PROCESO = /^[A-Z][A-Z0-9_]{1,39}$/;
 export type TipoTarea = string;
-/** Loop 22: las áreas de trabajo de aFull (+ Montaje, Administración y Otro), en el orden en que se muestran. */
+/** Loop 22: las áreas de trabajo de aFull (+ Administración y Otro), en el orden en que se muestran. El montaje va en Logística. */
 export const AREAS_PROCESO = {
   TERMINACIONES: 'Terminaciones',
   CARPINTERIA: 'Carpintería',
@@ -22,7 +22,6 @@ export const AREAS_PROCESO = {
   IMPRESIONES: 'Impresiones',
   HERRERIA: 'Herrería',
   LOGISTICA: 'Logística',
-  MONTAJE: 'Montaje e instalación',
   DISENO: 'Diseño',
   ADMINISTRACION: 'Administración',
   OTRO: 'Otro',

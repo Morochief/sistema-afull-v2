@@ -58,7 +58,8 @@ describe('Loop 22 — áreas de trabajo', () => {
     expect(de('HERRERIA')).toEqual(expect.arrayContaining(['Fabricación', 'Despiece de materiales', 'Limpieza de caños']));
     expect(de('LOGISTICA')).toEqual(expect.arrayContaining(['Retiro de materiales', 'Cobranza', 'Entrega de recibo', 'Entrega de materiales']));
     expect(de('DISENO')).toEqual(expect.arrayContaining(['Diseño', 'Informe', 'Redes sociales', 'Preparación de originales', 'Medición']));
-    expect(de('MONTAJE')).toEqual(expect.arrayContaining(['Montaje / colocación']));
+    // Ajuste 26/11 (cambio aprobado): el montaje va en Logística (CA-22.8).
+    expect(de('LOGISTICA')).toEqual(expect.arrayContaining(['Montaje / colocación']));
     expect(lista.find((p) => p.codigo === 'CARPINTERIA')?.activo).toBe(false);
     const juan = await sesion(['admin']);
     expect((await juan('POST', '/api/procesos', { nombre: 'zz no', area: 'TALLER' })).status).toBe(400);
